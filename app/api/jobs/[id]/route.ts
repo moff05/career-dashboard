@@ -32,6 +32,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const db = getDb();
     const { id } = await params;
     const body = await request.json();
+    if ('status' in body) body.status_updated_at = new Date().toISOString();
     const fields = Object.keys(body).map(k => `${k} = ?`).join(', ');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const args = [...Object.values(body), parseInt(id)] as any[];

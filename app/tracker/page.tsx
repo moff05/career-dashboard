@@ -19,6 +19,13 @@ interface Job {
   source: string | null;
   notes: string | null;
   created_at: string;
+  status_updated_at: string | null;
+}
+
+function isStaleApplied(job: Job): boolean {
+  if (job.status !== 'applied' || !job.status_updated_at) return false;
+  const days = (Date.now() - new Date(job.status_updated_at).getTime()) / (1000 * 60 * 60 * 24);
+  return days >= 14;
 }
 
 // Vibrant hash-based badge colors — no network calls, always consistent
@@ -651,7 +658,13 @@ export default function TrackerPage() {
                       <div style={{ color: '#e0e0e0', fontWeight: 500, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {job.title}
                       </div>
-                      {job.notes && (
+                      {isStaleApplied(job) && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '3px', backgroundColor: '#2d1f4e', borderRadius: '4px', padding: '1px 6px' }}>
+                          <div style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#a78bfa', flexShrink: 0 }} />
+                          <span style={{ color: '#a78bfa', fontSize: '10px', fontWeight: 600 }}>Follow up</span>
+                        </div>
+                      )}
+                      {!isStaleApplied(job) && job.notes && (
                         <div style={{ color: '#555', fontSize: '10px', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {job.notes}
                         </div>
