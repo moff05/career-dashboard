@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "migrate": "npx tsx scripts/migrate.ts",
-    "migrate-v2": "npx tsx scripts/migrate-v2.ts"
+    "migrate-v2": "npx tsx scripts/migrate-v2.ts",
+    "migrate-v3": "npx tsx scripts/migrate-v3.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",

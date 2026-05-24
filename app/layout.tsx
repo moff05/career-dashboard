@@ -3,20 +3,14 @@
 import './globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Briefcase,
-  MessageSquare,
-  CalendarDays,
-  User,
-  Zap,
-} from 'lucide-react';
+import { LayoutDashboard, Briefcase, MessageSquare, CalendarDays, User } from 'lucide-react';
 
 const navItems = [
-  { href: '/tracker',  label: 'Jobs',     icon: Briefcase },
-  { href: '/coach',    label: 'Coach',    icon: MessageSquare },
-  { href: '/analyze',  label: 'Analyze',  icon: Zap },
-  { href: '/timeline', label: 'Timeline', icon: CalendarDays },
-  { href: '/profile',  label: 'Profile',  icon: User },
+  { href: '/',        label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/tracker', label: 'Jobs',      icon: Briefcase },
+  { href: '/coach',   label: 'Coach',     icon: MessageSquare },
+  { href: '/timeline',label: 'Timeline',  icon: CalendarDays },
+  { href: '/profile', label: 'Profile',   icon: User },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -29,79 +23,74 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           * { box-sizing: border-box; }
           body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
           ::-webkit-scrollbar { width: 6px; height: 6px; }
-          ::-webkit-scrollbar-track { background: #1a1a1a; }
-          ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-          ::-webkit-scrollbar-thumb:hover { background: #444; }
+          ::-webkit-scrollbar-track { background: #0a0a0a; }
+          ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+          ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
           input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
-          select option { background: #1e1e1e; }
+          select option { background: #111; }
           @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+          @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes barGrow { from { width: 0%; } to { } }
         `}</style>
       </head>
-      <body style={{ margin: 0, padding: 0, backgroundColor: '#1a1a1a' }}>
+      <body style={{ margin: 0, padding: 0, backgroundColor: '#0a0a0a' }}>
         <div style={{ display: 'flex', minHeight: '100vh' }}>
-
-          {/* Sidebar */}
           <aside style={{
-            width: '208px', minHeight: '100vh',
-            backgroundColor: '#181818',
-            borderRight: '1px solid #242424',
+            width: '200px', minHeight: '100vh',
+            backgroundColor: '#0d0d0d',
+            borderRight: '1px solid #1a1a1a',
             position: 'fixed', top: 0, left: 0, bottom: 0,
             display: 'flex', flexDirection: 'column',
             zIndex: 50,
           }}>
             {/* Brand */}
-            <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #222' }}>
+            <div style={{ padding: '20px 16px 18px', borderBottom: '1px solid #1a1a1a' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{
-                  width: '32px', height: '32px', borderRadius: '8px',
-                  backgroundColor: '#d97706',
+                  width: '34px', height: '34px', borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #f59e0b, #d97706)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '13px', fontWeight: 800, color: '#fff',
+                  fontSize: '13px', fontWeight: 800, color: '#000',
                   letterSpacing: '-0.5px', flexShrink: 0,
+                  boxShadow: '0 0 16px rgba(245,158,11,0.3)',
                 }}>
                   NM
                 </div>
                 <div>
-                  <div style={{ color: '#d0d0d0', fontWeight: 600, fontSize: '13px', lineHeight: 1.2 }}>
-                    Nicholas Moffett
+                  <div style={{ color: '#e8e8e8', fontWeight: 700, fontSize: '13px', lineHeight: 1.2 }}>
+                    Nicholas M.
                   </div>
-                  <div style={{ color: '#555', fontSize: '10px', marginTop: '2px' }}>
-                    Career Dashboard
+                  <div style={{ color: '#444', fontSize: '10px', marginTop: '2px' }}>
+                    UM · Class of 2027
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Nav */}
-            <nav style={{ padding: '8px 0', flex: 1 }}>
-              <div style={{ padding: '8px 12px 4px' }}>
-                <span style={{ color: '#3a3a3a', fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                  Navigation
-                </span>
-              </div>
+            <nav style={{ padding: '10px 0', flex: 1 }}>
               {navItems.map(({ href, label, icon: Icon }) => {
-                const isActive = pathname === href || pathname.startsWith(href + '/');
+                const isActive = href === '/' ? pathname === '/' : (pathname === href || pathname.startsWith(href + '/'));
                 return (
                   <Link key={href} href={href} style={{
                     display: 'flex', alignItems: 'center', gap: '9px',
-                    padding: '8px 14px 8px 12px',
+                    padding: '9px 14px 9px 14px',
                     textDecoration: 'none',
-                    color: isActive ? '#e0e0e0' : '#565656',
-                    backgroundColor: isActive ? '#222' : 'transparent',
-                    borderLeft: isActive ? '2px solid #d97706' : '2px solid transparent',
-                    fontSize: '13px', fontWeight: isActive ? 500 : 400,
-                    transition: 'all 0.12s ease',
-                    position: 'relative',
+                    color: isActive ? '#f0f0f0' : '#4a4a4a',
+                    backgroundColor: isActive ? '#161616' : 'transparent',
+                    borderLeft: isActive ? '2px solid #f59e0b' : '2px solid transparent',
+                    fontSize: '13px', fontWeight: isActive ? 600 : 400,
+                    transition: 'all 0.1s ease',
                   }}
                     onMouseEnter={e => {
                       if (!isActive) {
-                        (e.currentTarget as HTMLAnchorElement).style.color = '#999';
-                        (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#1e1e1e';
+                        (e.currentTarget as HTMLAnchorElement).style.color = '#888';
+                        (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#111';
                       }
                     }}
                     onMouseLeave={e => {
                       if (!isActive) {
-                        (e.currentTarget as HTMLAnchorElement).style.color = '#565656';
+                        (e.currentTarget as HTMLAnchorElement).style.color = '#4a4a4a';
                         (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'transparent';
                       }
                     }}
@@ -114,25 +103,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
 
             {/* Footer */}
-            <div style={{ padding: '12px 16px', borderTop: '1px solid #222' }}>
+            <div style={{ padding: '14px 16px', borderTop: '1px solid #1a1a1a' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{
-                  width: '6px', height: '6px', borderRadius: '50%',
-                  backgroundColor: '#d97706', flexShrink: 0,
-                }} />
-                <span style={{ color: '#3a3a3a', fontSize: '11px' }}>Powered by Claude</span>
-              </div>
-              <div style={{ color: '#2e2e2e', fontSize: '10px', marginTop: '3px', paddingLeft: '12px' }}>
-                UM · Class of 2027
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e', flexShrink: 0, boxShadow: '0 0 6px rgba(34,197,94,0.6)' }} />
+                <span style={{ color: '#333', fontSize: '10px' }}>Powered by Claude</span>
               </div>
             </div>
           </aside>
 
-          {/* Main */}
-          <main style={{
-            marginLeft: '208px', flex: 1, minHeight: '100vh',
-            backgroundColor: '#1a1a1a', overflow: 'auto',
-          }}>
+          <main style={{ marginLeft: '200px', flex: 1, minHeight: '100vh', backgroundColor: '#0a0a0a', overflow: 'auto' }}>
             {children}
           </main>
         </div>
