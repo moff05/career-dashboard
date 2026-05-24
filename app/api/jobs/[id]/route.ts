@@ -1,0 +1,57 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getDb } from '@/lib/db';
+
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const db = getDb();
+    const { id } = await params;
+    const body = await request.json();
+    const { company, title, type, status, match_score, posting_date, deadline, url, description, salary_range, location, source, notes } = body;
+
+    await db.execute({
+      sql: `UPDATE jobs SET company=?, title=?, type=?, status=?, match_score=?, posting_date=?, deadline=?, url=?, description=?, salary_range=?, location=?, source=?, notes=? WHERE id=?`,
+      args: [
+        company, title, type, status,
+        match_score || null, posting_date || null, deadline || null,
+        url || null, description || null, salary_range || null,
+        location || null, source || null, notes || null,
+        parseInt(id),
+      ],
+    });
+
+    const updated = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ?', args: [parseInt(id)] })).rows[0];
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error('PUT /api/jobs/[id] error:', error);
+    return NextResponse.json({ error: 'Failed to update job' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const db = getDb();
+    const { id } = await params;
+    const body = await request.json();
+    const fields = Object.keys(body).map(k => `${k} = ?`).join(', ');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const args = [...Object.values(body), parseInt(id)] as any[];
+    await db.execute({ sql: `UPDATE jobs SET ${fields} WHERE id = ?`, args });
+    const updated = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ?', args: [parseInt(id)] })).rows[0];
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error('PATCH /api/jobs/[id] error:', error);
+    return NextResponse.json({ error: 'Failed to update job' }, { status: 500 });
+  }
+}
+
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const db = getDb();
+    const { id } = await params;
+    await db.execute({ sql: 'DELETE FROM jobs WHERE id = ?', args: [parseInt(id)] });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('DELETE /api/jobs/[id] error:', error);
+    return NextResponse.json({ error: 'Failed to delete job' }, { status: 500 });
+  }
+}
