@@ -5,22 +5,18 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Briefcase,
-  Compass,
   MessageSquare,
   CalendarDays,
   User,
-  Sparkles,
   Zap,
 } from 'lucide-react';
 
 const navItems = [
   { href: '/tracker',  label: 'Jobs',     icon: Briefcase },
-  { href: '/discover', label: 'Discover', icon: Compass },
   { href: '/coach',    label: 'Coach',    icon: MessageSquare },
   { href: '/analyze',  label: 'Analyze',  icon: Zap },
   { href: '/timeline', label: 'Timeline', icon: CalendarDays },
   { href: '/profile',  label: 'Profile',  icon: User },
-  { href: '/memory',   label: 'Memory',   icon: Sparkles },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
