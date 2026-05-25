@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Career Dashboard
 
-## Getting Started
+A personal AI-powered job search command center built with Next.js, TypeScript, and Claude. Tracks applications, surfaces leads, generates cover letters, runs mock interviews, and advises on application strategy — all from one dashboard.
 
-First, run the development server:
+**Live:** [career-dashboard-ten.vercel.app](https://career-dashboard-ten.vercel.app)
+
+---
+
+## Features
+
+### Job Tracker
+- Import any job posting from a URL in one click (handles JS-rendered pages via Jina reader)
+- Multi-source import: paste recruiter emails, LinkedIn messages, or upload a screenshot — Claude reads them all and extracts structured fields
+- Company-grouped rows with collapsible expand, inline status updates, column sorting, and search/filter
+- AI match scorecard (5 categories × 100) auto-fires on panel open, cached per session
+
+### AI-Powered Detail Panel
+- **Gaps & positioning** — what's missing for this role and how to frame your background against it
+- **Tailored resume bullets** — which bullets to lead with and how to rephrase them
+- **Cover letter generator** — full draft in seconds, prefilled from the job record
+- **Network section** — save contacts at each company, track outreach status (not reached out → reached out → responded → warm), company-keyed so contacts appear across all jobs at that company
+
+### Discover
+- Auto-generated lead feed (AI, refreshes every 10 min) constrained to internship-friendly locations
+- Purple dot on lead cards when you already have a contact at that company
+- Company research tool: search any company or role type → overview, culture signals, open role types, personalized fit reasoning
+
+### Coach
+- Streaming chat with persistent memory extraction — facts about you are saved and used in every future AI call
+- **Mock interview mode** — pick behavioral, product, technical, case, or fit; answer 5 questions; get per-answer feedback and a final assessment
+- Quick-action prefills and cover letter shortcut from tracker
+
+### Home Dashboard
+- Pipeline stats, upcoming deadlines, follow-up nudges
+- **Application strategy advisor** — ranked list of which jobs to prioritize and why, based on fit score, deadline, and stage
+
+### Analytics
+- Applications by week, response rate, fit score distribution, avg days per stage
+
+### Timeline
+- Vertical timeline merging manual milestones with job deadlines from the tracker
+
+---
+
+## Stack
+
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 15 App Router |
+| Language | TypeScript |
+| Database | Turso (libsql, cloud SQLite) |
+| AI | Anthropic Claude (Sonnet 4.6 + Haiku 4.5) |
+| Deployment | Vercel |
+
+---
+
+## Running locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/moff05/career-dashboard.git
+cd career-dashboard
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create `.env.local`:
+```
+ANTHROPIC_API_KEY=sk-ant-...
+TURSO_DATABASE_URL=libsql://...
+TURSO_AUTH_TOKEN=...
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev   # http://localhost:3000
+npm run build # production check
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Architecture
 
-To learn more about Next.js, take a look at the following resources:
+```
+app/
+├── tracker/        # Job applications + detail panel
+├── discover/       # AI lead feed + company research
+├── coach/          # Chat + mock interview mode
+├── analytics/      # Pipeline stats
+├── timeline/       # Career milestones
+├── profile/        # Editable profile + AI summary
+├── memory/         # Extracted memory CRUD
+└── api/            # All backend routes (jobs, connections, interview, strategy, …)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+lib/
+├── db.ts           # Turso singleton + schema
+├── ai-context.ts   # Builds system prompt from resume + memories + jobs
+└── resume-parser.ts
+```
