@@ -178,14 +178,14 @@ export default function CoachPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#0d1e30' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f8fafc' }}>
 
       {/* Header */}
-      <div style={{ padding: '18px 32px', borderBottom: '1px solid #1a2e48', backgroundColor: '#091525', flexShrink: 0 }}>
-        <h1 style={{ color: '#eaf2ff', fontSize: '15px', fontWeight: 700, margin: '0 0 1px' }}>AI Career Coach</h1>
-        <p style={{ color: '#507090', fontSize: '11px', margin: '0 0 12px' }}>Powered by Claude — knows your full background</p>
+      <div style={{ padding: '18px 32px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <h1 style={{ color: '#0f172a', fontSize: '15px', fontWeight: 700, margin: '0 0 1px' }}>AI Career Coach</h1>
+        <p style={{ color: '#94a3b8', fontSize: '11px', margin: '0 0 12px' }}>Powered by Claude — knows your full background</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <span style={{ color: '#507090', fontSize: '10px', fontWeight: 600, marginRight: '2px' }}>Quick actions:</span>
+          <span style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 600, marginRight: '2px' }}>Quick actions:</span>
           {[
             { label: 'Analyze a JD', text: 'Please analyze this job description for me and tell me how well I\'d fit:\n\n[paste JD here]' },
             { label: 'What should I apply to?', text: 'Based on my background and the jobs I\'ve saved, what should I be applying to right now?' },
@@ -193,13 +193,13 @@ export default function CoachPage() {
             { label: 'Cold outreach email', text: 'Help me write a cold outreach email to a recruiter at a company I\'m interested in.' },
           ].map(({ label, text }) => (
             <button key={label} onClick={() => setQuickAction(text)} style={{
-              backgroundColor: '#152845', border: '1px solid #1e3d5c',
-              borderRadius: '20px', padding: '5px 12px', color: '#628aaa',
+              backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0',
+              borderRadius: '20px', padding: '5px 12px', color: '#64748b',
               fontSize: '11px', fontWeight: 500, cursor: 'pointer',
               transition: 'all 0.15s', whiteSpace: 'nowrap', fontFamily: 'inherit',
             }}
-              onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(59,130,246,0.35)'; b.style.color = '#3b82f6'; }}
-              onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = '#1e3d5c'; b.style.color = '#628aaa'; }}
+              onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(59,130,246,0.35)'; b.style.color = '#3b82f6'; b.style.backgroundColor = 'rgba(59,130,246,0.05)'; }}
+              onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = '#e2e8f0'; b.style.color = '#64748b'; b.style.backgroundColor = '#f1f5f9'; }}
             >{label}</button>
           ))}
         </div>
@@ -208,7 +208,7 @@ export default function CoachPage() {
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
         {!historyLoaded && (
-          <div style={{ textAlign: 'center', color: '#507090', padding: '48px', fontSize: '13px' }}>Loading…</div>
+          <div style={{ textAlign: 'center', color: '#94a3b8', padding: '48px', fontSize: '13px' }}>Loading…</div>
         )}
 
         {historyLoaded && messages.map((msg, idx) => (
@@ -221,40 +221,40 @@ export default function CoachPage() {
                 width: '30px', height: '30px', borderRadius: '10px',
                 background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: '#000', fontSize: '11px', fontWeight: 800,
+                color: '#fff', fontSize: '11px', fontWeight: 800,
                 flexShrink: 0, marginTop: '2px', letterSpacing: '-0.5px',
-                boxShadow: '0 0 14px rgba(59,130,246,0.25)',
+                boxShadow: '0 2px 8px rgba(59,130,246,0.25)',
               }}>AI</div>
             )}
 
             <div style={{
               maxWidth: '85%',
-              backgroundColor: msg.role === 'user' ? '#152845' : 'transparent',
-              border: msg.role === 'user' ? '1px solid #1e3d5c' : 'none',
+              backgroundColor: msg.role === 'user' ? '#f1f5f9' : 'transparent',
+              border: msg.role === 'user' ? '1px solid #e2e8f0' : 'none',
               borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '0',
               padding: msg.role === 'user' ? '10px 15px' : '0',
-              color: '#eaf2ff', fontSize: '14px', lineHeight: '1.65',
+              color: '#1e293b', fontSize: '14px', lineHeight: '1.65',
             }}>
               {msg.role === 'assistant' ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    p: ({ children }) => <p style={{ margin: '0 0 10px', color: '#d5e5f5' }}>{children}</p>,
-                    strong: ({ children }) => <strong style={{ color: '#eaf2ff', fontWeight: 600 }}>{children}</strong>,
-                    ul: ({ children }) => <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#d5e5f5' }}>{children}</ul>,
-                    ol: ({ children }) => <ol style={{ margin: '8px 0', paddingLeft: '20px', color: '#d5e5f5' }}>{children}</ol>,
-                    li: ({ children }) => <li style={{ margin: '4px 0', color: '#d5e5f5' }}>{children}</li>,
-                    h1: ({ children }) => <h1 style={{ color: '#eaf2ff', fontSize: '17px', fontWeight: 700, margin: '14px 0 8px' }}>{children}</h1>,
-                    h2: ({ children }) => <h2 style={{ color: '#eaf2ff', fontSize: '15px', fontWeight: 700, margin: '12px 0 6px' }}>{children}</h2>,
-                    h3: ({ children }) => <h3 style={{ color: '#eaf2ff', fontSize: '13px', fontWeight: 600, margin: '10px 0 5px' }}>{children}</h3>,
-                    code: ({ children }) => <code style={{ backgroundColor: '#1a2e4a', color: '#3b82f6', padding: '1px 5px', borderRadius: '5px', fontSize: '12px', fontFamily: 'monospace' }}>{children}</code>,
-                    blockquote: ({ children }) => <blockquote style={{ borderLeft: '3px solid rgba(59,130,246,0.4)', paddingLeft: '12px', margin: '8px 0', color: '#8eb0cc' }}>{children}</blockquote>,
+                    p: ({ children }) => <p style={{ margin: '0 0 10px', color: '#334155' }}>{children}</p>,
+                    strong: ({ children }) => <strong style={{ color: '#0f172a', fontWeight: 600 }}>{children}</strong>,
+                    ul: ({ children }) => <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#334155' }}>{children}</ul>,
+                    ol: ({ children }) => <ol style={{ margin: '8px 0', paddingLeft: '20px', color: '#334155' }}>{children}</ol>,
+                    li: ({ children }) => <li style={{ margin: '4px 0', color: '#334155' }}>{children}</li>,
+                    h1: ({ children }) => <h1 style={{ color: '#0f172a', fontSize: '17px', fontWeight: 700, margin: '14px 0 8px' }}>{children}</h1>,
+                    h2: ({ children }) => <h2 style={{ color: '#0f172a', fontSize: '15px', fontWeight: 700, margin: '12px 0 6px' }}>{children}</h2>,
+                    h3: ({ children }) => <h3 style={{ color: '#0f172a', fontSize: '13px', fontWeight: 600, margin: '10px 0 5px' }}>{children}</h3>,
+                    code: ({ children }) => <code style={{ backgroundColor: '#f1f5f9', color: '#3b82f6', padding: '1px 5px', borderRadius: '5px', fontSize: '12px', fontFamily: 'monospace', border: '1px solid #e2e8f0' }}>{children}</code>,
+                    blockquote: ({ children }) => <blockquote style={{ borderLeft: '3px solid rgba(59,130,246,0.3)', paddingLeft: '12px', margin: '8px 0', color: '#64748b' }}>{children}</blockquote>,
                   }}
                 >
                   {msg.content || (loading && idx === messages.length - 1 ? '...' : '')}
                 </ReactMarkdown>
               ) : (
-                <span style={{ whiteSpace: 'pre-wrap', color: '#d5e5f5' }}>{msg.content}</span>
+                <span style={{ whiteSpace: 'pre-wrap', color: '#1e293b' }}>{msg.content}</span>
               )}
             </div>
           </div>
@@ -266,10 +266,10 @@ export default function CoachPage() {
               width: '30px', height: '30px', borderRadius: '10px',
               background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#000', fontSize: '11px', fontWeight: 800, flexShrink: 0,
-              boxShadow: '0 0 14px rgba(59,130,246,0.25)',
+              color: '#fff', fontSize: '11px', fontWeight: 800, flexShrink: 0,
+              boxShadow: '0 2px 8px rgba(59,130,246,0.25)',
             }}>AI</div>
-            <Loader size={15} color="#507090" style={{ marginTop: '7px', animation: 'spin 1s linear infinite' }} />
+            <Loader size={15} color="#94a3b8" style={{ marginTop: '7px', animation: 'spin 1s linear infinite' }} />
           </div>
         )}
 
@@ -277,7 +277,7 @@ export default function CoachPage() {
       </div>
 
       {/* Input bar */}
-      <div style={{ padding: '14px 32px 22px', borderTop: '1px solid #1a2e48', backgroundColor: '#091525', flexShrink: 0 }}>
+      <div style={{ padding: '14px 32px 22px', borderTop: '1px solid #e2e8f0', backgroundColor: '#ffffff', flexShrink: 0, boxShadow: '0 -1px 3px rgba(0,0,0,0.04)' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
           <textarea
             ref={textareaRef}
@@ -287,31 +287,31 @@ export default function CoachPage() {
             placeholder="Ask your career coach anything…"
             rows={1}
             style={{
-              flex: 1, backgroundColor: '#152845', border: '1px solid #1e3d5c',
-              borderRadius: '12px', padding: '12px 16px', color: '#eaf2ff',
+              flex: 1, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0',
+              borderRadius: '12px', padding: '12px 16px', color: '#0f172a',
               fontSize: '14px', outline: 'none', resize: 'none', lineHeight: '1.5',
               minHeight: '44px', maxHeight: '160px', overflow: 'auto', fontFamily: 'inherit',
               transition: 'border-color 0.15s',
             }}
             onFocus={e => (e.target.style.borderColor = 'rgba(59,130,246,0.4)')}
-            onBlur={e => (e.target.style.borderColor = '#1e3d5c')}
+            onBlur={e => (e.target.style.borderColor = '#e2e8f0')}
           />
           <button
             onClick={() => handleSend()}
             disabled={loading || !input.trim()}
             style={{
               width: '44px', height: '44px', borderRadius: '12px',
-              background: loading || !input.trim() ? '#152845' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-              border: loading || !input.trim() ? '1px solid #1e3d5c' : 'none',
+              background: loading || !input.trim() ? '#f1f5f9' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              border: loading || !input.trim() ? '1px solid #e2e8f0' : 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', flexShrink: 0,
               boxShadow: loading || !input.trim() ? 'none' : '0 4px 12px rgba(59,130,246,0.3)',
             }}
           >
-            <Send size={16} color={loading || !input.trim() ? '#507090' : '#fff'} />
+            <Send size={16} color={loading || !input.trim() ? '#94a3b8' : '#fff'} />
           </button>
         </div>
-        <p style={{ color: '#3c5875', fontSize: '10px', margin: '7px 0 0', textAlign: 'center' }}>
+        <p style={{ color: '#cbd5e1', fontSize: '10px', margin: '7px 0 0', textAlign: 'center' }}>
           Enter to send · Shift+Enter for new line
         </p>
       </div>
@@ -320,10 +320,10 @@ export default function CoachPage() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: '100px', left: '50%', transform: 'translateX(-50%)',
-          backgroundColor: '#152845', border: '1px solid rgba(59,130,246,0.3)',
-          color: '#eaf2ff', padding: '10px 20px', borderRadius: '10px',
+          backgroundColor: '#ffffff', border: '1px solid rgba(59,130,246,0.2)',
+          color: '#0f172a', padding: '10px 20px', borderRadius: '10px',
           fontSize: '12px', zIndex: 1000, maxWidth: '400px', textAlign: 'center',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
         }}>
           {toast}
         </div>

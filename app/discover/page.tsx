@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, RefreshCw, Plus, X, Loader, AlertCircle } from 'lucide-react'; // Plus used by lead save button
+import { Search, RefreshCw, Plus, X, Loader, AlertCircle } from 'lucide-react';
 
 interface Lead {
   id: number;
@@ -36,10 +36,10 @@ function badgeColor(name: string) {
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
   return BADGE_COLORS[Math.abs(h) % BADGE_COLORS.length];
 }
-function fitColor(s: number) { return s >= 8 ? '#22c55e' : s >= 6 ? '#3b82f6' : s >= 4 ? '#f97316' : '#ef4444'; }
+function fitColor(s: number) { return s >= 8 ? '#059669' : s >= 6 ? '#2563eb' : s >= 4 ? '#d97706' : '#dc2626'; }
 function verdictColor(v: string) {
-  if (v === 'Strong Match') return '#22c55e'; if (v === 'Good Fit') return '#3b82f6';
-  if (v === 'Stretch') return '#f97316'; return '#ef4444';
+  if (v === 'Strong Match') return '#059669'; if (v === 'Good Fit') return '#2563eb';
+  if (v === 'Stretch') return '#d97706'; return '#dc2626';
 }
 function initials(name: string) { return name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase(); }
 function isStudentFriendly(location: string) { return location === 'Remote' || location.toLowerCase().includes('miami'); }
@@ -116,21 +116,22 @@ export default function DiscoverPage() {
   const visible = leads.filter(l => !dismissed.has(l.id));
 
   return (
-    <div style={{ padding: '28px 32px', minHeight: '100vh', backgroundColor: '#0d1e30' }}>
+    <div style={{ padding: '28px 32px', minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '22px' }}>
         <div>
-          <h1 style={{ color: '#eaf2ff', fontSize: '18px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Discover</h1>
-          <p style={{ color: '#3c5875', fontSize: '12px', margin: '4px 0 0' }}>Research companies · explore leads</p>
+          <h1 style={{ color: '#0f172a', fontSize: '18px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Discover</h1>
+          <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0' }}>Research companies · explore leads</p>
         </div>
         <button onClick={() => loadLeads(true)} disabled={leadsLoading} style={{
-          display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'transparent',
-          color: '#3c5875', border: '1px solid #1e3d5c', borderRadius: '10px', padding: '6px 12px',
+          display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#ffffff',
+          color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '6px 12px',
           fontSize: '11px', cursor: leadsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
         }}
-          onMouseEnter={e => !leadsLoading && (e.currentTarget.style.color = '#628aaa')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#3c5875')}
+          onMouseEnter={e => !leadsLoading && (e.currentTarget.style.color = '#3b82f6')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}
         >
           <RefreshCw size={11} style={leadsLoading ? { animation: 'spin 1s linear infinite' } : {}} /> Refresh leads
         </button>
@@ -143,18 +144,22 @@ export default function DiscoverPage() {
             type="text" value={query} onChange={e => setQuery(e.target.value)}
             placeholder="Search a company or role — e.g. 'CoStar', 'PropTech analyst', 'Anthropic'..."
             style={{
-              flex: 1, backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '14px',
-              padding: '11px 16px', color: '#eaf2ff', fontSize: '13px', outline: 'none', fontFamily: 'inherit',
+              flex: 1, backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px',
+              padding: '11px 16px', color: '#0f172a', fontSize: '13px', outline: 'none', fontFamily: 'inherit',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
             }}
             onFocus={e => (e.target.style.borderColor = '#3b82f6')}
-            onBlur={e => (e.target.style.borderColor = '#1e3d5c')}
+            onBlur={e => (e.target.style.borderColor = '#e2e8f0')}
           />
           <button type="submit" disabled={searching || !query.trim()} style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0,
-            backgroundColor: searching || !query.trim() ? '#1a2e4a' : '#2563eb',
-            color: searching || !query.trim() ? '#507090' : '#000',
-            border: 'none', borderRadius: '10px', padding: '11px 20px',
-            fontSize: '13px', fontWeight: 700, cursor: searching || !query.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+            background: searching || !query.trim() ? '#f1f5f9' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+            color: searching || !query.trim() ? '#94a3b8' : '#fff',
+            border: searching || !query.trim() ? '1px solid #e2e8f0' : 'none',
+            borderRadius: '10px', padding: '11px 20px',
+            fontSize: '13px', fontWeight: 700, cursor: searching || !query.trim() ? 'not-allowed' : 'pointer',
+            fontFamily: 'inherit',
+            boxShadow: searching || !query.trim() ? 'none' : '0 4px 14px rgba(59,130,246,0.25)',
           }}>
             {searching
               ? <><Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> Searching…</>
@@ -162,7 +167,7 @@ export default function DiscoverPage() {
           </button>
         </div>
         {searchErr && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f87171', fontSize: '12px', marginTop: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#dc2626', fontSize: '12px', marginTop: '10px' }}>
             <AlertCircle size={12} /> {searchErr}
           </div>
         )}
@@ -170,7 +175,7 @@ export default function DiscoverPage() {
 
       {/* Research result */}
       {result && (
-        <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '14px', padding: '24px', marginBottom: '36px', animation: 'fadeIn 0.25s ease' }}>
+        <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '24px', marginBottom: '36px', animation: 'fadeIn 0.25s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
           {/* Top row */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
             <div style={{
@@ -181,16 +186,16 @@ export default function DiscoverPage() {
             }}>{initials(result.company)}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                <span style={{ color: '#eaf2ff', fontSize: '16px', fontWeight: 700 }}>{result.company}</span>
+                <span style={{ color: '#0f172a', fontSize: '16px', fontWeight: 700 }}>{result.company}</span>
                 <span style={{
-                  backgroundColor: `${verdictColor(result.fit_verdict)}1a`, border: `1px solid ${verdictColor(result.fit_verdict)}33`,
+                  backgroundColor: `${verdictColor(result.fit_verdict)}14`, border: `1px solid ${verdictColor(result.fit_verdict)}33`,
                   color: verdictColor(result.fit_verdict), borderRadius: '20px',
                   padding: '2px 10px', fontSize: '11px', fontWeight: 700,
                 }}>{result.fit_verdict} · {result.fit_score}/10</span>
-                {result.size !== 'Unknown' && <span style={{ color: '#3c5875', fontSize: '11px' }}>{result.size}</span>}
-                {result.stage && <span style={{ color: '#3c5875', fontSize: '11px' }}>· {result.stage}</span>}
+                {result.size !== 'Unknown' && <span style={{ color: '#94a3b8', fontSize: '11px' }}>{result.size}</span>}
+                {result.stage && <span style={{ color: '#94a3b8', fontSize: '11px' }}>· {result.stage}</span>}
               </div>
-              <p style={{ color: '#507090', fontSize: '12px', margin: 0, lineHeight: 1.6 }}>{result.what_they_do}</p>
+              <p style={{ color: '#64748b', fontSize: '12px', margin: 0, lineHeight: 1.6 }}>{result.what_they_do}</p>
             </div>
           </div>
 
@@ -198,7 +203,7 @@ export default function DiscoverPage() {
           {result.culture_signals?.length > 0 && (
             <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '20px' }}>
               {result.culture_signals.map((s, i) => (
-                <span key={i} style={{ backgroundColor: '#1a2e48', color: '#507090', border: '1px solid #1e3d5c', borderRadius: '20px', padding: '3px 9px', fontSize: '11px' }}>{s}</span>
+                <span key={i} style={{ backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '20px', padding: '3px 9px', fontSize: '11px' }}>{s}</span>
               ))}
             </div>
           )}
@@ -209,39 +214,37 @@ export default function DiscoverPage() {
             {/* Roles */}
             <div>
               <div style={{ marginBottom: '10px' }}>
-                <div style={{ color: '#3c5875', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Role Types to Search</div>
-                <div style={{ color: '#3c5875', fontSize: '10px', marginTop: '3px' }}>Suggestions — verify on their careers page</div>
+                <div style={{ color: '#64748b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Role Types to Search</div>
+                <div style={{ color: '#94a3b8', fontSize: '10px', marginTop: '3px' }}>Suggestions — verify on their careers page</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-                {result.roles?.map((role, i) => {
-                  return (
-                    <div key={i} style={{ backgroundColor: '#152845', borderRadius: '7px', padding: '10px 12px' }}>
-                      <div style={{ color: '#d5e5f5', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{role.title}</div>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
-                        <span style={{ color: TYPE_COLORS[role.type] || '#507090', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[role.type] || role.type}</span>
-                        <span style={{ color: '#3c5875', fontSize: '10px' }}>·</span>
-                        <span style={{ color: '#507090', fontSize: '10px' }}>{role.location}</span>
-                      </div>
+                {result.roles?.map((role, i) => (
+                  <div key={i} style={{ backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: '7px', padding: '10px 12px' }}>
+                    <div style={{ color: '#334155', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{role.title}</div>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
+                      <span style={{ color: TYPE_COLORS[role.type] || '#64748b', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[role.type] || role.type}</span>
+                      <span style={{ color: '#cbd5e1', fontSize: '10px' }}>·</span>
+                      <span style={{ color: '#94a3b8', fontSize: '10px' }}>{role.location}</span>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Fit analysis */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ backgroundColor: '#111', borderRadius: '8px', padding: '13px 15px' }}>
-                <div style={{ color: '#333', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '7px' }}>Why You Fit</div>
-                <p style={{ color: '#666', fontSize: '12px', margin: 0, lineHeight: 1.65 }}>{result.fit_reasoning}</p>
+              <div style={{ backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: '8px', padding: '13px 15px' }}>
+                <div style={{ color: '#64748b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '7px' }}>Why You Fit</div>
+                <p style={{ color: '#475569', fontSize: '12px', margin: 0, lineHeight: 1.65 }}>{result.fit_reasoning}</p>
               </div>
-              <div style={{ backgroundColor: '#0d1e30', border: '1px solid #1a2e48', borderRadius: '8px', padding: '13px 15px' }}>
-                <div style={{ color: '#60a5fa', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '7px' }}>Your Angle</div>
-                <p style={{ color: '#60a5fa', fontSize: '12px', margin: 0, lineHeight: 1.65 }}>{result.nicholas_angle}</p>
+              <div style={{ backgroundColor: 'rgba(59,130,246,0.04)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: '8px', padding: '13px 15px' }}>
+                <div style={{ color: '#2563eb', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '7px' }}>Your Angle</div>
+                <p style={{ color: '#2563eb', fontSize: '12px', margin: 0, lineHeight: 1.65 }}>{result.nicholas_angle}</p>
               </div>
               {result.caveat && (
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', padding: '2px 0' }}>
-                  <span style={{ color: '#333', fontSize: '11px', flexShrink: 0, marginTop: '1px' }}>⚠</span>
-                  <span style={{ color: '#2e2e2e', fontSize: '11px', lineHeight: 1.55 }}>{result.caveat}</span>
+                  <span style={{ color: '#94a3b8', fontSize: '11px', flexShrink: 0, marginTop: '1px' }}>⚠</span>
+                  <span style={{ color: '#64748b', fontSize: '11px', lineHeight: 1.55 }}>{result.caveat}</span>
                 </div>
               )}
             </div>
@@ -253,21 +256,21 @@ export default function DiscoverPage() {
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ color: '#333', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>For You</span>
-            {leadsAge && !leadsLoading && <span style={{ color: '#1e1e1e', fontSize: '10px' }}>· {leadsAge}</span>}
+            <span style={{ color: '#64748b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>For You</span>
+            {leadsAge && !leadsLoading && <span style={{ color: '#cbd5e1', fontSize: '10px' }}>· {leadsAge}</span>}
           </div>
-          <span style={{ color: '#1e1e1e', fontSize: '11px' }}>AI-generated — verify openings on company sites</span>
+          <span style={{ color: '#94a3b8', fontSize: '11px' }}>AI-generated — verify openings on company sites</span>
         </div>
 
         {leadsLoading && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#2a2a2a', fontSize: '12px', padding: '48px 0' }}>
-            <Loader size={14} color="#333" style={{ animation: 'spin 1s linear infinite' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#94a3b8', fontSize: '12px', padding: '48px 0' }}>
+            <Loader size={14} color="#94a3b8" style={{ animation: 'spin 1s linear infinite' }} />
             Finding leads for you…
           </div>
         )}
 
         {!leadsLoading && leads.length > 0 && visible.length === 0 && (
-          <div style={{ color: '#2a2a2a', fontSize: '12px', padding: '32px 0' }}>
+          <div style={{ color: '#94a3b8', fontSize: '12px', padding: '32px 0' }}>
             All leads dismissed.{' '}
             <button onClick={() => loadLeads(true)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Refresh</button>
             {' '}for new ones.
@@ -282,11 +285,13 @@ export default function DiscoverPage() {
               const color = badgeColor(lead.company);
               return (
                 <div key={lead.id} style={{
-                  backgroundColor: '#152845', border: '1px solid #181818', borderRadius: '10px',
+                  backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px',
                   padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  transition: 'box-shadow 0.15s, border-color 0.15s',
                 }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = '#242424')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#181818')}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; }}
                 >
                   {/* Top: badge + info + dismiss */}
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
@@ -297,40 +302,40 @@ export default function DiscoverPage() {
                       fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px',
                     }}>{initials(lead.company)}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: '#d0d0d0', fontSize: '12px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.company}</div>
-                      <div style={{ color: '#4a4a4a', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.title}</div>
+                      <div style={{ color: '#1e293b', fontSize: '12px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.company}</div>
+                      <div style={{ color: '#64748b', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.title}</div>
                     </div>
                     <button onClick={() => setDismissed(prev => new Set([...prev, lead.id]))} style={{
-                      background: 'none', border: 'none', color: '#222', cursor: 'pointer', padding: '2px', display: 'flex', flexShrink: 0,
+                      background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px', display: 'flex', flexShrink: 0,
                     }}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#555')}
-                      onMouseLeave={e => (e.currentTarget.style.color = '#222')}
+                      onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
+                      onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}
                     ><X size={13} /></button>
                   </div>
 
                   {/* Type + location + score */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-                    <span style={{ color: TYPE_COLORS[lead.type] || '#555', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[lead.type] || lead.type}</span>
-                    <span style={{ color: '#222', fontSize: '10px' }}>·</span>
-                    <span style={{ color: '#3a3a3a', fontSize: '10px' }}>{lead.location}</span>
+                    <span style={{ color: TYPE_COLORS[lead.type] || '#64748b', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[lead.type] || lead.type}</span>
+                    <span style={{ color: '#cbd5e1', fontSize: '10px' }}>·</span>
+                    <span style={{ color: '#64748b', fontSize: '10px' }}>{lead.location}</span>
                     {lead.type !== 'full-time' && (
                       <span style={{
                         fontSize: '9px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px',
-                        backgroundColor: friendly ? '#081408' : '#180e00',
-                        color: friendly ? '#22c55e' : '#f97316',
+                        backgroundColor: friendly ? 'rgba(5,150,105,0.07)' : 'rgba(220,38,38,0.07)',
+                        color: friendly ? '#059669' : '#dc2626',
                       }}>{friendly ? 'Student-friendly' : 'On-site only'}</span>
                     )}
                     <span style={{ marginLeft: 'auto', color: fitColor(lead.fit_score), fontSize: '13px', fontWeight: 800 }}>{lead.fit_score}/10</span>
                   </div>
 
                   {/* Why */}
-                  <p style={{ color: '#4a4a4a', fontSize: '11px', lineHeight: 1.6, margin: 0 }}>{lead.why}</p>
+                  <p style={{ color: '#475569', fontSize: '11px', lineHeight: 1.6, margin: 0 }}>{lead.why}</p>
 
                   {/* Tags */}
                   {lead.tags?.length > 0 && (
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                       {lead.tags.map((t, i) => (
-                        <span key={i} style={{ backgroundColor: '#131313', color: '#2e2e2e', border: '1px solid #1c1c1c', borderRadius: '3px', padding: '2px 7px', fontSize: '10px' }}>{t}</span>
+                        <span key={i} style={{ backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '3px', padding: '2px 7px', fontSize: '10px' }}>{t}</span>
                       ))}
                     </div>
                   )}
@@ -338,15 +343,15 @@ export default function DiscoverPage() {
                   {/* Save button */}
                   <button onClick={() => saveLead(lead)} disabled={isSaved} style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                    backgroundColor: isSaved ? '#081408' : '#111',
-                    color: isSaved ? '#22c55e' : '#555',
-                    border: `1px solid ${isSaved ? '#166534' : '#1e1e1e'}`,
+                    backgroundColor: isSaved ? 'rgba(5,150,105,0.06)' : '#f8fafc',
+                    color: isSaved ? '#059669' : '#94a3b8',
+                    border: `1px solid ${isSaved ? 'rgba(5,150,105,0.3)' : '#e2e8f0'}`,
                     borderRadius: '6px', padding: '8px', fontSize: '11px', fontWeight: 600,
                     cursor: isSaved ? 'default' : 'pointer', fontFamily: 'inherit', width: '100%',
                     transition: 'all 0.15s',
                   }}
-                    onMouseEnter={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#2563eb'; (e.currentTarget as HTMLButtonElement).style.color = '#2563eb'; } }}
-                    onMouseLeave={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#1e1e1e'; (e.currentTarget as HTMLButtonElement).style.color = '#555'; } }}
+                    onMouseEnter={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(59,130,246,0.3)'; (e.currentTarget as HTMLButtonElement).style.color = '#3b82f6'; } }}
+                    onMouseLeave={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#e2e8f0'; (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; } }}
                   >
                     {isSaved ? '✓ Saved to Tracker' : <><Plus size={11} /> Save to Tracker</>}
                   </button>

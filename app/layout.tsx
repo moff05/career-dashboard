@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           @keyframes barGrow { from { width: 0%; } to { } }
         `}</style>
       </head>
-      <body style={{ margin: 0, padding: 0, backgroundColor: '#0d1e30' }}>
+      <body style={{ margin: 0, padding: 0, backgroundColor: '#f1f5f9' }}>
         <div style={{ display: 'flex', minHeight: '100vh' }}>
           <aside style={{
             width: '210px', minHeight: '100vh',
@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   width: '36px', height: '36px', borderRadius: '10px',
                   background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '13px', fontWeight: 800, color: '#000',
+                  fontSize: '13px', fontWeight: 800, color: '#fff',
                   letterSpacing: '-0.5px', flexShrink: 0,
                   boxShadow: '0 0 20px rgba(59,130,246,0.3)',
                 }}>NM</div>
@@ -107,7 +107,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </aside>
 
-          <main style={{ marginLeft: '210px', flex: 1, minHeight: '100vh', backgroundColor: '#0d1e30', overflow: 'auto' }}>
+          <main style={{ marginLeft: '210px', flex: 1, minHeight: '100vh', backgroundColor: '#f1f5f9', overflow: 'auto' }}>
             {children}
           </main>
         </div>
