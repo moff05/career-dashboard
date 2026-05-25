@@ -66,6 +66,24 @@ export default function CoachPage() {
     loadHistory();
   }, [loadHistory]);
 
+  // Auto-send score discussion message when navigated from tracker
+  useEffect(() => {
+    if (!historyLoaded) return;
+    const brief = sessionStorage.getItem('coach-score-brief');
+    if (!brief) return;
+    sessionStorage.removeItem('coach-score-brief');
+    try {
+      const data = JSON.parse(brief);
+      const cats = (data.categories || [])
+        .map((c: { name: string; score: number; rationale: string }) =>
+          `• ${c.name}: ${c.score}/100 — ${c.rationale}`)
+        .join('\n');
+      const msg = `Walk me through my fit score for ${data.company} — ${data.title}.\n\nOverall: ${data.total}/100 — ${data.summary}\n\nCategory breakdown:\n${cats}\n\nWhat does this score mean, which gaps should I focus on, and what's my best strategy to improve my chances with this company?`;
+      handleSend(msg);
+    } catch { /* ignore malformed data */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyLoaded]);
+
   // Feature 7: On mount, check for cover-letter prefill URL params
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -88,13 +106,15 @@ export default function CoachPage() {
     }
   }, []);
 
-  const handleSend = async () => {
-    const text = input.trim();
+  const handleSend = async (forceText?: string) => {
+    const text = (forceText ?? input).trim();
     if (!text || loading) return;
 
-    setInput('');
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+    if (!forceText) {
+      setInput('');
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
     }
 
     const userMessage: Message = { role: 'user', content: text };
@@ -378,7 +398,7 @@ export default function CoachPage() {
             }}
           />
           <button
-            onClick={handleSend}
+            onClick={() => handleSend()}
             disabled={loading || !input.trim()}
             style={{
               width: '40px',
