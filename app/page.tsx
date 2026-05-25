@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Clock, MessageSquare, Zap, Plus, LayoutDashboard, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Clock, MessageSquare, Zap, Plus, RefreshCw, Bell } from 'lucide-react';
 
 interface Job {
   id: number; company: string; title: string; status: string;
@@ -42,8 +42,8 @@ function getPriorities(jobs: Job[]): Priority[] {
     if (!j.deadline || j.status === 'rejected' || j.status === 'offer') continue;
     const days = deadlineDays(j.deadline);
     if (days < 0) continue;
-    if (days <= 3) result.push({ level: 'urgent', label: `${j.title} at ${j.company}`, sub: `Deadline in ${days === 0 ? 'today' : `${days}d`}`, href: '/tracker' });
-    else if (days <= 7) result.push({ level: 'soon', label: `${j.company} — ${j.title}`, sub: `Deadline in ${days} days`, href: '/tracker' });
+    if (days <= 3) result.push({ level: 'urgent', label: `${j.title} at ${j.company}`, sub: `Deadline ${days === 0 ? 'today' : `in ${days}d`}`, href: '/tracker' });
+    else if (days <= 7) result.push({ level: 'soon', label: `${j.company} — ${j.title}`, sub: `Due in ${days} days`, href: '/tracker' });
   }
   for (const j of jobs) {
     if (j.status !== 'applied' || !j.status_updated_at) continue;
@@ -57,22 +57,29 @@ function getPriorities(jobs: Job[]): Priority[] {
 }
 
 const LEVEL_CFG = {
-  urgent:    { bg: '#160808', border: '#5c1212', icon: <AlertTriangle size={12} color="#ef4444" />, tag: 'Urgent',   color: '#ef4444' },
-  soon:      { bg: '#130f00', border: '#5a3200', icon: <Clock        size={12} color="#f59e0b" />, tag: 'Soon',     color: '#f59e0b' },
-  followup:  { bg: '#0d0916', border: '#3b1d72', icon: <MessageSquare size={12} color="#a855f7"/>, tag: 'Follow up',color: '#a855f7' },
-  interview: { bg: '#081408', border: '#14532d', icon: <Zap          size={12} color="#22c55e" />, tag: 'Prep',     color: '#22c55e' },
+  urgent:    { bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.2)',   icon: <AlertTriangle size={12} color="#f87171" />, tag: 'Urgent',    color: '#f87171' },
+  soon:      { bg: 'rgba(245,158,11,0.08)',   border: 'rgba(245,158,11,0.2)',  icon: <Clock         size={12} color="#fbbf24" />, tag: 'Soon',      color: '#fbbf24' },
+  followup:  { bg: 'rgba(139,92,246,0.08)',   border: 'rgba(139,92,246,0.2)',  icon: <Bell          size={12} color="#a78bfa" />, tag: 'Follow up', color: '#a78bfa' },
+  interview: { bg: 'rgba(16,185,129,0.08)',   border: 'rgba(16,185,129,0.2)',  icon: <Zap           size={12} color="#34d399" />, tag: 'Prep',      color: '#34d399' },
 };
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
-  saved:        { label: 'Saved',        color: '#666',    bg: '#161616' },
-  applied:      { label: 'Applied',      color: '#3b82f6', bg: '#0d1a2e' },
-  interviewing: { label: 'Interviewing', color: '#f59e0b', bg: '#1a1200' },
-  offer:        { label: 'Offer',        color: '#22c55e', bg: '#0a1f0a' },
-  rejected:     { label: 'Rejected',     color: '#ef4444', bg: '#1a0808' },
+  saved:        { label: 'Saved',        color: '#7a8fa8', bg: 'rgba(122,143,168,0.10)' },
+  applied:      { label: 'Applied',      color: '#818cf8', bg: 'rgba(129,140,248,0.10)' },
+  interviewing: { label: 'Interview',    color: '#fbbf24', bg: 'rgba(251,191,36,0.10)'  },
+  offer:        { label: 'Offer',        color: '#34d399', bg: 'rgba(52,211,153,0.10)'  },
+  rejected:     { label: 'Rejected',     color: '#f87171', bg: 'rgba(248,113,113,0.10)' },
 };
 
 function scoreColor(s: number) {
-  if (s >= 8) return '#22c55e'; if (s >= 6) return '#f59e0b'; if (s >= 4) return '#f97316'; return '#ef4444';
+  if (s >= 8) return '#34d399'; if (s >= 6) return '#fbbf24'; return '#f87171';
+}
+
+const BADGE_COLORS = ['#7c3aed','#2563eb','#0891b2','#059669','#d97706','#dc2626','#db2777','#4f46e5','#0284c7','#16a34a','#ca8a04'];
+function companyColor(name: string) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+  return BADGE_COLORS[Math.abs(h) % BADGE_COLORS.length];
 }
 
 export default function DashboardPage() {
@@ -80,7 +87,7 @@ export default function DashboardPage() {
   const [brief, setBrief] = useState<Brief | null>(null);
   const [briefLoading, setBriefLoading] = useState(false);
   const [briefAge, setBriefAge] = useState<string>('');
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   useEffect(() => {
     fetch('/api/jobs').then(r => r.json()).then(setJobs).catch(() => {});
@@ -125,56 +132,57 @@ export default function DashboardPage() {
     }).length,
   };
 
+  // Daily digest items
+  const noResponseJobs = jobs.filter(j => {
+    if (j.status !== 'applied' || !j.status_updated_at) return false;
+    return Math.floor((Date.now() - new Date(j.status_updated_at).getTime()) / 86400000) >= 14;
+  });
+  const thisWeekDeadlines = jobs.filter(j => {
+    if (!j.deadline || j.status === 'rejected' || j.status === 'offer') return false;
+    const d = deadlineDays(j.deadline);
+    return d >= 0 && d <= 7;
+  }).sort((a, b) => deadlineDays(a.deadline!) - deadlineDays(b.deadline!));
+
   const priorities = getPriorities(jobs);
   const recentJobs = [...jobs].sort((a, b) => b.id - a.id).slice(0, 5);
   const hasJobs = jobs.length > 0;
 
   return (
-    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#0a0a0a', maxWidth: '1040px' }}>
+    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#0d1117', maxWidth: '1060px' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px' }}>
         <div>
-          <h1 style={{ color: '#f0f0f0', fontSize: '22px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>
-            {greeting()}, Nicholas
+          <h1 style={{ color: '#e2e8f4', fontSize: '22px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>
+            {greeting()}, Nicholas 👋
           </h1>
-          <p style={{ color: '#2e2e2e', fontSize: '12px', margin: '4px 0 0' }}>{today}</p>
+          <p style={{ color: '#3d5068', fontSize: '12px', margin: '5px 0 0' }}>{today}</p>
         </div>
 
-        {/* Quick actions */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <Link href="/tracker" style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
-            backgroundColor: '#d97706', color: '#000', borderRadius: '8px',
-            padding: '8px 16px', fontSize: '12px', fontWeight: 700,
+            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            color: '#000', borderRadius: '10px',
+            padding: '9px 18px', fontSize: '12px', fontWeight: 700,
             textDecoration: 'none', whiteSpace: 'nowrap',
+            boxShadow: '0 4px 14px rgba(245,158,11,0.25)',
           }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f59e0b')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#d97706')}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
             <Plus size={13} /> Import Job
           </Link>
           <Link href="/coach" style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
-            backgroundColor: '#111', border: '1px solid #222', color: '#888',
-            borderRadius: '8px', padding: '8px 14px', fontSize: '12px', fontWeight: 500,
+            backgroundColor: '#111827', border: '1px solid #1e2839', color: '#7a8fa8',
+            borderRadius: '10px', padding: '9px 14px', fontSize: '12px', fontWeight: 500,
             textDecoration: 'none', whiteSpace: 'nowrap',
           }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.borderColor = '#d97706'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = '#222'; }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#f59e0b'; e.currentTarget.style.borderColor = 'rgba(245,158,11,0.3)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#7a8fa8'; e.currentTarget.style.borderColor = '#1e2839'; }}
           >
             <MessageSquare size={12} /> Coach
-          </Link>
-          <Link href="/tracker" style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            backgroundColor: '#111', border: '1px solid #222', color: '#888',
-            borderRadius: '8px', padding: '8px 14px', fontSize: '12px', fontWeight: 500,
-            textDecoration: 'none', whiteSpace: 'nowrap',
-          }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.borderColor = '#d97706'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = '#222'; }}
-          >
-            <LayoutDashboard size={12} /> Pipeline
           </Link>
         </div>
       </div>
@@ -182,71 +190,113 @@ export default function DashboardPage() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginBottom: '24px' }}>
         {[
-          { label: 'Tracked',      value: stats.total,        color: '#e8e8e8', glow: '' },
-          { label: 'Applied',      value: stats.applied,      color: '#3b82f6', glow: 'rgba(59,130,246,0.12)' },
-          { label: 'Interviewing', value: stats.interviewing, color: '#f59e0b', glow: 'rgba(245,158,11,0.12)' },
-          { label: 'Offers',       value: stats.offers,       color: '#22c55e', glow: 'rgba(34,197,94,0.12)' },
-          { label: 'Due this week',value: stats.deadlines,    color: stats.deadlines > 0 ? '#ef4444' : '#2a2a2a', glow: 'rgba(239,68,68,0.12)' },
+          { label: 'Tracked',      value: stats.total,        color: '#e2e8f4', glow: '' },
+          { label: 'Applied',      value: stats.applied,      color: '#818cf8', glow: 'rgba(129,140,248,0.1)' },
+          { label: 'Interviewing', value: stats.interviewing, color: '#fbbf24', glow: 'rgba(251,191,36,0.1)' },
+          { label: 'Offers',       value: stats.offers,       color: '#34d399', glow: 'rgba(52,211,153,0.1)' },
+          { label: 'Due this week',value: stats.deadlines,    color: stats.deadlines > 0 ? '#f87171' : '#3d5068', glow: 'rgba(248,113,113,0.1)' },
         ].map(s => (
           <div key={s.label} style={{
-            backgroundColor: '#0f0f0f', border: '1px solid #181818', borderRadius: '10px', padding: '16px 14px',
+            backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px', padding: '16px 14px',
             boxShadow: s.value > 0 && s.glow ? `0 0 20px ${s.glow}` : 'none',
           }}>
-            <div style={{ color: s.value > 0 ? s.color : '#1e1e1e', fontSize: '30px', fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.value}</div>
-            <div style={{ color: s.value > 0 ? '#3a3a3a' : '#1e1e1e', fontSize: '10px', marginTop: '6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</div>
+            <div style={{ color: s.value > 0 ? s.color : '#1e2839', fontSize: '28px', fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.value}</div>
+            <div style={{ color: s.value > 0 ? '#3d5068' : '#1e2839', fontSize: '10px', marginTop: '6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</div>
           </div>
         ))}
       </div>
+
+      {/* Daily digest banner */}
+      {(noResponseJobs.length > 0 || thisWeekDeadlines.length > 0) && (
+        <div style={{
+          backgroundColor: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)',
+          borderRadius: '14px', padding: '14px 18px', marginBottom: '20px',
+          display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center',
+          animation: 'fadeIn 0.3s ease',
+        }}>
+          <span style={{ color: '#f59e0b', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0 }}>Today</span>
+          {thisWeekDeadlines.slice(0, 2).map(j => {
+            const d = deadlineDays(j.deadline!);
+            return (
+              <Link key={j.id} href="/tracker" style={{
+                display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none',
+                backgroundColor: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.18)',
+                borderRadius: '8px', padding: '5px 10px',
+              }}>
+                <span style={{ color: '#f87171', fontSize: '11px', fontWeight: 600 }}>{j.company}</span>
+                <span style={{ color: '#3d5068', fontSize: '11px' }}>due {d === 0 ? 'today' : `in ${d}d`}</span>
+              </Link>
+            );
+          })}
+          {noResponseJobs.slice(0, 2).map(j => (
+            <Link key={j.id} href="/tracker" style={{
+              display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none',
+              backgroundColor: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.18)',
+              borderRadius: '8px', padding: '5px 10px',
+            }}>
+              <span style={{ color: '#a78bfa', fontSize: '11px', fontWeight: 600 }}>{j.company}</span>
+              <span style={{ color: '#3d5068', fontSize: '11px' }}>no response · follow up?</span>
+            </Link>
+          ))}
+          {(noResponseJobs.length + thisWeekDeadlines.length > 4) && (
+            <Link href="/tracker" style={{ color: '#f59e0b', fontSize: '11px', textDecoration: 'none' }}>
+              +{noResponseJobs.length + thisWeekDeadlines.length - 4} more →
+            </Link>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
 
         {/* Today's Priorities */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <span style={{ color: '#3a3a3a', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Today&apos;s Priorities</span>
-            <Link href="/tracker" style={{ color: '#2a2a2a', fontSize: '11px', textDecoration: 'none' }}
-              onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#666')}
-              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#2a2a2a')}>
+            <span style={{ color: '#4a5d75', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Priorities</span>
+            <Link href="/tracker" style={{ color: '#3d5068', fontSize: '11px', textDecoration: 'none' }}
+              onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#7a8fa8')}
+              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#3d5068')}>
               View all →
             </Link>
           </div>
 
           {priorities.length === 0 ? (
-            <div style={{ backgroundColor: '#0f0f0f', border: '1px solid #181818', borderRadius: '10px', padding: '28px 20px', textAlign: 'center' }}>
+            <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px', padding: '28px 20px', textAlign: 'center' }}>
               {hasJobs ? (
                 <>
-                  <div style={{ color: '#22c55e', fontSize: '18px', marginBottom: '6px' }}>✓</div>
-                  <div style={{ color: '#2e2e2e', fontSize: '12px' }}>No urgent actions right now.</div>
+                  <div style={{ fontSize: '20px', marginBottom: '6px' }}>✅</div>
+                  <div style={{ color: '#3d5068', fontSize: '12px' }}>All clear — no urgent actions.</div>
                 </>
               ) : (
                 <>
-                  <div style={{ color: '#1e1e1e', fontSize: '30px', marginBottom: '8px' }}>→</div>
-                  <div style={{ color: '#2e2e2e', fontSize: '12px', marginBottom: '10px' }}>Start by importing a job.</div>
+                  <div style={{ color: '#3d5068', fontSize: '12px', marginBottom: '12px' }}>Start by importing a job.</div>
                   <Link href="/tracker" style={{
-                    display: 'inline-block', backgroundColor: '#d97706', color: '#000',
-                    borderRadius: '6px', padding: '6px 14px', fontSize: '11px', fontWeight: 700, textDecoration: 'none',
+                    display: 'inline-block',
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    color: '#000', borderRadius: '8px', padding: '7px 16px',
+                    fontSize: '11px', fontWeight: 700, textDecoration: 'none',
                   }}>Import Job →</Link>
                 </>
               )}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {priorities.slice(0, 6).map((p, i) => {
+              {priorities.slice(0, 5).map((p, i) => {
                 const c = LEVEL_CFG[p.level];
                 return (
                   <Link key={i} href={p.href} style={{
                     display: 'flex', alignItems: 'center', gap: '10px',
                     backgroundColor: c.bg, border: `1px solid ${c.border}`,
-                    borderRadius: '8px', padding: '10px 12px', textDecoration: 'none',
+                    borderRadius: '10px', padding: '10px 12px', textDecoration: 'none',
+                    transition: 'opacity 0.15s',
                   }}
-                    onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.opacity = '0.75')}
-                    onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.opacity = '1')}>
+                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
                     <div style={{ flexShrink: 0 }}>{c.icon}</div>
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ color: '#d0d0d0', fontSize: '12px', fontWeight: 600, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.label}</div>
-                      <div style={{ color: '#444', fontSize: '11px', marginTop: '1px' }}>{p.sub}</div>
+                      <div style={{ color: '#d8e2f0', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.label}</div>
+                      <div style={{ color: '#4a5d75', fontSize: '11px', marginTop: '1px' }}>{p.sub}</div>
                     </div>
-                    <span style={{ fontSize: '9px', fontWeight: 700, color: c.color, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{c.tag}</span>
+                    <span style={{ fontSize: '9px', fontWeight: 700, color: c.color, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 7px', borderRadius: '20px', backgroundColor: c.bg, border: `1px solid ${c.border}` }}>{c.tag}</span>
                   </Link>
                 );
               })}
@@ -258,61 +308,60 @@ export default function DashboardPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#3a3a3a', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Weekly Brief</span>
-              {briefAge && !briefLoading && (
-                <span style={{ color: '#222', fontSize: '10px' }}>· {briefAge}</span>
-              )}
+              <span style={{ color: '#4a5d75', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Weekly Brief</span>
+              {briefAge && !briefLoading && <span style={{ color: '#2d3f58', fontSize: '10px' }}>· {briefAge}</span>}
             </div>
             <button onClick={() => loadBrief(true)} disabled={briefLoading} style={{
               display: 'flex', alignItems: 'center', gap: '4px',
-              backgroundColor: 'transparent', color: '#2a2a2a', border: 'none',
+              backgroundColor: 'transparent', color: '#3d5068', border: 'none',
               padding: '2px', fontSize: '10px', cursor: briefLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
             }}
-              onMouseEnter={e => !briefLoading && ((e.currentTarget as HTMLButtonElement).style.color = '#888')}
-              onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = '#2a2a2a')}
+              onMouseEnter={e => !briefLoading && ((e.currentTarget as HTMLButtonElement).style.color = '#7a8fa8')}
+              onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = '#3d5068')}
             >
               <RefreshCw size={11} style={briefLoading ? { animation: 'spin 1s linear infinite' } : {}} />
             </button>
           </div>
 
           {briefLoading && !brief && (
-            <div style={{ backgroundColor: '#0f0f0f', border: '1px solid #181818', borderRadius: '10px', padding: '32px 20px', textAlign: 'center' }}>
-              <RefreshCw size={14} color="#333" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
-              <div style={{ color: '#2a2a2a', fontSize: '12px' }}>Generating your brief…</div>
+            <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
+              <RefreshCw size={14} color="#3d5068" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px', display: 'block' }} />
+              <div style={{ color: '#3d5068', fontSize: '12px' }}>Generating your brief…</div>
             </div>
           )}
 
           {!brief && !briefLoading && (
-            <div style={{ backgroundColor: '#0f0f0f', border: '1px solid #181818', borderRadius: '10px', padding: '32px 20px', textAlign: 'center' }}>
-              <div style={{ color: '#2a2a2a', fontSize: '12px', marginBottom: '10px' }}>Your weekly brief wasn&apos;t loaded.</div>
+            <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
+              <div style={{ color: '#3d5068', fontSize: '12px', marginBottom: '12px' }}>Your weekly brief wasn&apos;t loaded.</div>
               <button onClick={() => loadBrief(true)} style={{
-                backgroundColor: '#161616', color: '#666', border: '1px solid #1e1e1e',
-                borderRadius: '6px', padding: '6px 14px', fontSize: '11px', fontWeight: 500,
+                backgroundColor: '#151e2e', color: '#7a8fa8', border: '1px solid #1e2839',
+                borderRadius: '8px', padding: '6px 14px', fontSize: '11px', fontWeight: 500,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}>Generate</button>
             </div>
           )}
 
           {brief && (
-            <div style={{ backgroundColor: '#0f0f0f', border: '1px solid #181818', borderRadius: '10px', padding: '16px', animation: 'fadeIn 0.3s ease', maxHeight: '300px', overflowY: 'auto' }}>
-              <p style={{ color: '#d8d8d8', fontSize: '12px', fontWeight: 600, margin: '0 0 12px', lineHeight: 1.55 }}>{brief.headline}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px', padding: '16px', animation: 'fadeIn 0.3s ease', maxHeight: '300px', overflowY: 'auto' }}>
+              <p style={{ color: '#c8d5e8', fontSize: '12px', fontWeight: 600, margin: '0 0 12px', lineHeight: 1.6 }}>{brief.headline}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
                 {brief.priority_actions?.slice(0, 3).map((a, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '7px', alignItems: 'flex-start' }}>
+                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                     <span style={{
-                      fontSize: '9px', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', flexShrink: 0,
+                      fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '20px', flexShrink: 0,
                       marginTop: '1px', textTransform: 'uppercase', letterSpacing: '0.05em',
-                      backgroundColor: a.urgency === 'today' ? '#3f0f0f' : a.urgency === 'this-week' ? '#2a1900' : '#131313',
-                      color: a.urgency === 'today' ? '#f87171' : a.urgency === 'this-week' ? '#fbbf24' : '#444',
+                      backgroundColor: a.urgency === 'today' ? 'rgba(248,113,113,0.12)' : a.urgency === 'this-week' ? 'rgba(251,191,36,0.12)' : 'rgba(122,143,168,0.08)',
+                      color: a.urgency === 'today' ? '#f87171' : a.urgency === 'this-week' ? '#fbbf24' : '#4a5d75',
+                      border: `1px solid ${a.urgency === 'today' ? 'rgba(248,113,113,0.25)' : a.urgency === 'this-week' ? 'rgba(251,191,36,0.25)' : '#1e2839'}`,
                     }}>{a.urgency}</span>
-                    <div style={{ color: '#888', fontSize: '12px', lineHeight: 1.4 }}>{a.action}</div>
+                    <div style={{ color: '#7a8fa8', fontSize: '12px', lineHeight: 1.5 }}>{a.action}</div>
                   </div>
                 ))}
               </div>
               {brief.this_week_focus && (
-                <div style={{ borderTop: '1px solid #181818', marginTop: '12px', paddingTop: '12px' }}>
-                  <div style={{ color: '#2e2e2e', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '5px' }}>Focus</div>
-                  <p style={{ color: '#666', fontSize: '11px', margin: 0, lineHeight: 1.6 }}>{brief.this_week_focus}</p>
+                <div style={{ borderTop: '1px solid #1e2839', marginTop: '12px', paddingTop: '12px' }}>
+                  <div style={{ color: '#3d5068', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '5px' }}>This Week</div>
+                  <p style={{ color: '#4a5d75', fontSize: '11px', margin: 0, lineHeight: 1.65 }}>{brief.this_week_focus}</p>
                 </div>
               )}
             </div>
@@ -323,35 +372,34 @@ export default function DashboardPage() {
       {/* Recent Jobs */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span style={{ color: '#3a3a3a', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Recent Jobs</span>
-          <Link href="/tracker" style={{ color: '#2a2a2a', fontSize: '11px', textDecoration: 'none' }}
-            onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#666')}
-            onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#2a2a2a')}>
+          <span style={{ color: '#4a5d75', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Recent Jobs</span>
+          <Link href="/tracker" style={{ color: '#3d5068', fontSize: '11px', textDecoration: 'none' }}
+            onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#7a8fa8')}
+            onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#3d5068')}>
             View all →
           </Link>
         </div>
 
         {recentJobs.length === 0 ? (
-          <div style={{ backgroundColor: '#0f0f0f', border: '1px solid #181818', borderRadius: '10px', padding: '24px 20px', textAlign: 'center' }}>
-            <div style={{ color: '#1e1e1e', fontSize: '12px' }}>No jobs tracked yet — import one to get started.</div>
+          <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px', padding: '24px 20px', textAlign: 'center' }}>
+            <div style={{ color: '#3d5068', fontSize: '12px' }}>No jobs tracked yet — import one to get started.</div>
           </div>
         ) : (
-          <div style={{ backgroundColor: '#0f0f0f', border: '1px solid #181818', borderRadius: '10px', overflow: 'hidden' }}>
+          <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px', overflow: 'hidden' }}>
             {recentJobs.map((job, i) => {
               const sc = STATUS_CFG[job.status] || STATUS_CFG.saved;
               return (
                 <Link key={job.id} href="/tracker" style={{
                   display: 'flex', alignItems: 'center', gap: '14px',
                   padding: '12px 16px', textDecoration: 'none',
-                  borderBottom: i < recentJobs.length - 1 ? '1px solid #141414' : 'none',
-                  backgroundColor: 'transparent',
+                  borderBottom: i < recentJobs.length - 1 ? '1px solid #131c2b' : 'none',
+                  backgroundColor: 'transparent', transition: 'background 0.1s',
                 }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#121212')}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#151e2e')}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
-                  {/* Company badge */}
                   <div style={{
-                    width: '30px', height: '30px', borderRadius: '7px', flexShrink: 0,
+                    width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
                     backgroundColor: companyColor(job.company),
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px',
@@ -359,31 +407,27 @@ export default function DashboardPage() {
                     {job.company.slice(0, 2).toUpperCase()}
                   </div>
 
-                  {/* Job info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: '#d0d0d0', fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company}</div>
-                    <div style={{ color: '#444', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
+                    <div style={{ color: '#c8d5e8', fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company}</div>
+                    <div style={{ color: '#4a5d75', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
                   </div>
 
-                  {/* Score */}
                   {job.match_score != null && (
                     <div style={{ fontSize: '12px', fontWeight: 700, color: scoreColor(job.match_score), flexShrink: 0 }}>
                       {job.match_score}/10
                     </div>
                   )}
 
-                  {/* Status badge */}
                   <span style={{
-                    fontSize: '10px', fontWeight: 600, padding: '3px 8px', borderRadius: '4px', flexShrink: 0,
+                    fontSize: '10px', fontWeight: 600, padding: '3px 9px', borderRadius: '20px', flexShrink: 0,
                     backgroundColor: sc.bg, color: sc.color,
                   }}>{sc.label}</span>
 
-                  {/* Deadline */}
                   {job.deadline && (() => {
                     const days = deadlineDays(job.deadline);
                     if (days < 0 || days > 14) return null;
                     return (
-                      <span style={{ fontSize: '10px', color: days <= 3 ? '#ef4444' : '#555', flexShrink: 0, minWidth: '40px', textAlign: 'right' }}>
+                      <span style={{ fontSize: '10px', color: days <= 3 ? '#f87171' : '#4a5d75', flexShrink: 0, minWidth: '38px', textAlign: 'right' }}>
                         {days === 0 ? 'Today' : `${days}d`}
                       </span>
                     );
@@ -396,11 +440,4 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-}
-
-const BADGE_COLORS = ['#7c3aed','#2563eb','#0891b2','#059669','#d97706','#dc2626','#db2777','#7c3aed','#4f46e5','#0284c7','#16a34a','#ca8a04'];
-function companyColor(name: string) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
-  return BADGE_COLORS[Math.abs(h) % BADGE_COLORS.length];
 }

@@ -40,11 +40,11 @@ function getCompanyColor(name: string): [string, string] {
 }
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; border: string }> = {
-  saved:        { bg: '#1e1e1e', text: '#666', border: '#2a2a2a' },
-  applied:      { bg: '#1e3a8a', text: '#93c5fd', border: '#1d4ed8' },
-  interviewing: { bg: '#78350f', text: '#fde68a', border: '#92400e' },
-  offer:        { bg: '#14532d', text: '#86efac', border: '#166534' },
-  rejected:     { bg: '#450a0a', text: '#fca5a5', border: '#7f1d1d' },
+  saved:        { bg: 'rgba(122,143,168,0.1)', text: '#7a8fa8', border: 'rgba(122,143,168,0.2)' },
+  applied:      { bg: 'rgba(129,140,248,0.1)', text: '#818cf8', border: 'rgba(129,140,248,0.25)' },
+  interviewing: { bg: 'rgba(245,158,11,0.1)',  text: '#f59e0b', border: 'rgba(245,158,11,0.25)' },
+  offer:        { bg: 'rgba(52,211,153,0.1)',   text: '#34d399', border: 'rgba(52,211,153,0.25)' },
+  rejected:     { bg: 'rgba(248,113,113,0.1)',  text: '#f87171', border: 'rgba(248,113,113,0.25)' },
 };
 
 function scoreColor(s: number) {
@@ -82,19 +82,19 @@ function CompanyBadge({ company, size = 26 }: { company: string; size?: number }
 }
 
 function PostedDisplay({ date }: { date: string | null }) {
-  if (!date) return <span style={{ color: '#333' }}>—</span>;
+  if (!date) return <span style={{ color: '#2d3f58' }}>—</span>;
   const d = new Date(date); d.setHours(0,0,0,0);
   const today = new Date(); today.setHours(0,0,0,0);
   const diff = Math.round((today.getTime() - d.getTime()) / 86400000);
-  if (diff === 0) return <span style={{ color: '#aaa', fontSize: '11px' }}>Today</span>;
-  if (diff < 0) return <span style={{ color: '#666', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
-  if (diff < 7) return <span style={{ color: '#666', fontSize: '11px' }}>{diff}d ago</span>;
-  if (diff < 30) return <span style={{ color: '#555', fontSize: '11px' }}>{Math.round(diff/7)}w ago</span>;
-  return <span style={{ color: '#444', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
+  if (diff === 0) return <span style={{ color: '#8bacc8', fontSize: '11px' }}>Today</span>;
+  if (diff < 0) return <span style={{ color: '#4a5d75', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
+  if (diff < 7) return <span style={{ color: '#4a5d75', fontSize: '11px' }}>{diff}d ago</span>;
+  if (diff < 30) return <span style={{ color: '#3d5068', fontSize: '11px' }}>{Math.round(diff/7)}w ago</span>;
+  return <span style={{ color: '#3d5068', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
 }
 
 function DeadlineDisplay({ deadline }: { deadline: string | null }) {
-  if (!deadline) return <span style={{ color: '#333' }}>—</span>;
+  if (!deadline) return <span style={{ color: '#2d3f58' }}>—</span>;
   const today = new Date(); today.setHours(0,0,0,0);
   const d = new Date(deadline); d.setHours(0,0,0,0);
   const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
@@ -102,8 +102,8 @@ function DeadlineDisplay({ deadline }: { deadline: string | null }) {
   if (diff === 0) return <span style={{ color: '#ef4444', fontSize: '11px', fontWeight: 700 }}>Today!</span>;
   if (diff <= 3) return <span style={{ color: '#ef4444', fontSize: '11px', fontWeight: 600 }}>{diff}d left</span>;
   if (diff <= 7) return <span style={{ color: '#f59e0b', fontSize: '11px' }}>{diff}d left</span>;
-  if (diff <= 30) return <span style={{ color: '#666', fontSize: '11px' }}>{diff}d</span>;
-  return <span style={{ color: '#444', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
+  if (diff <= 30) return <span style={{ color: '#4a5d75', fontSize: '11px' }}>{diff}d</span>;
+  return <span style={{ color: '#3d5068', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
 }
 
 function StatusBadge({ job, onStatusChange }: { job: Job; onStatusChange: (id: number, status: string) => void }) {
@@ -127,7 +127,7 @@ function StatusBadge({ job, onStatusChange }: { job: Job; onStatusChange: (id: n
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 100,
-          backgroundColor: '#111', border: '1px solid #222', borderRadius: '8px',
+          backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px',
           overflow: 'hidden', minWidth: '120px', boxShadow: '0 8px 32px rgba(0,0,0,0.7)',
         }}>
           {STATUS_OPTIONS.map(st => {
@@ -136,10 +136,10 @@ function StatusBadge({ job, onStatusChange }: { job: Job; onStatusChange: (id: n
               <div key={st} onClick={e => { e.stopPropagation(); onStatusChange(job.id, st); setOpen(false); }} style={{
                 padding: '8px 14px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
                 color: ss.text, textTransform: 'capitalize',
-                backgroundColor: job.status === st ? '#1e1e1e' : 'transparent',
+                backgroundColor: job.status === st ? '#1e2839' : 'transparent',
               }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1a1a1a')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = job.status === st ? '#1e1e1e' : 'transparent')}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#162030')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = job.status === st ? '#1e2839' : 'transparent')}
               >{st}</div>
             );
           })}
@@ -158,8 +158,8 @@ const EMPTY_FORM = {
 type FormData = typeof EMPTY_FORM;
 
 const formInput: React.CSSProperties = {
-  width: '100%', backgroundColor: '#0d0d0d', border: '1px solid #222',
-  borderRadius: '6px', padding: '8px 10px', color: '#e8e8e8', fontSize: '13px',
+  width: '100%', backgroundColor: '#080c13', border: '1px solid #1e2839',
+  borderRadius: '10px', padding: '8px 10px', color: '#e2e8f4', fontSize: '13px',
   outline: 'none', boxSizing: 'border-box',
 };
 
@@ -169,12 +169,12 @@ function Field({ label, field, form, setForm, type = 'text' }: {
 }) {
   return (
     <div>
-      <label style={{ display: 'block', color: '#555', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>{label}</label>
+      <label style={{ display: 'block', color: '#3d5068', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>{label}</label>
       <input type={type} value={form[field]}
         onChange={e => setForm(p => ({ ...p, [field]: e.target.value }))}
         style={formInput}
         onFocus={e => (e.target.style.borderColor = '#f59e0b')}
-        onBlur={e => (e.target.style.borderColor = '#222')} />
+        onBlur={e => (e.target.style.borderColor = '#1e2839')} />
     </div>
   );
 }
@@ -467,7 +467,7 @@ export default function TrackerPage() {
   };
 
   const SortIcon = ({ col }: { col: string }) => sortBy !== col ? null : <span style={{ marginLeft: '3px', fontSize: '9px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
-  const colHdr = (col: string): React.CSSProperties => ({ cursor: 'pointer', userSelect: 'none', color: sortBy === col ? '#f59e0b' : '#404040', display: 'flex', alignItems: 'center' });
+  const colHdr = (col: string): React.CSSProperties => ({ cursor: 'pointer', userSelect: 'none', color: sortBy === col ? '#f59e0b' : '#3d5068', display: 'flex', alignItems: 'center' });
 
   const GRID = '28px 1fr 90px 95px 46px 90px 90px 72px';
   const GAP = '0 8px';
@@ -475,15 +475,15 @@ export default function TrackerPage() {
   const isStale = (job: Job) => job.status === 'applied' && !!job.status_updated_at && (Date.now() - new Date(job.status_updated_at).getTime()) / 86400000 >= 14;
 
   return (
-    <div style={{ padding: '28px 32px', minHeight: '100vh', backgroundColor: '#0a0a0a' }}>
+    <div style={{ padding: '28px 32px', minHeight: '100vh', backgroundColor: '#0d1117' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
-          <h1 style={{ color: '#f0f0f0', fontSize: '18px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Job Tracker</h1>
+          <h1 style={{ color: '#e8f0fc', fontSize: '18px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Job Tracker</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '5px' }}>
             {[
-              { label: 'tracked', value: stats.total, color: '#666', always: true },
+              { label: 'tracked', value: stats.total, color: '#4a5d75', always: true },
               { label: 'applied', value: stats.applied, color: '#93c5fd', always: false },
               { label: 'interviewing', value: stats.interviewing, color: '#fde68a', always: false },
               { label: stats.offers === 1 ? 'offer' : 'offers', value: stats.offers, color: '#86efac', always: false },
@@ -491,7 +491,7 @@ export default function TrackerPage() {
             ].filter(s => s.always || s.value > 0).map(({ label, value, color }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
                 <span style={{ color, fontWeight: 700, fontSize: '13px', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-                <span style={{ color: '#3a3a3a', fontSize: '11px' }}>{label}</span>
+                <span style={{ color: '#2d3f58', fontSize: '11px' }}>{label}</span>
               </div>
             ))}
           </div>
@@ -507,7 +507,7 @@ export default function TrackerPage() {
           </button>
           <button onClick={() => { setEditingJob(null); setForm(EMPTY_FORM); setShowModal(true); }} style={{
             display: 'flex', alignItems: 'center', gap: '5px',
-            backgroundColor: '#111', color: '#555', border: '1px solid #1e1e1e',
+            backgroundColor: '#111827', color: '#3d5068', border: '1px solid #1e2839',
             borderRadius: '7px', padding: '8px 12px', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
           }}>
             <Plus size={12} /> Manual
@@ -522,14 +522,14 @@ export default function TrackerPage() {
           <input
             type="text" placeholder="Search..."
             value={searchText} onChange={e => setSearchText(e.target.value)}
-            style={{ backgroundColor: '#0f0f0f', border: '1px solid #1e1e1e', borderRadius: '6px', padding: '6px 12px', color: '#e8e8e8', fontSize: '12px', outline: 'none', width: '160px', flexShrink: 0 }}
+            style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '10px', padding: '6px 12px', color: '#e2e8f4', fontSize: '12px', outline: 'none', width: '160px', flexShrink: 0 }}
           />
           <div style={{ display: 'flex', gap: '4px' }}>
             {['all','saved','applied','interviewing','offer','rejected'].map(s => (
               <button key={s} onClick={() => setStatusFilter(s)} style={{
-                backgroundColor: statusFilter === s ? '#f59e0b' : '#0f0f0f',
-                color: statusFilter === s ? '#000' : '#505050',
-                border: `1px solid ${statusFilter === s ? '#f59e0b' : '#1e1e1e'}`,
+                backgroundColor: statusFilter === s ? '#f59e0b' : '#111827',
+                color: statusFilter === s ? '#000' : '#4a5d75',
+                border: `1px solid ${statusFilter === s ? '#f59e0b' : '#1e2839'}`,
                 borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize', transition: 'all 0.1s',
               }}>{s === 'all' ? 'All' : s}</button>
             ))}
@@ -541,19 +541,19 @@ export default function TrackerPage() {
             const label = v === 'all' ? 'All Types' : TYPE_OPTIONS.find(t => t.value === v)?.label || v;
             return (
               <button key={v} onClick={() => setTypeFilter(v)} style={{
-                backgroundColor: typeFilter === v ? '#7c3aed' : '#0f0f0f',
-                color: typeFilter === v ? '#fff' : '#505050',
-                border: `1px solid ${typeFilter === v ? '#7c3aed' : '#1e1e1e'}`,
+                backgroundColor: typeFilter === v ? '#7c3aed' : '#111827',
+                color: typeFilter === v ? '#fff' : '#4a5d75',
+                border: `1px solid ${typeFilter === v ? '#7c3aed' : '#1e2839'}`,
                 borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.1s',
               }}>{label}</button>
             );
           })}
-          <div style={{ width: '1px', height: '16px', backgroundColor: '#1e1e1e', margin: '0 4px' }} />
+          <div style={{ width: '1px', height: '16px', backgroundColor: '#1e2839', margin: '0 4px' }} />
           <button onClick={() => setStarFilter(p => !p)} style={{
             display: 'flex', alignItems: 'center', gap: '4px',
-            backgroundColor: starFilter ? '#161200' : '#0f0f0f',
-            color: starFilter ? '#f59e0b' : '#505050',
-            border: `1px solid ${starFilter ? '#713f12' : '#1e1e1e'}`,
+            backgroundColor: starFilter ? '#161200' : '#111827',
+            color: starFilter ? '#f59e0b' : '#4a5d75',
+            border: `1px solid ${starFilter ? '#713f12' : '#1e2839'}`,
             borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.1s',
           }}>
             <Star size={11} fill={starFilter ? '#f59e0b' : 'none'} /> Starred
@@ -561,19 +561,19 @@ export default function TrackerPage() {
         </div>
       </div>
       {(searchText || statusFilter !== 'all' || typeFilter !== 'all' || starFilter) && (
-        <div style={{ color: '#505050', fontSize: '11px', marginBottom: '10px' }}>
+        <div style={{ color: '#3d5068', fontSize: '11px', marginBottom: '10px' }}>
           {sortedJobs.length} result{sortedJobs.length !== 1 ? 's' : ''}
         </div>
       )}
 
       {/* Table */}
       {loading ? (
-        <div style={{ color: '#333', textAlign: 'center', padding: '80px', fontSize: '13px' }}>Loading...</div>
+        <div style={{ color: '#2d3f58', textAlign: 'center', padding: '80px', fontSize: '13px' }}>Loading...</div>
       ) : jobs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px 32px' }}>
-          <LinkIcon size={28} color="#1a1a1a" style={{ marginBottom: '16px' }} />
-          <div style={{ color: '#444', fontSize: '14px', marginBottom: '6px' }}>No jobs tracked yet</div>
-          <div style={{ color: '#2a2a2a', fontSize: '12px', marginBottom: '24px' }}>Paste a job posting URL to get started</div>
+          <LinkIcon size={28} color="#162030" style={{ marginBottom: '16px' }} />
+          <div style={{ color: '#3d5068', fontSize: '14px', marginBottom: '6px' }}>No jobs tracked yet</div>
+          <div style={{ color: '#2d3f58', fontSize: '12px', marginBottom: '24px' }}>Paste a job posting URL to get started</div>
           <button onClick={openImport} style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
             background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000', border: 'none',
@@ -583,11 +583,11 @@ export default function TrackerPage() {
           </button>
         </div>
       ) : (
-        <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '10px', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: '#080c13', border: '1px solid #162030', borderRadius: '16px', overflow: 'hidden' }}>
           {/* Column headers */}
           <div style={{
             display: 'grid', gridTemplateColumns: GRID, gap: GAP,
-            padding: '9px 16px', borderBottom: '1px solid #161616',
+            padding: '9px 16px', borderBottom: '1px solid #151e2e',
             fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
           }}>
             <div />
@@ -597,7 +597,7 @@ export default function TrackerPage() {
             <div style={colHdr('match_score')} onClick={() => handleSort('match_score')}>Score <SortIcon col="match_score" /></div>
             <div style={colHdr('deadline')} onClick={() => handleSort('deadline')}>Deadline <SortIcon col="deadline" /></div>
             <div style={colHdr('posting_date')} onClick={() => handleSort('posting_date')}>Posted <SortIcon col="posting_date" /></div>
-            <div style={{ color: '#404040' }}>Actions</div>
+            <div style={{ color: '#3d5068' }}>Actions</div>
           </div>
 
           {Object.entries(grouped).map(([company, companyJobs], groupIdx) => {
@@ -610,16 +610,16 @@ export default function TrackerPage() {
                 <div onClick={() => setExpandedCompanies(prev => { const n = new Set(prev); n.has(company) ? n.delete(company) : n.add(company); return n; })}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '10px',
-                    padding: '11px 16px', backgroundColor: '#111',
-                    borderTop: groupIdx > 0 ? '1px solid #161616' : undefined,
-                    borderBottom: isExpanded ? '1px solid #161616' : (!isLast ? '1px solid #161616' : undefined),
+                    padding: '11px 16px', backgroundColor: '#111827',
+                    borderTop: groupIdx > 0 ? '1px solid #151e2e' : undefined,
+                    borderBottom: isExpanded ? '1px solid #151e2e' : (!isLast ? '1px solid #151e2e' : undefined),
                     borderLeft: `3px solid ${badgeBg}`,
                     cursor: 'pointer', userSelect: 'none',
                   }}>
-                  {isExpanded ? <ChevronDown size={11} color="#444" /> : <ChevronRight size={11} color="#444" />}
+                  {isExpanded ? <ChevronDown size={11} color="#3d5068" /> : <ChevronRight size={11} color="#3d5068" />}
                   <CompanyBadge company={company} size={22} />
-                  <span style={{ color: '#d0d0d0', fontWeight: 700, fontSize: '13px' }}>{company}</span>
-                  <span style={{ backgroundColor: '#161616', color: '#444', borderRadius: '10px', padding: '1px 7px', fontSize: '10px', fontWeight: 500 }}>
+                  <span style={{ color: '#c8d5e8', fontWeight: 700, fontSize: '13px' }}>{company}</span>
+                  <span style={{ backgroundColor: '#151e2e', color: '#3d5068', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: 500 }}>
                     {companyJobs.length} {companyJobs.length === 1 ? 'role' : 'roles'}
                   </span>
                   {companyJobs.some(j => j.starred) && <Star size={11} color="#f59e0b" fill="#f59e0b" />}
@@ -638,26 +638,26 @@ export default function TrackerPage() {
                         style={{
                           display: 'grid', gridTemplateColumns: GRID, gap: GAP, alignItems: 'center',
                           padding: '12px 16px',
-                          borderBottom: (isJobExpanded || !isLastInGroup) ? '1px solid #141414' : undefined,
+                          borderBottom: (isJobExpanded || !isLastInGroup) ? '1px solid #131c2b' : undefined,
                           cursor: 'pointer', transition: 'background 0.1s',
-                          backgroundColor: isJobExpanded ? '#111' : 'transparent',
+                          backgroundColor: isJobExpanded ? '#111827' : 'transparent',
                         }}
-                        onMouseEnter={e => !isJobExpanded && (e.currentTarget.style.backgroundColor = '#0f0f0f')}
+                        onMouseEnter={e => !isJobExpanded && (e.currentTarget.style.backgroundColor = '#111827')}
                         onMouseLeave={e => !isJobExpanded && (e.currentTarget.style.backgroundColor = 'transparent')}
                       >
                         {/* Star */}
                         <div onClick={e => { e.stopPropagation(); handleStarToggle(job.id, job.starred); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                          <Star size={13} color={job.starred ? '#f59e0b' : '#2a2a2a'} fill={job.starred ? '#f59e0b' : 'none'}
+                          <Star size={13} color={job.starred ? '#f59e0b' : '#2d3f58'} fill={job.starred ? '#f59e0b' : 'none'}
                             style={{ transition: 'all 0.15s' }} />
                         </div>
 
                         {/* Title */}
                         <div>
-                          <div style={{ color: '#e0e0e0', fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ color: '#e2e8f4', fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {job.title}
                           </div>
                           {isStale(job) && (
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '3px', backgroundColor: '#1a0d2e', borderRadius: '4px', padding: '1px 6px' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '3px', backgroundColor: '#1a0d2e', borderRadius: '20px', padding: '1px 6px' }}>
                               <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#a855f7' }} />
                               <span style={{ color: '#a855f7', fontSize: '10px', fontWeight: 600 }}>Follow up</span>
                             </div>
@@ -666,7 +666,7 @@ export default function TrackerPage() {
 
                         {/* Type */}
                         <div>
-                          <span style={{ color: TYPE_COLORS[job.type] || '#555', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em' }}>
+                          <span style={{ color: TYPE_COLORS[job.type] || '#3d5068', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em' }}>
                             {TYPE_OPTIONS.find(t => t.value === job.type)?.label || job.type}
                           </span>
                         </div>
@@ -682,7 +682,7 @@ export default function TrackerPage() {
                             <span style={{ color: job.match_score >= 8 ? '#22c55e' : job.match_score >= 6 ? '#f59e0b' : '#f87171', fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
                               {job.match_score}/10
                             </span>
-                          ) : <span style={{ color: '#282828' }}>—</span>}
+                          ) : <span style={{ color: '#2d3f58' }}>—</span>}
                         </div>
 
                         {/* Deadline */}
@@ -693,16 +693,16 @@ export default function TrackerPage() {
 
                         {/* Actions */}
                         <div style={{ display: 'flex', gap: '2px', alignItems: 'center', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
-                          <button onClick={() => openEdit(job)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#333', padding: '5px', borderRadius: '4px', display: 'flex' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#888')} onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+                          <button onClick={() => openEdit(job)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2d3f58', padding: '5px', borderRadius: '20px', display: 'flex' }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#7a8fa8')} onMouseLeave={e => (e.currentTarget.style.color = '#2d3f58')}>
                             <Edit2 size={11} />
                           </button>
-                          <button onClick={() => window.location.href = `/coach?prefill=cover-letter&company=${encodeURIComponent(job.company)}&title=${encodeURIComponent(job.title)}`} title="Cover letter" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#333', padding: '5px', borderRadius: '4px', display: 'flex' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#f59e0b')} onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+                          <button onClick={() => window.location.href = `/coach?prefill=cover-letter&company=${encodeURIComponent(job.company)}&title=${encodeURIComponent(job.title)}`} title="Cover letter" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2d3f58', padding: '5px', borderRadius: '20px', display: 'flex' }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#f59e0b')} onMouseLeave={e => (e.currentTarget.style.color = '#2d3f58')}>
                             <FileText size={11} />
                           </button>
-                          <button onClick={() => handleDelete(job.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#333', padding: '5px', borderRadius: '4px', display: 'flex' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')} onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+                          <button onClick={() => handleDelete(job.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2d3f58', padding: '5px', borderRadius: '20px', display: 'flex' }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')} onMouseLeave={e => (e.currentTarget.style.color = '#2d3f58')}>
                             <Trash2 size={11} />
                           </button>
                         </div>
@@ -710,9 +710,9 @@ export default function TrackerPage() {
 
                       {/* Expanded panel */}
                       {isJobExpanded && (
-                        <div style={{ backgroundColor: '#0c0c0c', borderBottom: '1px solid #1a1a1a', padding: '0 16px 24px' }}>
+                        <div style={{ backgroundColor: '#080c13', borderBottom: '1px solid #162030', padding: '0 16px 24px' }}>
                           {/* Tabs */}
-                          <div style={{ display: 'flex', gap: '0px', borderBottom: '1px solid #1a1a1a', marginBottom: '20px', paddingTop: '14px', flexWrap: 'nowrap', overflowX: 'auto' }}>
+                          <div style={{ display: 'flex', gap: '0px', borderBottom: '1px solid #162030', marginBottom: '20px', paddingTop: '14px', flexWrap: 'nowrap', overflowX: 'auto' }}>
                             {[
                               { id: 'overview',      label: 'Overview' },
                               { id: 'description',   label: 'Job Details' },
@@ -723,14 +723,14 @@ export default function TrackerPage() {
                             ].map(tab => (
                               <button key={tab.id} onClick={() => setTab(job.id, tab.id)} style={{
                                 backgroundColor: 'transparent',
-                                color: activeTab === tab.id ? '#f59e0b' : '#404040',
+                                color: activeTab === tab.id ? '#f59e0b' : '#3d5068',
                                 border: 'none', borderBottom: activeTab === tab.id ? '2px solid #f59e0b' : '2px solid transparent',
                                 padding: '6px 14px', fontSize: '11px', fontWeight: activeTab === tab.id ? 700 : 400,
                                 cursor: 'pointer', fontFamily: 'inherit', marginBottom: '-1px', transition: 'color 0.1s',
                                 whiteSpace: 'nowrap',
                               }}
-                                onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.color = '#888'; }}
-                                onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.color = '#404040'; }}
+                                onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.color = '#7a8fa8'; }}
+                                onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.color = '#3d5068'; }}
                               >{tab.label}</button>
                             ))}
                           </div>
@@ -751,24 +751,24 @@ export default function TrackerPage() {
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px 20px', marginBottom: '14px' }}>
                                 {[
                                   { label: 'Location', value: job.location },
-                                  { label: 'Deadline', value: job.deadline ? <><span style={{ color: '#aaa' }}>{job.deadline}</span> <DeadlineDisplay deadline={job.deadline} /></> : null },
+                                  { label: 'Deadline', value: job.deadline ? <><span style={{ color: '#8bacc8' }}>{job.deadline}</span> <DeadlineDisplay deadline={job.deadline} /></> : null },
                                   { label: 'Salary', value: job.salary_range },
-                                  { label: 'Type', value: job.type ? <span style={{ color: TYPE_COLORS[job.type] || '#888', fontWeight: 700 }}>{TYPE_OPTIONS.find(t => t.value === job.type)?.label}</span> : null },
+                                  { label: 'Type', value: job.type ? <span style={{ color: TYPE_COLORS[job.type] || '#7a8fa8', fontWeight: 700 }}>{TYPE_OPTIONS.find(t => t.value === job.type)?.label}</span> : null },
                                   { label: 'Source', value: job.source },
                                   { label: 'Posted', value: job.posting_date },
                                 ].map(({ label, value }) => (
                                   value ? (
                                     <div key={label}>
-                                      <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>{label}</div>
-                                      <div style={{ color: '#aaa', fontSize: '12px', lineHeight: 1.4 }}>{value}</div>
+                                      <div style={{ color: '#3d5068', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>{label}</div>
+                                      <div style={{ color: '#8bacc8', fontSize: '12px', lineHeight: 1.4 }}>{value}</div>
                                     </div>
                                   ) : null
                                 ))}
                               </div>
                               {job.notes && (
-                                <div style={{ backgroundColor: '#111', borderRadius: '7px', padding: '12px 14px' }}>
-                                  <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '6px' }}>Notes</div>
-                                  <div style={{ color: '#888', fontSize: '12px', lineHeight: 1.6 }}>{job.notes}</div>
+                                <div style={{ backgroundColor: '#111827', borderRadius: '14px', padding: '12px 14px' }}>
+                                  <div style={{ color: '#3d5068', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '6px' }}>Notes</div>
+                                  <div style={{ color: '#7a8fa8', fontSize: '12px', lineHeight: 1.6 }}>{job.notes}</div>
                                 </div>
                               )}
                             </div>
@@ -781,13 +781,13 @@ export default function TrackerPage() {
                             return (
                               <div>
                                 {(!details || details === 'loading') && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#444', fontSize: '12px', padding: '20px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#3d5068', fontSize: '12px', padding: '20px 0' }}>
                                     <Loader size={14} color="#f59e0b" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                     Generating job breakdown...
                                   </div>
                                 )}
                                 {details === 'error' && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '12px', padding: '12px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4a5d75', fontSize: '12px', padding: '12px 0' }}>
                                     <AlertCircle size={13} color="#ef4444" />
                                     Failed to generate.{' '}
                                     <button onClick={() => refreshDetails(job.id)} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
@@ -800,41 +800,41 @@ export default function TrackerPage() {
 
                                       {/* Company + Role row */}
                                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                                        <div style={{ backgroundColor: '#111', borderRadius: '8px', padding: '14px 16px' }}>
-                                          <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Company</div>
-                                          <p style={{ color: '#aaa', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.company_overview}</p>
+                                        <div style={{ backgroundColor: '#111827', borderRadius: '14px', padding: '14px 16px' }}>
+                                          <div style={{ color: '#3d5068', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Company</div>
+                                          <p style={{ color: '#8bacc8', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.company_overview}</p>
                                         </div>
-                                        <div style={{ backgroundColor: '#111', borderRadius: '8px', padding: '14px 16px' }}>
-                                          <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>The Role</div>
-                                          <p style={{ color: '#aaa', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.role_summary}</p>
+                                        <div style={{ backgroundColor: '#111827', borderRadius: '14px', padding: '14px 16px' }}>
+                                          <div style={{ color: '#3d5068', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>The Role</div>
+                                          <p style={{ color: '#8bacc8', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.role_summary}</p>
                                         </div>
                                       </div>
 
                                       {/* Qualifications */}
-                                      <div style={{ backgroundColor: '#111', borderRadius: '8px', padding: '14px 16px' }}>
-                                        <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>What They&apos;re Looking For</div>
+                                      <div style={{ backgroundColor: '#111827', borderRadius: '14px', padding: '14px 16px' }}>
+                                        <div style={{ color: '#3d5068', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>What They&apos;re Looking For</div>
                                         <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                           {d.key_qualifications.map((q, i) => (
-                                            <li key={i} style={{ color: '#999', fontSize: '12px', lineHeight: 1.5 }}>{q}</li>
+                                            <li key={i} style={{ color: '#8bacc8', fontSize: '12px', lineHeight: 1.5 }}>{q}</li>
                                           ))}
                                         </ul>
                                       </div>
 
                                       {/* Your Angle — highlighted */}
-                                      <div style={{ backgroundColor: '#110d00', border: '1px solid #2a1f00', borderRadius: '8px', padding: '14px 16px' }}>
+                                      <div style={{ backgroundColor: '#110d00', border: '1px solid #2a1f00', borderRadius: '14px', padding: '14px 16px' }}>
                                         <div style={{ color: '#f59e0b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>✦ Your Angle</div>
                                         <p style={{ color: '#c8922a', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.what_to_highlight}</p>
                                       </div>
 
                                       {/* Footer: refresh + raw JD toggle */}
                                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <button onClick={() => refreshDetails(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
-                                          onMouseEnter={e => (e.currentTarget.style.color = '#666')} onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+                                        <button onClick={() => refreshDetails(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#2d3f58', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
+                                          onMouseEnter={e => (e.currentTarget.style.color = '#4a5d75')} onMouseLeave={e => (e.currentTarget.style.color = '#2d3f58')}>
                                           <RotateCcw size={10} /> Regenerate
                                         </button>
                                         {job.description && (
-                                          <button onClick={() => setShowRawJd(p => ({ ...p, [job.id]: !p[job.id] }))} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
-                                            onMouseEnter={e => (e.currentTarget.style.color = '#666')} onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+                                          <button onClick={() => setShowRawJd(p => ({ ...p, [job.id]: !p[job.id] }))} style={{ background: 'none', border: 'none', color: '#2d3f58', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
+                                            onMouseEnter={e => (e.currentTarget.style.color = '#4a5d75')} onMouseLeave={e => (e.currentTarget.style.color = '#2d3f58')}>
                                             {rawVisible ? 'Hide raw JD' : 'View raw JD'}
                                           </button>
                                         )}
@@ -842,8 +842,8 @@ export default function TrackerPage() {
 
                                       {/* Raw JD */}
                                       {rawVisible && job.description && (
-                                        <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', padding: '14px 16px', maxHeight: '280px', overflowY: 'auto' }}>
-                                          <pre style={{ color: '#555', fontSize: '11px', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
+                                        <div style={{ backgroundColor: '#080c13', border: '1px solid #162030', borderRadius: '14px', padding: '14px 16px', maxHeight: '280px', overflowY: 'auto' }}>
+                                          <pre style={{ color: '#3d5068', fontSize: '11px', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
                                             {job.description}
                                           </pre>
                                         </div>
@@ -860,7 +860,7 @@ export default function TrackerPage() {
                           {activeTab === 'score' && (
                             <div>
                               {analysis === 'loading' && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#444', fontSize: '12px', padding: '20px 0' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#3d5068', fontSize: '12px', padding: '20px 0' }}>
                                   <Loader size={14} color="#f59e0b" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                   Analyzing fit against your profile...
                                 </div>
@@ -874,18 +874,18 @@ export default function TrackerPage() {
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                   }}>
                                     <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(job.match_score * 10), lineHeight: 1 }}>{job.match_score * 10}</span>
-                                    <span style={{ fontSize: '10px', color: '#444' }}>/100</span>
+                                    <span style={{ fontSize: '10px', color: '#3d5068' }}>/100</span>
                                   </div>
                                   <div>
-                                    <div style={{ color: '#888', fontSize: '13px', marginBottom: '8px' }}>Score from last analysis.</div>
-                                    <button onClick={() => runAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#111', color: '#f59e0b', border: '1px solid #2a1f00', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                    <div style={{ color: '#7a8fa8', fontSize: '13px', marginBottom: '8px' }}>Score from last analysis.</div>
+                                    <button onClick={() => runAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#111827', color: '#f59e0b', border: '1px solid #2a1f00', borderRadius: '10px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                                       Load full breakdown →
                                     </button>
                                   </div>
                                 </div>
                               )}
                               {analysis === 'error' && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '12px', padding: '12px 0' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4a5d75', fontSize: '12px', padding: '12px 0' }}>
                                   <AlertCircle size={13} color="#ef4444" />
                                   Analysis failed.{' '}
                                   <button onClick={() => refreshAnalysis(job.id)} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
@@ -904,12 +904,12 @@ export default function TrackerPage() {
                                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                       }}>
                                         <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(r.total), lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{r.total}</span>
-                                        <span style={{ fontSize: '10px', color: '#444' }}>/100</span>
+                                        <span style={{ fontSize: '10px', color: '#3d5068' }}>/100</span>
                                       </div>
                                       <div style={{ flex: 1 }}>
-                                        <div style={{ color: '#ccc', fontSize: '13px', lineHeight: 1.6 }}>{r.summary}</div>
-                                        <button onClick={() => refreshAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px', background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
-                                          onMouseEnter={e => (e.currentTarget.style.color = '#666')} onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+                                        <div style={{ color: '#c8d5e8', fontSize: '13px', lineHeight: 1.6 }}>{r.summary}</div>
+                                        <button onClick={() => refreshAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px', background: 'none', border: 'none', color: '#2d3f58', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
+                                          onMouseEnter={e => (e.currentTarget.style.color = '#4a5d75')} onMouseLeave={e => (e.currentTarget.style.color = '#2d3f58')}>
                                           <RotateCcw size={10} /> Refresh
                                         </button>
                                       </div>
@@ -919,18 +919,18 @@ export default function TrackerPage() {
                                       {r.categories.map(cat => (
                                         <div key={cat.name}>
                                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '5px' }}>
-                                            <span style={{ color: '#bbb', fontSize: '12px', fontWeight: 600 }}>{cat.name}</span>
+                                            <span style={{ color: '#c8d5e8', fontSize: '12px', fontWeight: 600 }}>{cat.name}</span>
                                             <span style={{ color: scoreColor(cat.score), fontSize: '13px', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{cat.score}</span>
                                           </div>
-                                          <div style={{ backgroundColor: '#1a1a1a', borderRadius: '4px', height: '4px', overflow: 'hidden', marginBottom: '4px' }}>
+                                          <div style={{ backgroundColor: '#162030', borderRadius: '20px', height: '4px', overflow: 'hidden', marginBottom: '4px' }}>
                                             <div style={{
-                                              width: `${cat.score}%`, height: '100%', borderRadius: '4px',
+                                              width: `${cat.score}%`, height: '100%', borderRadius: '20px',
                                               backgroundColor: scoreColor(cat.score),
                                               boxShadow: `0 0 6px ${scoreGlow(cat.score)}`,
                                               transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1)',
                                             }} />
                                           </div>
-                                          <div style={{ color: '#3a3a3a', fontSize: '11px', lineHeight: 1.5 }}>{cat.rationale}</div>
+                                          <div style={{ color: '#2d3f58', fontSize: '11px', lineHeight: 1.5 }}>{cat.rationale}</div>
                                         </div>
                                       ))}
                                     </div>
@@ -947,7 +947,7 @@ export default function TrackerPage() {
                                       style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '5px',
                                         backgroundColor: 'transparent', color: '#a855f7', border: '1px solid #3b1f6e',
-                                        borderRadius: '6px', padding: '7px 14px', fontSize: '12px', fontWeight: 600,
+                                        borderRadius: '10px', padding: '7px 14px', fontSize: '12px', fontWeight: 600,
                                         cursor: 'pointer', fontFamily: 'inherit',
                                       }}>
                                       <MessageSquare size={12} /> Discuss with Coach
@@ -968,20 +968,20 @@ export default function TrackerPage() {
                               <div>
                                 {/* Tone selector + generate */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                                  <span style={{ color: '#444', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>Tone:</span>
+                                  <span style={{ color: '#3d5068', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>Tone:</span>
                                   {(['professional', 'confident', 'concise'] as const).map(t => (
                                     <button key={t} onClick={() => setCoverLetterTones(p => ({ ...p, [job.id]: t }))} style={{
-                                      backgroundColor: tone === t ? '#1a1200' : '#0f0f0f',
-                                      color: tone === t ? '#f59e0b' : '#505050',
-                                      border: `1px solid ${tone === t ? '#713f12' : '#1e1e1e'}`,
-                                      borderRadius: '5px', padding: '4px 12px', fontSize: '11px', fontWeight: 600,
+                                      backgroundColor: tone === t ? '#1a1200' : '#111827',
+                                      color: tone === t ? '#f59e0b' : '#4a5d75',
+                                      border: `1px solid ${tone === t ? '#713f12' : '#1e2839'}`,
+                                      borderRadius: '20px', padding: '4px 12px', fontSize: '11px', fontWeight: 600,
                                       cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize',
                                     }}>{t}</button>
                                   ))}
                                   <button onClick={() => runCoverLetter(job.id, tone)} disabled={isLoading} style={{
                                     display: 'inline-flex', alignItems: 'center', gap: '5px', marginLeft: 'auto',
-                                    backgroundColor: isLoading ? '#1a1a1a' : '#d97706', color: isLoading ? '#444' : '#000',
-                                    border: 'none', borderRadius: '6px', padding: '6px 16px', fontSize: '12px', fontWeight: 700,
+                                    backgroundColor: isLoading ? '#1e2839' : '#d97706', color: isLoading ? '#3d5068' : '#000',
+                                    border: 'none', borderRadius: '10px', padding: '6px 16px', fontSize: '12px', fontWeight: 700,
                                     cursor: isLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
                                   }}>
                                     {isLoading ? <><Loader size={11} style={{ animation: 'spin 1s linear infinite' }} /> Generating…</> : result ? 'Regenerate' : 'Generate'}
@@ -989,22 +989,22 @@ export default function TrackerPage() {
                                 </div>
 
                                 {isError && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '12px', padding: '12px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4a5d75', fontSize: '12px', padding: '12px 0' }}>
                                     <AlertCircle size={13} color="#ef4444" /> Failed.{' '}
                                     <button onClick={() => runCoverLetter(job.id, tone)} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
                                   </div>
                                 )}
 
                                 {!cl && !isLoading && (
-                                  <div style={{ backgroundColor: '#0f0f0f', border: '1px solid #1a1a1a', borderRadius: '8px', padding: '32px 20px', textAlign: 'center' }}>
-                                    <div style={{ color: '#2a2a2a', fontSize: '12px' }}>Select a tone and click Generate</div>
+                                  <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
+                                    <div style={{ color: '#2d3f58', fontSize: '12px' }}>Select a tone and click Generate</div>
                                   </div>
                                 )}
 
                                 {result && (
                                   <div>
-                                    <div style={{ backgroundColor: '#0f0f0f', border: '1px solid #1a1a1a', borderRadius: '8px', padding: '20px', marginBottom: '12px', maxHeight: '360px', overflowY: 'auto', animation: 'fadeIn 0.25s ease' }}>
-                                      <pre style={{ color: '#d0d0d0', fontSize: '12px', lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
+                                    <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px', padding: '20px', marginBottom: '12px', maxHeight: '360px', overflowY: 'auto', animation: 'fadeIn 0.25s ease' }}>
+                                      <pre style={{ color: '#c8d5e8', fontSize: '12px', lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
                                         {result.letter}
                                       </pre>
                                     </div>
@@ -1016,10 +1016,10 @@ export default function TrackerPage() {
                                       }}
                                       style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                        backgroundColor: copiedJobId === job.id ? '#14532d' : '#111',
-                                        color: copiedJobId === job.id ? '#86efac' : '#888',
-                                        border: `1px solid ${copiedJobId === job.id ? '#166534' : '#222'}`,
-                                        borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 600,
+                                        backgroundColor: copiedJobId === job.id ? '#14532d' : '#111827',
+                                        color: copiedJobId === job.id ? '#86efac' : '#7a8fa8',
+                                        border: `1px solid ${copiedJobId === job.id ? '#166534' : '#1e2839'}`,
+                                        borderRadius: '10px', padding: '6px 14px', fontSize: '12px', fontWeight: 600,
                                         cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
                                       }}>
                                       {copiedJobId === job.id ? '✓ Copied!' : 'Copy to Clipboard'}
@@ -1036,13 +1036,13 @@ export default function TrackerPage() {
                             return (
                               <div>
                                 {(!gaps || gaps === 'loading') && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#444', fontSize: '12px', padding: '20px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#3d5068', fontSize: '12px', padding: '20px 0' }}>
                                     <Loader size={14} color="#f59e0b" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                     Analyzing fit gaps...
                                   </div>
                                 )}
                                 {gaps === 'error' && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '12px', padding: '12px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4a5d75', fontSize: '12px', padding: '12px 0' }}>
                                     <AlertCircle size={13} color="#ef4444" /> Failed.{' '}
                                     <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
                                   </div>
@@ -1053,22 +1053,22 @@ export default function TrackerPage() {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'fadeIn 0.25s ease' }}>
 
                                       {/* Positioning */}
-                                      <div style={{ backgroundColor: '#0b0f0a', border: '1px solid #1e2e1a', borderRadius: '8px', padding: '14px 16px' }}>
+                                      <div style={{ backgroundColor: '#0b0f0a', border: '1px solid #1e2e1a', borderRadius: '14px', padding: '14px 16px' }}>
                                         <div style={{ color: '#6ea86a', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Your Positioning</div>
                                         <p style={{ color: '#8aaa85', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{g.positioning}</p>
                                       </div>
 
                                       {/* Gaps */}
                                       <div>
-                                        <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Gaps to Address</div>
+                                        <div style={{ color: '#3d5068', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Gaps to Address</div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                           {g.gaps.map((gap, i) => (
-                                            <div key={i} style={{ backgroundColor: '#111', borderRadius: '7px', padding: '12px 14px', borderLeft: `3px solid ${gap.severity === 'major' ? '#ef4444' : '#f59e0b'}` }}>
+                                            <div key={i} style={{ backgroundColor: '#111827', borderRadius: '14px', padding: '12px 14px', borderLeft: `3px solid ${gap.severity === 'major' ? '#ef4444' : '#f59e0b'}` }}>
                                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
                                                 <span style={{ color: gap.severity === 'major' ? '#ef4444' : '#f59e0b', fontSize: '11px', fontWeight: 700 }}>{gap.skill}</span>
                                                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: gap.severity === 'major' ? '#7f1d1d' : '#713f12', backgroundColor: gap.severity === 'major' ? '#450a0a' : '#1c1000', borderRadius: '3px', padding: '1px 5px' }}>{gap.severity}</span>
                                               </div>
-                                              <p style={{ color: '#777', fontSize: '11px', margin: 0, lineHeight: 1.55 }}>{gap.how_to_address}</p>
+                                              <p style={{ color: '#7a8fa8', fontSize: '11px', margin: 0, lineHeight: 1.55 }}>{gap.how_to_address}</p>
                                             </div>
                                           ))}
                                         </div>
@@ -1077,31 +1077,31 @@ export default function TrackerPage() {
                                       {/* Apply signal — full-width banner */}
                                       <div style={{
                                         display: 'flex', alignItems: 'center', gap: '12px',
-                                        backgroundColor: g.should_apply ? '#0a1f0a' : '#1a0808',
-                                        border: `1px solid ${g.should_apply ? '#166534' : '#7f1d1d'}`,
-                                        borderRadius: '8px', padding: '12px 16px',
+                                        backgroundColor: g.should_apply ? 'rgba(52,211,153,0.08)' : 'rgba(248,113,113,0.08)',
+                                        border: `1px solid ${g.should_apply ? 'rgba(52,211,153,0.25)' : 'rgba(248,113,113,0.25)'}`,
+                                        borderRadius: '14px', padding: '12px 16px',
                                       }}>
-                                        <span style={{ color: g.should_apply ? '#22c55e' : '#ef4444', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
+                                        <span style={{ color: g.should_apply ? '#34d399' : '#f87171', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
                                           {g.should_apply ? '✓ Apply' : '✗ Skip'}
                                         </span>
-                                        <span style={{ color: '#666', fontSize: '12px', lineHeight: 1.5 }}>{g.apply_reasoning}</span>
+                                        <span style={{ color: '#4a5d75', fontSize: '12px', lineHeight: 1.5 }}>{g.apply_reasoning}</span>
                                       </div>
 
                                       {/* Quick wins */}
                                       <div>
-                                        <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Quick Wins</div>
+                                        <div style={{ color: '#3d5068', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Quick Wins</div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                           {g.quick_wins.map((w, i) => (
                                             <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                                               <span style={{ color: '#22c55e', fontSize: '11px', flexShrink: 0, marginTop: '2px' }}>→</span>
-                                              <span style={{ color: '#888', fontSize: '12px', lineHeight: 1.55 }}>{w}</span>
+                                              <span style={{ color: '#7a8fa8', fontSize: '12px', lineHeight: 1.55 }}>{w}</span>
                                             </div>
                                           ))}
                                         </div>
                                       </div>
 
-                                      <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}
-                                        onMouseEnter={e => (e.currentTarget.style.color = '#666')} onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+                                      <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#2d3f58', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}
+                                        onMouseEnter={e => (e.currentTarget.style.color = '#4a5d75')} onMouseLeave={e => (e.currentTarget.style.color = '#2d3f58')}>
                                         <RotateCcw size={10} /> Regenerate
                                       </button>
                                     </div>
@@ -1117,13 +1117,13 @@ export default function TrackerPage() {
                             return (
                               <div>
                                 {(!bl || bl === 'loading') && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#444', fontSize: '12px', padding: '20px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#3d5068', fontSize: '12px', padding: '20px 0' }}>
                                     <Loader size={14} color="#f59e0b" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                     Tailoring resume bullets...
                                   </div>
                                 )}
                                 {bl === 'error' && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '12px', padding: '12px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4a5d75', fontSize: '12px', padding: '12px 0' }}>
                                     <AlertCircle size={13} color="#ef4444" /> Failed.{' '}
                                     <button onClick={() => { delete bulletsCacheRef.current[job.id]; runBullets(job.id); }} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
                                   </div>
@@ -1135,14 +1135,14 @@ export default function TrackerPage() {
 
                                       {/* Lead With */}
                                       <div>
-                                        <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Lead With These</div>
+                                        <div style={{ color: '#3d5068', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Lead With These</div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                           {b.lead_with.map((item, i) => (
-                                            <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', backgroundColor: '#111', borderRadius: '7px', padding: '10px 13px' }}>
+                                            <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', backgroundColor: '#111827', borderRadius: '14px', padding: '10px 13px' }}>
                                               <span style={{ color: '#f59e0b', fontWeight: 800, fontSize: '12px', flexShrink: 0, marginTop: '1px' }}>{i + 1}</span>
                                               <div>
-                                                <div style={{ color: '#d0d0d0', fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>{item.experience}</div>
-                                                <div style={{ color: '#555', fontSize: '11px', lineHeight: 1.5 }}>{item.why}</div>
+                                                <div style={{ color: '#c8d5e8', fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>{item.experience}</div>
+                                                <div style={{ color: '#3d5068', fontSize: '11px', lineHeight: 1.5 }}>{item.why}</div>
                                               </div>
                                             </div>
                                           ))}
@@ -1151,19 +1151,19 @@ export default function TrackerPage() {
 
                                       {/* Tailored bullets */}
                                       <div>
-                                        <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Tailored Bullets</div>
+                                        <div style={{ color: '#3d5068', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Tailored Bullets</div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                           {b.tailored_bullets.map((item, i) => (
-                                            <div key={i} style={{ backgroundColor: '#111', borderRadius: '7px', padding: '12px 14px' }}>
+                                            <div key={i} style={{ backgroundColor: '#111827', borderRadius: '14px', padding: '12px 14px' }}>
                                               <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', alignItems: 'flex-start' }}>
-                                                <span style={{ color: '#333', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginTop: '2px', lineHeight: 1.6 }}>Before</span>
-                                                <span style={{ color: '#555', fontSize: '11px', lineHeight: 1.55, textDecoration: 'line-through' }}>{item.original}</span>
+                                                <span style={{ color: '#2d3f58', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginTop: '2px', lineHeight: 1.6 }}>Before</span>
+                                                <span style={{ color: '#3d5068', fontSize: '11px', lineHeight: 1.55, textDecoration: 'line-through' }}>{item.original}</span>
                                               </div>
                                               <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', alignItems: 'flex-start' }}>
                                                 <span style={{ color: '#22c55e', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginTop: '2px', lineHeight: 1.6 }}>After</span>
-                                                <span style={{ color: '#d0d0d0', fontSize: '11px', lineHeight: 1.55, fontWeight: 500 }}>{item.tailored}</span>
+                                                <span style={{ color: '#c8d5e8', fontSize: '11px', lineHeight: 1.55, fontWeight: 500 }}>{item.tailored}</span>
                                               </div>
-                                              <div style={{ color: '#3a3a3a', fontSize: '10px', lineHeight: 1.5, borderTop: '1px solid #1a1a1a', paddingTop: '6px', marginTop: '4px' }}>{item.why}</div>
+                                              <div style={{ color: '#2d3f58', fontSize: '10px', lineHeight: 1.5, borderTop: '1px solid #162030', paddingTop: '6px', marginTop: '4px' }}>{item.why}</div>
                                             </div>
                                           ))}
                                         </div>
@@ -1172,21 +1172,21 @@ export default function TrackerPage() {
                                       {/* Keywords + Deprioritize */}
                                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                                         <div>
-                                          <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Add These Keywords</div>
+                                          <div style={{ color: '#3d5068', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Add These Keywords</div>
                                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                                             {b.keywords_to_add.map((k, i) => (
-                                              <span key={i} style={{ backgroundColor: '#111', color: '#3b82f6', border: '1px solid #1e3a8a', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 500 }}>{k}</span>
+                                              <span key={i} style={{ backgroundColor: '#111827', color: '#818cf8', border: '1px solid rgba(129,140,248,0.2)', borderRadius: '20px', padding: '3px 8px', fontSize: '11px', fontWeight: 500 }}>{k}</span>
                                             ))}
                                           </div>
                                         </div>
                                         {b.deprioritize.length > 0 && (
                                           <div>
-                                            <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Deprioritize</div>
+                                            <div style={{ color: '#3d5068', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Deprioritize</div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                               {b.deprioritize.map((item, i) => (
                                                 <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
                                                   <span style={{ color: '#ef4444', fontSize: '11px', flexShrink: 0 }}>↓</span>
-                                                  <span style={{ color: '#555', fontSize: '11px', lineHeight: 1.5 }}>{item}</span>
+                                                  <span style={{ color: '#3d5068', fontSize: '11px', lineHeight: 1.5 }}>{item}</span>
                                                 </div>
                                               ))}
                                             </div>
@@ -1194,8 +1194,8 @@ export default function TrackerPage() {
                                         )}
                                       </div>
 
-                                      <button onClick={() => { delete bulletsCacheRef.current[job.id]; runBullets(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}
-                                        onMouseEnter={e => (e.currentTarget.style.color = '#666')} onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+                                      <button onClick={() => { delete bulletsCacheRef.current[job.id]; runBullets(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#2d3f58', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}
+                                        onMouseEnter={e => (e.currentTarget.style.color = '#4a5d75')} onMouseLeave={e => (e.currentTarget.style.color = '#2d3f58')}>
                                         <RotateCcw size={10} /> Regenerate
                                       </button>
                                     </div>
@@ -1220,42 +1220,42 @@ export default function TrackerPage() {
       {importStep && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, backdropFilter: 'blur(3px)' }}
           onClick={e => { if (e.target === e.currentTarget) closeImport(); }}>
-          <div style={{ backgroundColor: '#0f0f0f', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '28px', width: '560px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}>
+          <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '16px', padding: '28px', width: '560px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}>
             {importStep === 'input' && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <h2 style={{ color: '#f0f0f0', fontSize: '15px', fontWeight: 700, margin: 0 }}>Import from URL</h2>
-                  <button onClick={closeImport} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
+                  <h2 style={{ color: '#e8f0fc', fontSize: '15px', fontWeight: 700, margin: 0 }}>Import from URL</h2>
+                  <button onClick={closeImport} style={{ background: 'none', border: 'none', color: '#3d5068', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
                 </div>
-                <p style={{ color: '#444', fontSize: '12px', margin: '0 0 16px' }}>Paste a job posting link. Add context below if the page doesn&apos;t load or you have extra info.</p>
+                <p style={{ color: '#4a5d75', fontSize: '12px', margin: '0 0 16px' }}>Paste a job posting link. Add context below if the page doesn&apos;t load or you have extra info.</p>
                 <input type="url" value={importUrl} onChange={e => setImportUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') fetchImport(); }}
                   placeholder="https://jobs.company.com/..." autoFocus
-                  style={{ width: '100%', backgroundColor: '#0a0a0a', border: '1px solid #222', borderRadius: '8px', padding: '11px 14px', color: '#e8e8e8', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-                  onFocus={e => (e.target.style.borderColor = '#f59e0b')} onBlur={e => (e.target.style.borderColor = '#222')} />
-                <div style={{ marginTop: '16px', borderTop: '1px solid #161616', paddingTop: '14px' }}>
-                  <div style={{ color: '#333', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Extra context <span style={{ color: '#282828', fontWeight: 400 }}>— optional</span></div>
+                  style={{ width: '100%', backgroundColor: '#0d1117', border: '1px solid #1e2839', borderRadius: '14px', padding: '11px 14px', color: '#e2e8f4', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={e => (e.target.style.borderColor = '#f59e0b')} onBlur={e => (e.target.style.borderColor = '#1e2839')} />
+                <div style={{ marginTop: '16px', borderTop: '1px solid #151e2e', paddingTop: '14px' }}>
+                  <div style={{ color: '#2d3f58', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Extra context <span style={{ color: '#2d3f58', fontWeight: 400 }}>— optional</span></div>
                   <textarea value={importExtraText} onChange={e => setImportExtraText(e.target.value)} placeholder="Paste job description, recruiter email, or any extra details..." rows={3}
-                    style={{ width: '100%', backgroundColor: '#0a0a0a', border: '1px solid #1e1e1e', borderRadius: '7px', padding: '10px 12px', color: '#bbb', fontSize: '12px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, marginBottom: '8px' }} />
+                    style={{ width: '100%', backgroundColor: '#0d1117', border: '1px solid #1e2839', borderRadius: '10px', padding: '10px 12px', color: '#8bacc8', fontSize: '12px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, marginBottom: '8px' }} />
                   <input type="url" value={importExtraLink} onChange={e => setImportExtraLink(e.target.value)} placeholder="Additional link (LinkedIn, company page...)"
-                    style={{ width: '100%', backgroundColor: '#0a0a0a', border: '1px solid #1e1e1e', borderRadius: '7px', padding: '9px 12px', color: '#bbb', fontSize: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }} />
+                    style={{ width: '100%', backgroundColor: '#0d1117', border: '1px solid #1e2839', borderRadius: '10px', padding: '9px 12px', color: '#8bacc8', fontSize: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }} />
                   <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{ display: 'none' }} onChange={handleImageUpload} />
                   {!importImage ? (
                     <button onClick={() => imageInputRef.current?.click()}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'transparent', color: '#444', border: '1px dashed #222', borderRadius: '7px', padding: '8px 14px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'transparent', color: '#4a5d75', border: '1px dashed #1e2839', borderRadius: '10px', padding: '8px 14px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>
                       <ImageIcon size={12} /> Upload screenshot
                     </button>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#0a0a0a', border: '1px solid #1e1e1e', borderRadius: '7px', padding: '8px 10px' }}>
-                      <img src={importImage.previewUrl} alt="screenshot" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
-                      <div style={{ flex: 1 }}><div style={{ color: '#ccc', fontSize: '12px', fontWeight: 500 }}>Screenshot attached</div><div style={{ color: '#444', fontSize: '11px' }}>Claude will read this image</div></div>
-                      <button onClick={removeImage} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#0d1117', border: '1px solid #1e2839', borderRadius: '10px', padding: '8px 10px' }}>
+                      <img src={importImage.previewUrl} alt="screenshot" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '20px', flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}><div style={{ color: '#c8d5e8', fontSize: '12px', fontWeight: 500 }}>Screenshot attached</div><div style={{ color: '#4a5d75', fontSize: '11px' }}>Claude will read this image</div></div>
+                      <button onClick={removeImage} style={{ background: 'none', border: 'none', color: '#3d5068', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
                     </div>
                   )}
                 </div>
                 {importFetchError && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f87171', fontSize: '12px', marginTop: '12px' }}><AlertCircle size={13} /> {importFetchError}</div>}
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '18px' }}>
-                  <button onClick={closeImport} style={{ backgroundColor: '#161616', color: '#666', border: '1px solid #222', borderRadius: '6px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={fetchImport} disabled={!importUrl.trim()} style={{ background: !importUrl.trim() ? '#1a1a1a' : 'linear-gradient(135deg,#f59e0b,#d97706)', color: !importUrl.trim() ? '#444' : '#000', border: 'none', borderRadius: '6px', padding: '8px 20px', fontSize: '13px', fontWeight: 700, cursor: !importUrl.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button onClick={closeImport} style={{ backgroundColor: '#151e2e', color: '#4a5d75', border: '1px solid #1e2839', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={fetchImport} disabled={!importUrl.trim()} style={{ background: !importUrl.trim() ? '#162030' : 'linear-gradient(135deg,#f59e0b,#d97706)', color: !importUrl.trim() ? '#3d5068' : '#000', border: 'none', borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700, cursor: !importUrl.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <LinkIcon size={13} /> Fetch & Parse
                   </button>
                 </div>
@@ -1264,18 +1264,18 @@ export default function TrackerPage() {
             {importStep === 'loading' && (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
                 <Loader size={28} color="#f59e0b" style={{ animation: 'spin 1s linear infinite', marginBottom: '16px' }} />
-                <div style={{ color: '#666', fontSize: '13px' }}>Parsing job details...</div>
-                <div style={{ color: '#333', fontSize: '11px', marginTop: '6px' }}>Takes a few seconds</div>
+                <div style={{ color: '#4a5d75', fontSize: '13px' }}>Parsing job details...</div>
+                <div style={{ color: '#2d3f58', fontSize: '11px', marginTop: '6px' }}>Takes a few seconds</div>
               </div>
             )}
             {importStep === 'review' && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <h2 style={{ color: '#f0f0f0', fontSize: '15px', fontWeight: 700, margin: 0 }}>Review & Add</h2>
-                  <button onClick={closeImport} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
+                  <h2 style={{ color: '#e8f0fc', fontSize: '15px', fontWeight: 700, margin: 0 }}>Review & Add</h2>
+                  <button onClick={closeImport} style={{ background: 'none', border: 'none', color: '#3d5068', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
                 </div>
                 {importWarning && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#1a1000', border: '1px solid #713f12', borderRadius: '6px', padding: '10px 12px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#1a1000', border: '1px solid #713f12', borderRadius: '10px', padding: '10px 12px', marginBottom: '16px' }}>
                     <AlertCircle size={13} color="#f59e0b" style={{ flexShrink: 0, marginTop: '1px' }} />
                     <span style={{ color: '#f59e0b', fontSize: '12px', lineHeight: 1.5 }}>{importWarning}</span>
                   </div>
@@ -1288,37 +1288,37 @@ export default function TrackerPage() {
                   <Field label="Date Posted" field="posting_date" form={importForm} setForm={setImportForm} type="date" />
                   <Field label="Deadline" field="deadline" form={importForm} setForm={setImportForm} type="date" />
                   <div>
-                    <label style={{ display: 'block', color: '#555', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
+                    <label style={{ display: 'block', color: '#3d5068', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
                     <select value={importForm.type} onChange={e => setImportForm(p => ({ ...p, type: e.target.value }))} style={{ ...formInput }}>
                       {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', color: '#555', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Source</label>
+                    <label style={{ display: 'block', color: '#3d5068', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Source</label>
                     <input value={importForm.source} onChange={e => setImportForm(p => ({ ...p, source: e.target.value }))} style={formInput} />
                   </div>
                 </div>
                 <div style={{ marginTop: '12px' }}>
-                  <label style={{ display: 'block', color: '#555', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>URL</label>
+                  <label style={{ display: 'block', color: '#3d5068', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>URL</label>
                   <input value={importForm.url} onChange={e => setImportForm(p => ({ ...p, url: e.target.value }))} style={formInput} />
                 </div>
                 <div style={{ marginTop: '12px' }}>
-                  <label style={{ display: 'block', color: '#555', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Notes</label>
+                  <label style={{ display: 'block', color: '#3d5068', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Notes</label>
                   <textarea value={importForm.notes} onChange={e => setImportForm(p => ({ ...p, notes: e.target.value }))} rows={2} style={{ ...formInput, resize: 'vertical', fontFamily: 'inherit' }} />
                 </div>
                 <div style={{ marginTop: '12px' }}>
-                  <label style={{ display: 'block', color: '#555', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Description</label>
+                  <label style={{ display: 'block', color: '#3d5068', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Description</label>
                   <textarea value={importForm.description} onChange={e => setImportForm(p => ({ ...p, description: e.target.value }))} rows={3} style={{ ...formInput, resize: 'vertical', fontFamily: 'inherit' }} />
                 </div>
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
-                  <button onClick={() => setImportStep('input')} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#161616', color: '#666', border: '1px solid #222', borderRadius: '6px', padding: '8px 14px', fontSize: '13px', cursor: 'pointer' }}>
+                  <button onClick={() => setImportStep('input')} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#151e2e', color: '#4a5d75', border: '1px solid #1e2839', borderRadius: '10px', padding: '8px 14px', fontSize: '13px', cursor: 'pointer' }}>
                     <ArrowLeft size={12} /> Back
                   </button>
-                  <button onClick={closeImport} style={{ backgroundColor: '#161616', color: '#666', border: '1px solid #222', borderRadius: '6px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={closeImport} style={{ backgroundColor: '#151e2e', color: '#4a5d75', border: '1px solid #1e2839', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
                   <button onClick={handleImportSave} disabled={saving || !importForm.company || !importForm.title} style={{
-                    background: !importForm.company || !importForm.title ? '#1a1a1a' : 'linear-gradient(135deg,#f59e0b,#d97706)',
-                    color: !importForm.company || !importForm.title ? '#444' : '#000',
-                    border: 'none', borderRadius: '6px', padding: '8px 20px', fontSize: '13px', fontWeight: 700,
+                    background: !importForm.company || !importForm.title ? '#162030' : 'linear-gradient(135deg,#f59e0b,#d97706)',
+                    color: !importForm.company || !importForm.title ? '#3d5068' : '#000',
+                    border: 'none', borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700,
                     cursor: saving || !importForm.company || !importForm.title ? 'not-allowed' : 'pointer',
                   }}>
                     {saving ? 'Adding...' : 'Add to Tracker'}
@@ -1334,10 +1334,10 @@ export default function TrackerPage() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, backdropFilter: 'blur(3px)' }}
           onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
-          <div style={{ backgroundColor: '#0f0f0f', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', width: '580px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}>
+          <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '16px', padding: '24px', width: '580px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ color: '#f0f0f0', fontSize: '15px', fontWeight: 700, margin: 0 }}>{editingJob ? 'Edit Job' : 'Add Job'}</h2>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
+              <h2 style={{ color: '#e8f0fc', fontSize: '15px', fontWeight: 700, margin: 0 }}>{editingJob ? 'Edit Job' : 'Add Job'}</h2>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#3d5068', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <Field label="Company *" field="company" form={form} setForm={setForm} />
@@ -1349,13 +1349,13 @@ export default function TrackerPage() {
               <Field label="Match Score (1–10)" field="match_score" form={form} setForm={setForm} type="number" />
               <Field label="Source" field="source" form={form} setForm={setForm} />
               <div>
-                <label style={{ display: 'block', color: '#555', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
+                <label style={{ display: 'block', color: '#3d5068', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
                 <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} style={formInput}>
                   {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', color: '#555', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Status</label>
+                <label style={{ display: 'block', color: '#3d5068', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Status</label>
                 <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} style={formInput}>
                   {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                 </select>
@@ -1363,19 +1363,19 @@ export default function TrackerPage() {
             </div>
             <div style={{ marginTop: '12px' }}><Field label="URL" field="url" form={form} setForm={setForm} /></div>
             <div style={{ marginTop: '12px' }}>
-              <label style={{ display: 'block', color: '#555', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Notes</label>
+              <label style={{ display: 'block', color: '#3d5068', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Notes</label>
               <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} style={{ ...formInput, resize: 'vertical', fontFamily: 'inherit' }} />
             </div>
             <div style={{ marginTop: '12px' }}>
-              <label style={{ display: 'block', color: '#555', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Description</label>
+              <label style={{ display: 'block', color: '#3d5068', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Description</label>
               <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} style={{ ...formInput, resize: 'vertical', fontFamily: 'inherit' }} />
             </div>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <button onClick={() => setShowModal(false)} style={{ backgroundColor: '#161616', color: '#666', border: '1px solid #222', borderRadius: '6px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => setShowModal(false)} style={{ backgroundColor: '#151e2e', color: '#4a5d75', border: '1px solid #1e2839', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
               <button onClick={handleSave} disabled={saving || !form.company || !form.title} style={{
-                background: !form.company || !form.title ? '#1a1a1a' : 'linear-gradient(135deg,#f59e0b,#d97706)',
-                color: !form.company || !form.title ? '#444' : '#000',
-                border: 'none', borderRadius: '6px', padding: '8px 20px', fontSize: '13px', fontWeight: 700,
+                background: !form.company || !form.title ? '#162030' : 'linear-gradient(135deg,#f59e0b,#d97706)',
+                color: !form.company || !form.title ? '#3d5068' : '#000',
+                border: 'none', borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700,
                 cursor: saving || !form.company || !form.title ? 'not-allowed' : 'pointer',
               }}>
                 {saving ? 'Saving...' : 'Save Job'}
