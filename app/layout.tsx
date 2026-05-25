@@ -3,12 +3,13 @@
 import './globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, MessageSquare, CalendarDays, User } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Compass, MessageSquare, CalendarDays, User } from 'lucide-react';
 
 const navItems = [
-  { href: '/',        label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/tracker', label: 'Jobs',      icon: Briefcase },
-  { href: '/coach',   label: 'Coach',     icon: MessageSquare },
+  { href: '/',         label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/tracker',  label: 'Jobs',      icon: Briefcase },
+  { href: '/discover', label: 'Discover',  icon: Compass },
+  { href: '/coach',    label: 'Coach',     icon: MessageSquare },
   { href: '/timeline',label: 'Timeline',  icon: CalendarDays },
   { href: '/profile', label: 'Profile',   icon: User },
 ];
