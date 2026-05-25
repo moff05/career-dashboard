@@ -197,13 +197,13 @@ export default function CoachPage() {
       display: 'flex',
       flexDirection: 'column',
       height: '100vh',
-      backgroundColor: '#1a1a1a',
+      backgroundColor: '#0a0a0a',
     }}>
       {/* Header */}
       <div style={{
         padding: '20px 32px',
-        borderBottom: '1px solid #2a2a2a',
-        backgroundColor: '#1e1e1e',
+        borderBottom: '1px solid #1a1a1a',
+        backgroundColor: '#0d0d0d',
         flexShrink: 0,
       }}>
         <h1 style={{ color: '#e8e8e8', fontSize: '16px', fontWeight: 600, margin: 0 }}>AI Career Coach</h1>
@@ -213,45 +213,38 @@ export default function CoachPage() {
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
+          gap: '8px',
           marginTop: '12px',
           flexWrap: 'wrap',
         }}>
-          <span style={{ color: '#555', fontSize: '11px', fontWeight: 500, whiteSpace: 'nowrap' }}>Quick actions:</span>
-          <button
-            onClick={() => setQuickAction('Please analyze this job description for me and tell me how well I\'d fit:\n\n[paste JD here]')}
-            style={{
-              background: 'none',
-              border: '1px solid #333',
-              borderRadius: '5px',
-              padding: '4px 10px',
-              color: '#d97706',
-              fontSize: '11px',
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#d97706'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#333'; }}
-          >
-            Analyze a Job Description
-          </button>
-          <button
-            onClick={() => setQuickAction('Based on my background and the jobs I\'ve saved, what should I be applying to right now?')}
-            style={{
-              background: 'none',
-              border: '1px solid #333',
-              borderRadius: '5px',
-              padding: '4px 10px',
-              color: '#d97706',
-              fontSize: '11px',
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#d97706'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#333'; }}
-          >
-            What should I apply to next?
-          </button>
+          <span style={{ color: '#404040', fontSize: '11px', fontWeight: 500, whiteSpace: 'nowrap', marginRight: '2px' }}>Quick actions:</span>
+          {[
+            { label: 'Analyze a Job Description', text: 'Please analyze this job description for me and tell me how well I\'d fit:\n\n[paste JD here]' },
+            { label: 'What should I apply to next?', text: 'Based on my background and the jobs I\'ve saved, what should I be applying to right now?' },
+            { label: 'Help me prep for an interview', text: 'I have an upcoming interview. Can you help me prepare with likely questions and strong answers based on my background?' },
+            { label: 'Write a cold outreach email', text: 'Help me write a cold outreach email to a recruiter at a company I\'m interested in.' },
+          ].map(({ label, text }) => (
+            <button
+              key={label}
+              onClick={() => setQuickAction(text)}
+              style={{
+                backgroundColor: '#131313',
+                border: '1px solid #222',
+                borderRadius: '6px',
+                padding: '5px 12px',
+                color: '#888',
+                fontSize: '11px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.1s',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = '#d97706'; b.style.color = '#d97706'; }}
+              onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = '#222'; b.style.color = '#888'; }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -282,26 +275,21 @@ export default function CoachPage() {
           >
             {msg.role === 'assistant' && (
               <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                backgroundColor: '#d97706',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
-                fontSize: '12px',
-                fontWeight: 700,
-                flexShrink: 0,
-                marginTop: '2px',
+                width: '28px', height: '28px', borderRadius: '8px',
+                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#000', fontSize: '13px', fontWeight: 800,
+                flexShrink: 0, marginTop: '2px', letterSpacing: '-0.5px',
+                boxShadow: '0 0 10px rgba(245,158,11,0.2)',
               }}>
-                N
+                AI
               </div>
             )}
 
             <div style={{
               maxWidth: '85%',
-              backgroundColor: msg.role === 'user' ? '#2a2a2a' : 'transparent',
+              backgroundColor: msg.role === 'user' ? '#161616' : 'transparent',
+              border: msg.role === 'user' ? '1px solid #1e1e1e' : 'none',
               borderRadius: msg.role === 'user' ? '12px' : '0',
               padding: msg.role === 'user' ? '10px 14px' : '0',
               color: '#e8e8e8',
@@ -338,18 +326,12 @@ export default function CoachPage() {
         {loading && messages[messages.length - 1]?.content === '' && (
           <div style={{ display: 'flex', gap: '10px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
             <div style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              backgroundColor: '#d97706',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              fontSize: '12px',
-              fontWeight: 700,
-              flexShrink: 0,
-            }}>N</div>
+              width: '28px', height: '28px', borderRadius: '8px',
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#000', fontSize: '13px', fontWeight: 800, flexShrink: 0,
+              boxShadow: '0 0 10px rgba(245,158,11,0.2)',
+            }}>AI</div>
             <Loader size={16} color="#888" style={{ marginTop: '6px', animation: 'spin 1s linear infinite' }} />
           </div>
         )}
@@ -360,8 +342,8 @@ export default function CoachPage() {
       {/* Input bar */}
       <div style={{
         padding: '16px 32px 24px',
-        borderTop: '1px solid #2a2a2a',
-        backgroundColor: '#1a1a1a',
+        borderTop: '1px solid #1a1a1a',
+        backgroundColor: '#0d0d0d',
         flexShrink: 0,
       }}>
         <div style={{
@@ -380,8 +362,8 @@ export default function CoachPage() {
             rows={1}
             style={{
               flex: 1,
-              backgroundColor: '#2a2a2a',
-              border: '1px solid #333',
+              backgroundColor: '#111',
+              border: '1px solid #222',
               borderRadius: '10px',
               padding: '12px 16px',
               color: '#e8e8e8',

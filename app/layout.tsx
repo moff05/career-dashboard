@@ -74,23 +74,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 return (
                   <Link key={href} href={href} style={{
                     display: 'flex', alignItems: 'center', gap: '9px',
-                    padding: '9px 14px 9px 14px',
+                    padding: '9px 16px',
                     textDecoration: 'none',
-                    color: isActive ? '#f0f0f0' : '#4a4a4a',
-                    backgroundColor: isActive ? '#161616' : 'transparent',
+                    color: isActive ? '#f0f0f0' : '#585858',
+                    backgroundColor: isActive ? '#181818' : 'transparent',
                     borderLeft: isActive ? '2px solid #f59e0b' : '2px solid transparent',
                     fontSize: '13px', fontWeight: isActive ? 600 : 400,
                     transition: 'all 0.1s ease',
                   }}
                     onMouseEnter={e => {
                       if (!isActive) {
-                        (e.currentTarget as HTMLAnchorElement).style.color = '#888';
-                        (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#111';
+                        (e.currentTarget as HTMLAnchorElement).style.color = '#b0b0b0';
+                        (e.currentTarget as HTMLAnchorElement).style.backgroundColor = '#131313';
                       }
                     }}
                     onMouseLeave={e => {
                       if (!isActive) {
-                        (e.currentTarget as HTMLAnchorElement).style.color = '#4a4a4a';
+                        (e.currentTarget as HTMLAnchorElement).style.color = '#585858';
                         (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'transparent';
                       }
                     }}
@@ -106,7 +106,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div style={{ padding: '14px 16px', borderTop: '1px solid #1a1a1a' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e', flexShrink: 0, boxShadow: '0 0 6px rgba(34,197,94,0.6)' }} />
-                <span style={{ color: '#333', fontSize: '10px' }}>Powered by Claude</span>
+                <span style={{ color: '#444', fontSize: '10px' }}>Powered by Claude</span>
               </div>
             </div>
           </aside>

@@ -368,7 +368,7 @@ export default function TrackerPage() {
   };
 
   const SortIcon = ({ col }: { col: string }) => sortBy !== col ? null : <span style={{ marginLeft: '3px', fontSize: '9px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
-  const colHdr = (col: string): React.CSSProperties => ({ cursor: 'pointer', userSelect: 'none', color: sortBy === col ? '#f59e0b' : '#333', display: 'flex', alignItems: 'center' });
+  const colHdr = (col: string): React.CSSProperties => ({ cursor: 'pointer', userSelect: 'none', color: sortBy === col ? '#f59e0b' : '#404040', display: 'flex', alignItems: 'center' });
 
   const GRID = '28px 1fr 90px 95px 46px 90px 90px 72px';
   const GAP = '0 8px';
@@ -382,9 +382,20 @@ export default function TrackerPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
           <h1 style={{ color: '#f0f0f0', fontSize: '18px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Job Tracker</h1>
-          <p style={{ color: '#333', fontSize: '12px', margin: '3px 0 0' }}>
-            {stats.total} tracked · {stats.applied} applied · {stats.interviewing} interviewing{stats.offers > 0 ? ` · ${stats.offers} offer${stats.offers > 1 ? 's' : ''}` : ''}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '5px' }}>
+            {[
+              { label: 'tracked', value: stats.total, color: '#666', always: true },
+              { label: 'applied', value: stats.applied, color: '#93c5fd', always: false },
+              { label: 'interviewing', value: stats.interviewing, color: '#fde68a', always: false },
+              { label: stats.offers === 1 ? 'offer' : 'offers', value: stats.offers, color: '#86efac', always: false },
+              { label: 'starred', value: stats.starred, color: '#f59e0b', always: false },
+            ].filter(s => s.always || s.value > 0).map(({ label, value, color }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
+                <span style={{ color, fontWeight: 700, fontSize: '13px', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+                <span style={{ color: '#3a3a3a', fontSize: '11px' }}>{label}</span>
+              </div>
+            ))}
+          </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={openImport} style={{
@@ -406,47 +417,52 @@ export default function TrackerPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
-        <input
-          type="text" placeholder="Search..."
-          value={searchText} onChange={e => setSearchText(e.target.value)}
-          style={{ backgroundColor: '#0f0f0f', border: '1px solid #1e1e1e', borderRadius: '6px', padding: '7px 12px', color: '#e8e8e8', fontSize: '12px', outline: 'none', width: '180px' }}
-        />
-        <div style={{ display: 'flex', gap: '5px' }}>
-          {['all','saved','applied','interviewing','offer','rejected'].map(s => (
-            <button key={s} onClick={() => setStatusFilter(s)} style={{
-              backgroundColor: statusFilter === s ? '#f59e0b' : '#0f0f0f',
-              color: statusFilter === s ? '#000' : '#444',
-              border: `1px solid ${statusFilter === s ? '#f59e0b' : '#1e1e1e'}`,
-              borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
-            }}>{s === 'all' ? 'All' : s}</button>
-          ))}
+      <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* Row 1: search + status */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <input
+            type="text" placeholder="Search..."
+            value={searchText} onChange={e => setSearchText(e.target.value)}
+            style={{ backgroundColor: '#0f0f0f', border: '1px solid #1e1e1e', borderRadius: '6px', padding: '6px 12px', color: '#e8e8e8', fontSize: '12px', outline: 'none', width: '160px', flexShrink: 0 }}
+          />
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {['all','saved','applied','interviewing','offer','rejected'].map(s => (
+              <button key={s} onClick={() => setStatusFilter(s)} style={{
+                backgroundColor: statusFilter === s ? '#f59e0b' : '#0f0f0f',
+                color: statusFilter === s ? '#000' : '#505050',
+                border: `1px solid ${statusFilter === s ? '#f59e0b' : '#1e1e1e'}`,
+                borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize', transition: 'all 0.1s',
+              }}>{s === 'all' ? 'All' : s}</button>
+            ))}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '5px' }}>
+        {/* Row 2: type + starred */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {['all', ...TYPE_OPTIONS.map(t => t.value)].map(v => {
             const label = v === 'all' ? 'All Types' : TYPE_OPTIONS.find(t => t.value === v)?.label || v;
             return (
               <button key={v} onClick={() => setTypeFilter(v)} style={{
                 backgroundColor: typeFilter === v ? '#7c3aed' : '#0f0f0f',
-                color: typeFilter === v ? '#fff' : '#444',
+                color: typeFilter === v ? '#fff' : '#505050',
                 border: `1px solid ${typeFilter === v ? '#7c3aed' : '#1e1e1e'}`,
-                borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.1s',
               }}>{label}</button>
             );
           })}
+          <div style={{ width: '1px', height: '16px', backgroundColor: '#1e1e1e', margin: '0 4px' }} />
+          <button onClick={() => setStarFilter(p => !p)} style={{
+            display: 'flex', alignItems: 'center', gap: '4px',
+            backgroundColor: starFilter ? '#161200' : '#0f0f0f',
+            color: starFilter ? '#f59e0b' : '#505050',
+            border: `1px solid ${starFilter ? '#713f12' : '#1e1e1e'}`,
+            borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.1s',
+          }}>
+            <Star size={11} fill={starFilter ? '#f59e0b' : 'none'} /> Starred
+          </button>
         </div>
-        <button onClick={() => setStarFilter(p => !p)} style={{
-          display: 'flex', alignItems: 'center', gap: '4px',
-          backgroundColor: starFilter ? '#161200' : '#0f0f0f',
-          color: starFilter ? '#f59e0b' : '#444',
-          border: `1px solid ${starFilter ? '#713f12' : '#1e1e1e'}`,
-          borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
-        }}>
-          <Star size={11} fill={starFilter ? '#f59e0b' : 'none'} /> Starred {stats.starred > 0 && `(${stats.starred})`}
-        </button>
       </div>
       {(searchText || statusFilter !== 'all' || typeFilter !== 'all' || starFilter) && (
-        <div style={{ color: '#444', fontSize: '11px', marginBottom: '10px' }}>
+        <div style={{ color: '#505050', fontSize: '11px', marginBottom: '10px' }}>
           {sortedJobs.length} result{sortedJobs.length !== 1 ? 's' : ''}
         </div>
       )}
@@ -472,8 +488,8 @@ export default function TrackerPage() {
           {/* Column headers */}
           <div style={{
             display: 'grid', gridTemplateColumns: GRID, gap: GAP,
-            padding: '8px 14px', borderBottom: '1px solid #161616',
-            fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em',
+            padding: '9px 16px', borderBottom: '1px solid #161616',
+            fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
           }}>
             <div />
             <div style={colHdr('title')} onClick={() => handleSort('title')}>Title <SortIcon col="title" /></div>
@@ -482,7 +498,7 @@ export default function TrackerPage() {
             <div style={colHdr('match_score')} onClick={() => handleSort('match_score')}>Score <SortIcon col="match_score" /></div>
             <div style={colHdr('deadline')} onClick={() => handleSort('deadline')}>Deadline <SortIcon col="deadline" /></div>
             <div style={colHdr('posting_date')} onClick={() => handleSort('posting_date')}>Posted <SortIcon col="posting_date" /></div>
-            <div style={{ color: '#333' }}>Actions</div>
+            <div style={{ color: '#404040' }}>Actions</div>
           </div>
 
           {Object.entries(grouped).map(([company, companyJobs], groupIdx) => {
@@ -495,7 +511,7 @@ export default function TrackerPage() {
                 <div onClick={() => setExpandedCompanies(prev => { const n = new Set(prev); n.has(company) ? n.delete(company) : n.add(company); return n; })}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '10px',
-                    padding: '10px 14px', backgroundColor: '#111',
+                    padding: '11px 16px', backgroundColor: '#111',
                     borderTop: groupIdx > 0 ? '1px solid #161616' : undefined,
                     borderBottom: isExpanded ? '1px solid #161616' : (!isLast ? '1px solid #161616' : undefined),
                     borderLeft: `3px solid ${badgeBg}`,
@@ -522,7 +538,7 @@ export default function TrackerPage() {
                         onClick={() => toggleJob(job.id)}
                         style={{
                           display: 'grid', gridTemplateColumns: GRID, gap: GAP, alignItems: 'center',
-                          padding: '10px 14px',
+                          padding: '12px 16px',
                           borderBottom: (isJobExpanded || !isLastInGroup) ? '1px solid #141414' : undefined,
                           cursor: 'pointer', transition: 'background 0.1s',
                           backgroundColor: isJobExpanded ? '#111' : 'transparent',
@@ -595,9 +611,9 @@ export default function TrackerPage() {
 
                       {/* Expanded panel */}
                       {isJobExpanded && (
-                        <div style={{ backgroundColor: '#0c0c0c', borderBottom: '1px solid #1a1a1a', padding: '0 14px 20px' }}>
+                        <div style={{ backgroundColor: '#0c0c0c', borderBottom: '1px solid #1a1a1a', padding: '0 16px 24px' }}>
                           {/* Tabs */}
-                          <div style={{ display: 'flex', gap: '2px', borderBottom: '1px solid #161616', marginBottom: '18px', paddingTop: '12px' }}>
+                          <div style={{ display: 'flex', gap: '2px', borderBottom: '1px solid #1a1a1a', marginBottom: '20px', paddingTop: '14px' }}>
                             {[
                               { id: 'overview', label: 'Overview' },
                               { id: 'description', label: 'Job Details' },
@@ -605,10 +621,10 @@ export default function TrackerPage() {
                             ].map(tab => (
                               <button key={tab.id} onClick={() => setTab(job.id, tab.id)} style={{
                                 backgroundColor: 'transparent',
-                                color: activeTab === tab.id ? '#f59e0b' : '#444',
+                                color: activeTab === tab.id ? '#f59e0b' : '#505050',
                                 border: 'none', borderBottom: activeTab === tab.id ? '2px solid #f59e0b' : '2px solid transparent',
-                                padding: '6px 14px', fontSize: '12px', fontWeight: activeTab === tab.id ? 700 : 400,
-                                cursor: 'pointer', fontFamily: 'inherit', marginBottom: '-1px',
+                                padding: '6px 16px', fontSize: '12px', fontWeight: activeTab === tab.id ? 700 : 400,
+                                cursor: 'pointer', fontFamily: 'inherit', marginBottom: '-1px', transition: 'color 0.1s',
                               }}>{tab.label}</button>
                             ))}
                           </div>
