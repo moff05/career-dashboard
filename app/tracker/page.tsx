@@ -411,11 +411,14 @@ export default function TrackerPage() {
 
   const setTab = (id: number, tab: string) => {
     setJobTabs(prev => ({ ...prev, [id]: tab }));
-    if (tab === 'score' && !analysisCacheRef.current[id]) runAnalysis(id);
+    if (tab === 'score' && !analysisCacheRef.current[id]) {
+      // Only auto-run if this job has never been scored in the DB
+      const thisJob = jobs.find(j => j.id === id);
+      if (!thisJob?.match_score) runAnalysis(id);
+    }
     if (tab === 'description' && !detailsCacheRef.current[id]) runDetails(id);
     if (tab === 'gaps' && !gapsCacheRef.current[id]) runGaps(id);
     if (tab === 'bullets' && !bulletsCacheRef.current[id]) runBullets(id);
-    // cover-letter: user-triggered via Generate button, not auto-loaded
   };
 
   const openEdit = (job: Job) => {
@@ -720,11 +723,15 @@ export default function TrackerPage() {
                             ].map(tab => (
                               <button key={tab.id} onClick={() => setTab(job.id, tab.id)} style={{
                                 backgroundColor: 'transparent',
-                                color: activeTab === tab.id ? '#f59e0b' : '#505050',
+                                color: activeTab === tab.id ? '#f59e0b' : '#404040',
                                 border: 'none', borderBottom: activeTab === tab.id ? '2px solid #f59e0b' : '2px solid transparent',
-                                padding: '6px 16px', fontSize: '12px', fontWeight: activeTab === tab.id ? 700 : 400,
+                                padding: '6px 14px', fontSize: '11px', fontWeight: activeTab === tab.id ? 700 : 400,
                                 cursor: 'pointer', fontFamily: 'inherit', marginBottom: '-1px', transition: 'color 0.1s',
-                              }}>{tab.label}</button>
+                                whiteSpace: 'nowrap',
+                              }}
+                                onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.color = '#888'; }}
+                                onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.color = '#404040'; }}
+                              >{tab.label}</button>
                             ))}
                           </div>
 
@@ -852,10 +859,29 @@ export default function TrackerPage() {
                           {/* Score tab */}
                           {activeTab === 'score' && (
                             <div>
-                              {(!analysis || analysis === 'loading') && (
+                              {analysis === 'loading' && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#444', fontSize: '12px', padding: '20px 0' }}>
                                   <Loader size={14} color="#f59e0b" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                   Analyzing fit against your profile...
+                                </div>
+                              )}
+                              {!analysis && job.match_score && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '8px 0' }}>
+                                  <div style={{
+                                    width: '82px', height: '82px', borderRadius: '50%', flexShrink: 0,
+                                    border: `3px solid ${scoreColor(job.match_score * 10)}`,
+                                    boxShadow: `0 0 28px ${scoreGlow(job.match_score * 10)}`,
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                  }}>
+                                    <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(job.match_score * 10), lineHeight: 1 }}>{job.match_score * 10}</span>
+                                    <span style={{ fontSize: '10px', color: '#444' }}>/100</span>
+                                  </div>
+                                  <div>
+                                    <div style={{ color: '#888', fontSize: '13px', marginBottom: '8px' }}>Score from last analysis.</div>
+                                    <button onClick={() => runAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#111', color: '#f59e0b', border: '1px solid #2a1f00', borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                      Load full breakdown →
+                                    </button>
+                                  </div>
                                 </div>
                               )}
                               {analysis === 'error' && (
@@ -1027,9 +1053,9 @@ export default function TrackerPage() {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'fadeIn 0.25s ease' }}>
 
                                       {/* Positioning */}
-                                      <div style={{ backgroundColor: '#0d0f00', border: '1px solid #2a3000', borderRadius: '8px', padding: '14px 16px' }}>
-                                        <div style={{ color: '#a3e635', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Your Positioning</div>
-                                        <p style={{ color: '#8aab30', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{g.positioning}</p>
+                                      <div style={{ backgroundColor: '#0b0f0a', border: '1px solid #1e2e1a', borderRadius: '8px', padding: '14px 16px' }}>
+                                        <div style={{ color: '#6ea86a', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Your Positioning</div>
+                                        <p style={{ color: '#8aaa85', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{g.positioning}</p>
                                       </div>
 
                                       {/* Gaps */}
@@ -1048,28 +1074,29 @@ export default function TrackerPage() {
                                         </div>
                                       </div>
 
-                                      {/* Quick wins + apply signal */}
-                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '14px', alignItems: 'start' }}>
-                                        <div>
-                                          <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Quick Wins</div>
-                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                            {g.quick_wins.map((w, i) => (
-                                              <div key={i} style={{ display: 'flex', gap: '7px', alignItems: 'flex-start' }}>
-                                                <span style={{ color: '#22c55e', fontSize: '11px', flexShrink: 0, marginTop: '1px' }}>→</span>
-                                                <span style={{ color: '#888', fontSize: '11px', lineHeight: 1.5 }}>{w}</span>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                        <div style={{
-                                          backgroundColor: g.should_apply ? '#0a1f0a' : '#1a0808',
-                                          border: `1px solid ${g.should_apply ? '#166534' : '#7f1d1d'}`,
-                                          borderRadius: '8px', padding: '10px 14px', textAlign: 'center', flexShrink: 0, minWidth: '120px',
-                                        }}>
-                                          <div style={{ color: g.should_apply ? '#22c55e' : '#ef4444', fontSize: '14px', fontWeight: 800, marginBottom: '4px' }}>
-                                            {g.should_apply ? '✓ Apply' : '✗ Skip'}
-                                          </div>
-                                          <div style={{ color: '#555', fontSize: '10px', lineHeight: 1.4 }}>{g.apply_reasoning}</div>
+                                      {/* Apply signal — full-width banner */}
+                                      <div style={{
+                                        display: 'flex', alignItems: 'center', gap: '12px',
+                                        backgroundColor: g.should_apply ? '#0a1f0a' : '#1a0808',
+                                        border: `1px solid ${g.should_apply ? '#166534' : '#7f1d1d'}`,
+                                        borderRadius: '8px', padding: '12px 16px',
+                                      }}>
+                                        <span style={{ color: g.should_apply ? '#22c55e' : '#ef4444', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
+                                          {g.should_apply ? '✓ Apply' : '✗ Skip'}
+                                        </span>
+                                        <span style={{ color: '#666', fontSize: '12px', lineHeight: 1.5 }}>{g.apply_reasoning}</span>
+                                      </div>
+
+                                      {/* Quick wins */}
+                                      <div>
+                                        <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Quick Wins</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                          {g.quick_wins.map((w, i) => (
+                                            <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                                              <span style={{ color: '#22c55e', fontSize: '11px', flexShrink: 0, marginTop: '2px' }}>→</span>
+                                              <span style={{ color: '#888', fontSize: '12px', lineHeight: 1.55 }}>{w}</span>
+                                            </div>
+                                          ))}
                                         </div>
                                       </div>
 
