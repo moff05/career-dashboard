@@ -59,6 +59,7 @@ export default function DiscoverPage() {
   const [leadsAge, setLeadsAge] = useState('');
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
   const [saved, setSaved] = useState<Set<number>>(new Set());
+  const [connectedCompanies, setConnectedCompanies] = useState<Set<string>>(new Set());
 
   const loadLeads = useCallback(async (force = false) => {
     if (!force) {
@@ -88,6 +89,15 @@ export default function DiscoverPage() {
   }, []);
 
   useEffect(() => { loadLeads(); }, [loadLeads]);
+
+  useEffect(() => {
+    fetch('/api/connections')
+      .then(r => r.json())
+      .then((data: { company: string }[]) => {
+        if (Array.isArray(data)) setConnectedCompanies(new Set(data.map(c => c.company)));
+      })
+      .catch(() => {});
+  }, []);
 
   const handleSearch = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -295,12 +305,21 @@ export default function DiscoverPage() {
                 >
                   {/* Top: badge + info + dismiss */}
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                    <div style={{
-                      width: '32px', height: '32px', borderRadius: '7px', flexShrink: 0,
-                      backgroundColor: color,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px',
-                    }}>{initials(lead.company)}</div>
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <div style={{
+                        width: '32px', height: '32px', borderRadius: '7px',
+                        backgroundColor: color,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px',
+                      }}>{initials(lead.company)}</div>
+                      {connectedCompanies.has(lead.company) && (
+                        <div title="You have a connection at this company" style={{
+                          position: 'absolute', top: '-3px', right: '-3px',
+                          width: '9px', height: '9px', borderRadius: '50%',
+                          backgroundColor: '#7c3aed', border: '1.5px solid #ffffff',
+                        }} />
+                      )}
+                    </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ color: '#1e293b', fontSize: '12px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.company}</div>
                       <div style={{ color: '#64748b', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.title}</div>

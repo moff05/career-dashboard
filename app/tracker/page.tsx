@@ -27,6 +27,15 @@ type BulletsState = BulletsResult | 'loading' | 'error';
 interface CoverLetterResult { letter: string; tone: string; }
 type CoverLetterState = CoverLetterResult | 'loading' | 'error';
 
+interface Connection { id: number; company: string; name: string; relationship: string | null; notes: string | null; status: string; created_at: string; }
+const CONN_STATUS: Record<string, { label: string; color: string; bg: string }> = {
+  not_reached_out: { label: 'Not reached out', color: '#94a3b8', bg: 'rgba(148,163,184,0.1)' },
+  reached_out:     { label: 'Reached out',     color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
+  responded:       { label: 'Responded',        color: '#059669', bg: 'rgba(5,150,105,0.08)'  },
+  warm:            { label: 'Warm',             color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
+};
+const CONN_CYCLE = ['not_reached_out', 'reached_out', 'responded', 'warm'];
+
 // ─── Colors ──────────────────────────────────────────────────────────────────
 const BADGE_PALETTE: [string, string][] = [
   ['#7c3aed','#fff'],['#2563eb','#fff'],['#059669','#fff'],['#2563eb','#fff'],
@@ -218,6 +227,10 @@ export default function TrackerPage() {
   const [coverLetterTones, setCoverLetterTones] = useState<Record<number, string>>({});
   const [copiedJobId, setCopiedJobId] = useState<number | null>(null);
 
+  const connectionsCacheRef = useRef<Record<string, Connection[]>>({});
+  const [connectionsMap, setConnectionsMap] = useState<Record<string, Connection[]>>({});
+  const [connAddForm, setConnAddForm] = useState<Record<string, { show: boolean; name: string; relationship: string; notes: string }>>({});
+
   const runAnalysis = useCallback((id: number) => {
     analysisCacheRef.current[id] = 'loading';
     setAnalysisResults(prev => ({ ...prev, [id]: 'loading' }));
@@ -303,6 +316,39 @@ export default function TrackerPage() {
       })
       .catch(() => { coverLetterCacheRef.current[id] = 'error'; setCoverLetterResults(prev => ({ ...prev, [id]: 'error' })); });
   }, []);
+
+  const fetchConnections = useCallback(async (company: string) => {
+    if (!company || connectionsCacheRef.current[company] !== undefined) return;
+    connectionsCacheRef.current[company] = [];
+    const data = await fetch(`/api/connections?company=${encodeURIComponent(company)}`).then(r => r.json()).catch(() => []);
+    connectionsCacheRef.current[company] = data;
+    setConnectionsMap(prev => ({ ...prev, [company]: data }));
+  }, []);
+
+  const addConnection = async (company: string) => {
+    const f = connAddForm[company];
+    if (!f?.name.trim()) return;
+    const data = await fetch('/api/connections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, name: f.name.trim(), relationship: f.relationship.trim() || null, notes: f.notes.trim() || null }) }).then(r => r.json());
+    const updated = [...(connectionsCacheRef.current[company] || []), data];
+    connectionsCacheRef.current[company] = updated;
+    setConnectionsMap(prev => ({ ...prev, [company]: updated }));
+    setConnAddForm(prev => ({ ...prev, [company]: { show: false, name: '', relationship: '', notes: '' } }));
+  };
+
+  const cycleConnStatus = async (company: string, connId: number, current: string) => {
+    const next = CONN_CYCLE[(CONN_CYCLE.indexOf(current) + 1) % CONN_CYCLE.length];
+    await fetch(`/api/connections/${connId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
+    const updated = (connectionsMap[company] || []).map(c => c.id === connId ? { ...c, status: next } : c);
+    connectionsCacheRef.current[company] = updated;
+    setConnectionsMap(prev => ({ ...prev, [company]: updated }));
+  };
+
+  const deleteConnection = async (company: string, connId: number) => {
+    await fetch(`/api/connections/${connId}`, { method: 'DELETE' });
+    const updated = (connectionsCacheRef.current[company] || []).filter(c => c.id !== connId);
+    connectionsCacheRef.current[company] = updated;
+    setConnectionsMap(prev => ({ ...prev, [company]: updated }));
+  };
 
   // Import modal
   const [importStep, setImportStep] = useState<null | 'input' | 'loading' | 'review'>(null);
@@ -402,12 +448,13 @@ export default function TrackerPage() {
         // Only auto-score if this job has never been scored — avoids re-calling on every page load
         const thisJob = jobs.find(j => j.id === id);
         if (!analysisCacheRef.current[id] && !thisJob?.match_score) runAnalysis(id);
+        fetchConnections(thisJob?.company || '');
         // Details load on-demand when the tab is clicked (see setTab)
       }
       return n;
     });
     setJobTabs(prev => prev[id] ? prev : { ...prev, [id]: 'overview' });
-  }, [runAnalysis, jobs]);
+  }, [runAnalysis, fetchConnections, jobs]);
 
   const setTab = (id: number, tab: string) => {
     setJobTabs(prev => ({ ...prev, [id]: tab }));
@@ -771,6 +818,71 @@ export default function TrackerPage() {
                                   <div style={{ color: '#64748b', fontSize: '12px', lineHeight: 1.6 }}>{job.notes}</div>
                                 </div>
                               )}
+
+                              {/* Network / Connections */}
+                              {(() => {
+                                const conns = connectionsMap[job.company] || [];
+                                const form = connAddForm[job.company] || { show: false, name: '', relationship: '', notes: '' };
+                                return (
+                                  <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '12px 14px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: conns.length > 0 || form.show ? '10px' : 0 }}>
+                                      <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                        Network
+                                        {conns.length > 0 && <span style={{ backgroundColor: '#f1f5f9', color: '#64748b', borderRadius: '20px', padding: '0 5px', fontSize: '9px', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>{conns.length}</span>}
+                                      </div>
+                                      <button onClick={() => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, show: !form.show } }))} style={{ background: 'none', border: 'none', color: form.show ? '#3b82f6' : '#cbd5e1', cursor: 'pointer', fontSize: '11px', fontWeight: 600, padding: '1px 4px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '3px', borderRadius: '4px' }}
+                                        onMouseEnter={e => { if (!form.show) e.currentTarget.style.color = '#64748b'; }}
+                                        onMouseLeave={e => { if (!form.show) e.currentTarget.style.color = '#cbd5e1'; }}>
+                                        <Plus size={11} /> Add
+                                      </button>
+                                    </div>
+
+                                    {conns.length === 0 && !form.show && (
+                                      <div style={{ color: '#cbd5e1', fontSize: '11px', fontStyle: 'italic' }}>No connections at {job.company} yet.</div>
+                                    )}
+
+                                    {conns.length > 0 && (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: form.show ? '10px' : 0 }}>
+                                        {conns.map(conn => {
+                                          const cs = CONN_STATUS[conn.status] || CONN_STATUS.not_reached_out;
+                                          return (
+                                            <div key={conn.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#f8fafc', borderRadius: '8px', padding: '7px 10px' }}>
+                                              <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: cs.color, flexShrink: 0 }} />
+                                              <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ color: '#334155', fontSize: '12px', fontWeight: 600 }}>{conn.name}</div>
+                                                {conn.relationship && <div style={{ color: '#94a3b8', fontSize: '10px' }}>{conn.relationship}</div>}
+                                              </div>
+                                              <button onClick={() => cycleConnStatus(job.company, conn.id, conn.status)} style={{ backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '3px 9px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap' }}
+                                                title="Click to update status">
+                                                {cs.label}
+                                              </button>
+                                              <button onClick={() => deleteConnection(job.company, conn.id)} style={{ background: 'none', border: 'none', color: '#e2e8f0', cursor: 'pointer', padding: '2px', display: 'flex', flexShrink: 0 }}
+                                                onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
+                                                onMouseLeave={e => (e.currentTarget.style.color = '#e2e8f0')}>
+                                                <Trash2 size={11} />
+                                              </button>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+
+                                    {form.show && (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
+                                          <input placeholder="Name *" value={form.name} onChange={e => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, name: e.target.value } }))} onKeyDown={e => { if (e.key === 'Enter') addConnection(job.company); if (e.key === 'Escape') setConnAddForm(prev => ({ ...prev, [job.company]: { show: false, name: '', relationship: '', notes: '' } })); }} autoFocus style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 10px', color: '#0f172a', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }} onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
+                                          <input placeholder="How you know them" value={form.relationship} onChange={e => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, relationship: e.target.value } }))} style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 10px', color: '#0f172a', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }} onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
+                                        </div>
+                                        <input placeholder="Notes (optional)" value={form.notes} onChange={e => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, notes: e.target.value } }))} style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 10px', color: '#0f172a', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }} onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                          <button onClick={() => addConnection(job.company)} disabled={!form.name.trim()} style={{ backgroundColor: form.name.trim() ? '#3b82f6' : '#f1f5f9', color: form.name.trim() ? '#fff' : '#94a3b8', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: form.name.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>Save</button>
+                                          <button onClick={() => setConnAddForm(prev => ({ ...prev, [job.company]: { show: false, name: '', relationship: '', notes: '' } }))} style={{ backgroundColor: 'transparent', color: '#94a3b8', border: 'none', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
 
