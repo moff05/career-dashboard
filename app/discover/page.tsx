@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, RefreshCw, Plus, X, Loader, AlertCircle } from 'lucide-react';
+import { Search, RefreshCw, Plus, X, Loader, AlertCircle } from 'lucide-react'; // Plus used by lead save button
 
 interface Lead {
   id: number;
@@ -59,7 +59,6 @@ export default function DiscoverPage() {
   const [leadsAge, setLeadsAge] = useState('');
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
   const [saved, setSaved] = useState<Set<number>>(new Set());
-  const [savedRoles, setSavedRoles] = useState<Set<string>>(new Set());
 
   const loadLeads = useCallback(async (force = false) => {
     if (!force) {
@@ -112,16 +111,6 @@ export default function DiscoverPage() {
       body: JSON.stringify({ company: lead.company, title: lead.title, type: lead.type, status: 'saved', location: lead.location, source: 'Discover', notes: lead.why }),
     });
     setSaved(prev => new Set([...prev, lead.id]));
-  };
-
-  const saveRole = async (role: ResearchRole, company: string) => {
-    const key = `${company}::${role.title}`;
-    if (savedRoles.has(key)) return;
-    await fetch('/api/jobs', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company, title: role.title, type: role.type, status: 'saved', location: role.location, source: 'Discover' }),
-    });
-    setSavedRoles(prev => new Set([...prev, key]));
   };
 
   const visible = leads.filter(l => !dismissed.has(l.id));
@@ -225,32 +214,13 @@ export default function DiscoverPage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
                 {result.roles?.map((role, i) => {
-                  const key = `${result.company}::${role.title}`;
-                  const isSaved = savedRoles.has(key);
                   return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#111', borderRadius: '7px', padding: '10px 12px' }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ color: '#d0d0d0', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{role.title}</div>
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
-                          <span style={{ color: TYPE_COLORS[role.type] || '#555', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[role.type] || role.type}</span>
-                          <span style={{ color: '#2a2a2a', fontSize: '10px' }}>·</span>
-                          <span style={{ color: '#444', fontSize: '10px' }}>{role.location}</span>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                        <button onClick={() => saveRole(role, result.company)} disabled={isSaved} style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '3px',
-                          backgroundColor: isSaved ? '#0a1f0a' : '#161616',
-                          color: isSaved ? '#22c55e' : '#555',
-                          border: `1px solid ${isSaved ? '#166534' : '#222'}`,
-                          borderRadius: '5px', padding: '4px 10px', fontSize: '11px', fontWeight: 600,
-                          cursor: isSaved ? 'default' : 'pointer', fontFamily: 'inherit',
-                        }}
-                          onMouseEnter={e => { if (!isSaved) (e.currentTarget as HTMLButtonElement).style.borderColor = '#d97706'; }}
-                          onMouseLeave={e => { if (!isSaved) (e.currentTarget as HTMLButtonElement).style.borderColor = '#222'; }}
-                        >
-                          {isSaved ? '✓' : <><Plus size={10} /> Save</>}
-                        </button>
+                    <div key={i} style={{ backgroundColor: '#111', borderRadius: '7px', padding: '10px 12px' }}>
+                      <div style={{ color: '#d0d0d0', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{role.title}</div>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
+                        <span style={{ color: TYPE_COLORS[role.type] || '#555', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[role.type] || role.type}</span>
+                        <span style={{ color: '#2a2a2a', fontSize: '10px' }}>·</span>
+                        <span style={{ color: '#444', fontSize: '10px' }}>{role.location}</span>
                       </div>
                     </div>
                   );

@@ -29,7 +29,7 @@ Return ONLY valid JSON, no other text:
   "caveat": "one sentence about anything to verify (e.g. 'Confirm current openings on their careers page')"
 }
 
-For roles: list 3-5 realistic role types at this company for Nicholas (mix internship + full-time if applicable). These are suggestions based on company fit — not verified live postings.
+For roles: list 3-5 real, entry-level roles that this company actually hires for (internships + new grad). Use real job titles this company has posted historically. Do not invent titles. Omit any role you are not confident this company actually recruits for.
 For fit_score: 1-10 — honest assessment based on Nicholas's CRE tech, AI automation, Python, n8n, SaaS background.
 For fit_verdict: Strong Match (8-10), Good Fit (6-7), Stretch (4-5), Not a Match (<4).`;
 
