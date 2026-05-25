@@ -15,6 +15,9 @@ interface AnalysisCategory { name: string; score: number; rationale: string; }
 interface AnalysisResult { categories: AnalysisCategory[]; total: number; summary: string; }
 type AnalysisState = AnalysisResult | 'loading' | 'error';
 
+interface DetailsResult { company_overview: string; role_summary: string; key_qualifications: string[]; what_to_highlight: string; }
+type DetailsState = DetailsResult | 'loading' | 'error';
+
 // ─── Colors ──────────────────────────────────────────────────────────────────
 const BADGE_PALETTE: [string, string][] = [
   ['#7c3aed','#fff'],['#2563eb','#fff'],['#059669','#fff'],['#d97706','#fff'],
@@ -188,9 +191,12 @@ export default function TrackerPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [sortClicks, setSortClicks] = useState<Record<string, number>>({});
 
-  // Analysis cache: per job id, persists for session
+  // Analysis + Details cache: per job id, persists for session
   const analysisCacheRef = useRef<Record<number, AnalysisState>>({});
   const [analysisResults, setAnalysisResults] = useState<Record<number, AnalysisState>>({});
+  const detailsCacheRef = useRef<Record<number, DetailsState>>({});
+  const [detailsResults, setDetailsResults] = useState<Record<number, DetailsState>>({});
+  const [showRawJd, setShowRawJd] = useState<Record<number, boolean>>({});
 
   const runAnalysis = useCallback((id: number) => {
     analysisCacheRef.current[id] = 'loading';
@@ -217,6 +223,27 @@ export default function TrackerPage() {
     delete analysisCacheRef.current[id];
     runAnalysis(id);
   }, [runAnalysis]);
+
+  const runDetails = useCallback((id: number) => {
+    detailsCacheRef.current[id] = 'loading';
+    setDetailsResults(prev => ({ ...prev, [id]: 'loading' }));
+    fetch(`/api/jobs/${id}/details`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        const result: DetailsState = data.error ? 'error' : data;
+        detailsCacheRef.current[id] = result;
+        setDetailsResults(prev => ({ ...prev, [id]: result }));
+      })
+      .catch(() => {
+        detailsCacheRef.current[id] = 'error';
+        setDetailsResults(prev => ({ ...prev, [id]: 'error' }));
+      });
+  }, []);
+
+  const refreshDetails = useCallback((id: number) => {
+    delete detailsCacheRef.current[id];
+    runDetails(id);
+  }, [runDetails]);
 
   // Import modal
   const [importStep, setImportStep] = useState<null | 'input' | 'loading' | 'review'>(null);
@@ -314,11 +341,12 @@ export default function TrackerPage() {
       else {
         n.add(id);
         if (!analysisCacheRef.current[id]) runAnalysis(id);
+        if (!detailsCacheRef.current[id]) runDetails(id);
       }
       return n;
     });
     setJobTabs(prev => prev[id] ? prev : { ...prev, [id]: 'overview' });
-  }, [runAnalysis]);
+  }, [runAnalysis, runDetails]);
 
   const setTab = (id: number, tab: string) => setJobTabs(prev => ({ ...prev, [id]: tab }));
 
@@ -668,25 +696,87 @@ export default function TrackerPage() {
                             </div>
                           )}
 
-                          {/* Description tab */}
-                          {activeTab === 'description' && (
-                            <div>
-                              {job.description ? (
-                                <div style={{ backgroundColor: '#111', borderRadius: '7px', padding: '14px 16px', maxHeight: '320px', overflowY: 'auto' }}>
-                                  <pre style={{ color: '#888', fontSize: '12px', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
-                                    {job.description}
-                                  </pre>
-                                </div>
-                              ) : (
-                                <div style={{ color: '#333', fontSize: '13px', textAlign: 'center', padding: '32px 0' }}>
-                                  No description saved.{' '}
-                                  <button onClick={() => openEdit(job)} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: '13px', padding: 0, fontFamily: 'inherit' }}>
-                                    Edit to add one.
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                          {/* Job Details tab */}
+                          {activeTab === 'description' && (() => {
+                            const details = detailsResults[job.id];
+                            const rawVisible = showRawJd[job.id];
+                            return (
+                              <div>
+                                {(!details || details === 'loading') && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#444', fontSize: '12px', padding: '20px 0' }}>
+                                    <Loader size={14} color="#f59e0b" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                                    Generating job breakdown...
+                                  </div>
+                                )}
+                                {details === 'error' && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '12px', padding: '12px 0' }}>
+                                    <AlertCircle size={13} color="#ef4444" />
+                                    Failed to generate.{' '}
+                                    <button onClick={() => refreshDetails(job.id)} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
+                                  </div>
+                                )}
+                                {details && details !== 'loading' && details !== 'error' && (() => {
+                                  const d = details as DetailsResult;
+                                  return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
+                                      {/* Company + Role row */}
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                                        <div style={{ backgroundColor: '#111', borderRadius: '8px', padding: '14px 16px' }}>
+                                          <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Company</div>
+                                          <p style={{ color: '#aaa', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.company_overview}</p>
+                                        </div>
+                                        <div style={{ backgroundColor: '#111', borderRadius: '8px', padding: '14px 16px' }}>
+                                          <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>The Role</div>
+                                          <p style={{ color: '#aaa', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.role_summary}</p>
+                                        </div>
+                                      </div>
+
+                                      {/* Qualifications */}
+                                      <div style={{ backgroundColor: '#111', borderRadius: '8px', padding: '14px 16px' }}>
+                                        <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>What They&apos;re Looking For</div>
+                                        <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                          {d.key_qualifications.map((q, i) => (
+                                            <li key={i} style={{ color: '#999', fontSize: '12px', lineHeight: 1.5 }}>{q}</li>
+                                          ))}
+                                        </ul>
+                                      </div>
+
+                                      {/* Your Angle — highlighted */}
+                                      <div style={{ backgroundColor: '#110d00', border: '1px solid #2a1f00', borderRadius: '8px', padding: '14px 16px' }}>
+                                        <div style={{ color: '#f59e0b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>✦ Your Angle</div>
+                                        <p style={{ color: '#c8922a', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.what_to_highlight}</p>
+                                      </div>
+
+                                      {/* Footer: refresh + raw JD toggle */}
+                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <button onClick={() => refreshDetails(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
+                                          onMouseEnter={e => (e.currentTarget.style.color = '#666')} onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+                                          <RotateCcw size={10} /> Regenerate
+                                        </button>
+                                        {job.description && (
+                                          <button onClick={() => setShowRawJd(p => ({ ...p, [job.id]: !p[job.id] }))} style={{ background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
+                                            onMouseEnter={e => (e.currentTarget.style.color = '#666')} onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+                                            {rawVisible ? 'Hide raw JD' : 'View raw JD'}
+                                          </button>
+                                        )}
+                                      </div>
+
+                                      {/* Raw JD */}
+                                      {rawVisible && job.description && (
+                                        <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #1a1a1a', borderRadius: '8px', padding: '14px 16px', maxHeight: '280px', overflowY: 'auto' }}>
+                                          <pre style={{ color: '#555', fontSize: '11px', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
+                                            {job.description}
+                                          </pre>
+                                        </div>
+                                      )}
+
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            );
+                          })()}
 
                           {/* Score tab */}
                           {activeTab === 'score' && (

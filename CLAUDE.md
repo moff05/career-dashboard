@@ -227,18 +227,41 @@ On first API call, `lib/resume-parser.ts` checks the `resume` table. If empty, p
 13. Import extracts full job description + posting_date
 14. "Posted" column in tracker table (sortable), replacing Location column
 
-### Next
-10. Deploy to Vercel — app must be hosted for alerts/nudges to work; usable anywhere
-11. Email deadline alerts (7d + 3d before deadline) — needs hosting + email service (Resend recommended)
-12. Follow-up nudge — flag "applied" jobs with no status change after 14 days
+### Tier 1 — Foundation (next to build)
+1. **UI/UX polish pass** — More breathing room in the table and expanded panel, better typography hierarchy, smoother interactions throughout
+2. **AI-enriched Job Details tab** — When a job is saved, auto-generate: company overview, role summary, key qualifications, and what to highlight given Nicholas's background. Replaces the "No description saved" dead state.
+3. **Home Dashboard** — Replace `/` redirect with a real landing page: pipeline stats, today's action items, upcoming deadlines, follow-up nudges, quick links. The daily-open hook.
 
-### Later
-11. Full cover letter generator (not just prefill shortcut)
-12. Mock interview mode in Coach
-13. Quick stats / analytics dashboard
-14. Weekly summary email (Sunday pipeline snapshot)
-15. Mobile-responsive layout
-16. Chrome bookmarklet
+### Tier 2 — Application quality
+4. **Full cover letter generator** — Dedicated flow inside each job's detail panel. Pull JD + resume, pick tone, generate formatted output, copy. One click per job.
+5. **Fit gaps + positioning advice** — Expand AI Score beyond a number: show exactly what's missing for this role and how to position CRE/AI automation background against the gaps.
+6. **Resume bullet tailoring** — Given a saved job, suggest which resume bullets to lead with or rephrase for that specific application.
+
+### Tier 3 — Discovery
+7. **Discover as research tool** — Search company name or role type → all current openings, company profile (culture, mission, size, recent news), quick fit verdict.
+8. **Discover feed** — Daily-refreshed "for you" card grid. Dismissible. Each card saves to tracker with one click. Constrained to Remote/Miami internships and target cities for full-time.
+
+### Tier 4 — Stats & motivation
+9. **Analytics page** — Applications sent by week, response rate, avg fit score, pipeline by status, time-in-stage. Gamified progress view.
+10. **Daily digest on Home** — Morning action items: deadlines this week, jobs with no response in 14+ days, new matching leads. Scannable in 30 seconds.
+
+### Tier 5 — Coach upgrades
+11. **Mock interview mode** — Role-specific question banks (Palantir DS-style, PM product sense, etc.). Answer → AI feedback loop.
+12. **Application strategy advisor** — "Here are your saved jobs — here's the order to apply and why," based on fit score, deadline, and preferences.
+
+### Tier 6 — Platform
+13. **Chrome extension** — Save any job from any tab with one click. Biggest workflow win for LinkedIn/Handshake browsing.
+14. **Mobile-responsive layout** — Clean on phone for checking the tracker on the go.
+15. **Weekly email digest** — Sunday summary: pipeline snapshot, what to do this week, new leads worth considering.
+
+### User context (informed these priorities)
+- Biggest pain: UI feels rough
+- Sources jobs from: all channels (LinkedIn, Handshake, company pages, Discover)
+- When opening a saved job wants: fit score + gaps, company research, full JD, cover letter
+- Discover mental model: research tool (search-driven, not just passive feed)
+- Coach role: all three (interview prep, application writing, strategy)
+- Daily hook: digest + stats (numbers are motivating)
+- Core anxieties: not standing out, applying to wrong/unrealistic roles
 
 ## Job Detail Analysis (planned)
 
