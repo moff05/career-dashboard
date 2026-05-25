@@ -221,6 +221,11 @@ On first API call, `lib/resume-parser.ts` checks the `resume` table. If empty, p
 7. Timeline shows job deadlines from tracker
 8. JD Fit Analyzer
 9. Weekly Brief
+10. Vercel deploy (Turso cloud DB, GitHub-linked)
+11. AI score auto-saves to DB after analysis (shows in table)
+12. Import uses Jina.ai reader for JS-rendered pages (Greenhouse, Lever, Workday, etc.)
+13. Import extracts full job description + posting_date
+14. "Posted" column in tracker table (sortable), replacing Location column
 
 ### Next
 10. Deploy to Vercel — app must be hosted for alerts/nudges to work; usable anywhere

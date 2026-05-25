@@ -69,6 +69,18 @@ function CompanyBadge({ company, size = 26 }: { company: string; size?: number }
   );
 }
 
+function PostedDisplay({ date }: { date: string | null }) {
+  if (!date) return <span style={{ color: '#333' }}>—</span>;
+  const d = new Date(date); d.setHours(0,0,0,0);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((today.getTime() - d.getTime()) / 86400000);
+  if (diff === 0) return <span style={{ color: '#aaa', fontSize: '11px' }}>Today</span>;
+  if (diff < 0) return <span style={{ color: '#666', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
+  if (diff < 7) return <span style={{ color: '#666', fontSize: '11px' }}>{diff}d ago</span>;
+  if (diff < 30) return <span style={{ color: '#555', fontSize: '11px' }}>{Math.round(diff/7)}w ago</span>;
+  return <span style={{ color: '#444', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
+}
+
 function DeadlineDisplay({ deadline }: { deadline: string | null }) {
   if (!deadline) return <span style={{ color: '#333' }}>—</span>;
   const today = new Date(); today.setHours(0,0,0,0);
@@ -189,6 +201,11 @@ export default function TrackerPage() {
         const result: AnalysisState = data.error ? 'error' : data;
         analysisCacheRef.current[id] = result;
         setAnalysisResults(prev => ({ ...prev, [id]: result }));
+        if (!data.error && typeof data.total === 'number') {
+          const score = Math.round(data.total / 10);
+          fetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_score: score }) });
+          setJobs(prev => prev.map(j => j.id === id ? { ...j, match_score: score } : j));
+        }
       })
       .catch(() => {
         analysisCacheRef.current[id] = 'error';
@@ -240,7 +257,7 @@ export default function TrackerPage() {
       const data = await res.json();
       if (data.error && !data.url) { setImportFetchError(data.error); setImportStep('input'); return; }
       setImportWarning(data.warning || '');
-      setImportForm({ company: data.company||'', title: data.title||'', type: data.type||'fall-2026-internship', status: 'saved', match_score: '', location: data.location||'', source: data.source||'company site', posting_date: '', deadline: data.deadline||'', url: data.url||trimmed, salary_range: data.salary_range||'', notes: '', description: data.description||'' });
+      setImportForm({ company: data.company||'', title: data.title||'', type: data.type||'fall-2026-internship', status: 'saved', match_score: '', location: data.location||'', source: data.source||'company site', posting_date: data.posting_date||'', deadline: data.deadline||'', url: data.url||trimmed, salary_range: data.salary_range||'', notes: '', description: data.description||'' });
       setImportStep('review');
     } catch { setImportFetchError('Request failed.'); setImportStep('input'); }
   };
@@ -330,6 +347,7 @@ export default function TrackerPage() {
     let cmp = 0;
     if (sortBy === 'match_score') cmp = (a.match_score ?? -1) - (b.match_score ?? -1);
     else if (sortBy === 'deadline') { if (!a.deadline && !b.deadline) cmp = 0; else if (!a.deadline) cmp = 1; else if (!b.deadline) cmp = -1; else cmp = new Date(a.deadline).getTime() - new Date(b.deadline).getTime(); }
+    else if (sortBy === 'posting_date') { if (!a.posting_date && !b.posting_date) cmp = 0; else if (!a.posting_date) cmp = 1; else if (!b.posting_date) cmp = -1; else cmp = new Date(a.posting_date).getTime() - new Date(b.posting_date).getTime(); }
     else if (sortBy === 'title') cmp = a.title.localeCompare(b.title);
     else if (sortBy === 'status') cmp = a.status.localeCompare(b.status);
     return sortDir === 'asc' ? cmp : -cmp;
@@ -463,7 +481,7 @@ export default function TrackerPage() {
             <div style={colHdr('status')} onClick={() => handleSort('status')}>Status <SortIcon col="status" /></div>
             <div style={colHdr('match_score')} onClick={() => handleSort('match_score')}>Score <SortIcon col="match_score" /></div>
             <div style={colHdr('deadline')} onClick={() => handleSort('deadline')}>Deadline <SortIcon col="deadline" /></div>
-            <div style={{ color: '#333' }}>Location</div>
+            <div style={colHdr('posting_date')} onClick={() => handleSort('posting_date')}>Posted <SortIcon col="posting_date" /></div>
             <div style={{ color: '#333' }}>Actions</div>
           </div>
 
@@ -555,10 +573,8 @@ export default function TrackerPage() {
                         {/* Deadline */}
                         <div><DeadlineDisplay deadline={job.deadline} /></div>
 
-                        {/* Location */}
-                        <div style={{ color: '#444', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {job.location || <span style={{ color: '#282828' }}>—</span>}
-                        </div>
+                        {/* Posted date */}
+                        <div><PostedDisplay date={job.posting_date} /></div>
 
                         {/* Actions */}
                         <div style={{ display: 'flex', gap: '2px', alignItems: 'center', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
@@ -809,8 +825,8 @@ export default function TrackerPage() {
                   <Field label="Job Title *" field="title" form={importForm} setForm={setImportForm} />
                   <Field label="Location" field="location" form={importForm} setForm={setImportForm} />
                   <Field label="Salary" field="salary_range" form={importForm} setForm={setImportForm} />
+                  <Field label="Date Posted" field="posting_date" form={importForm} setForm={setImportForm} type="date" />
                   <Field label="Deadline" field="deadline" form={importForm} setForm={setImportForm} type="date" />
-                  <Field label="Match Score (1–10)" field="match_score" form={importForm} setForm={setImportForm} type="number" />
                   <div>
                     <label style={{ display: 'block', color: '#555', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
                     <select value={importForm.type} onChange={e => setImportForm(p => ({ ...p, type: e.target.value }))} style={{ ...formInput }}>

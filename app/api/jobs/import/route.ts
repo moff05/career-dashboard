@@ -22,6 +22,15 @@ function detectSource(url: string): string {
   return 'company site';
 }
 
+async function fetchWithJina(url: string): Promise<string> {
+  const res = await fetch(`https://r.jina.ai/${url}`, {
+    headers: { 'Accept': 'text/plain', 'X-No-Cache': 'true' },
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!res.ok) throw new Error(`Jina ${res.status}`);
+  return (await res.text()).trim().slice(0, 18000);
+}
+
 async function fetchAndStrip(url: string): Promise<string> {
   const res = await fetch(url, {
     headers: {
@@ -39,7 +48,7 @@ async function fetchAndStrip(url: string): Promise<string> {
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
     .replace(/&#\d+;/g, ' ').replace(/\s{2,}/g, ' ')
-    .trim().slice(0, 10000);
+    .trim().slice(0, 12000);
 }
 
 export async function POST(request: NextRequest) {
@@ -59,9 +68,14 @@ export async function POST(request: NextRequest) {
     const contextParts: string[] = [];
     const warnings: string[] = [];
 
-    // 1. Fetch the main URL
+    // 1. Fetch the main URL — try Jina reader first (handles JS-rendered pages), fallback to plain fetch
     try {
-      const text = await fetchAndStrip(url);
+      let text = '';
+      try {
+        text = await fetchWithJina(url);
+      } catch {
+        text = await fetchAndStrip(url);
+      }
       if (text) contextParts.push(`[PAGE: ${url}]\n${text}`);
       else warnings.push('Page loaded but had no readable content.');
     } catch {
@@ -108,18 +122,18 @@ export async function POST(request: NextRequest) {
       } catch { /* silently skip */ }
     }
 
-    const blank = { company: '', title: '', location: '', type: '', deadline: '', salary_range: '', description: '' };
+    const blank = { company: '', title: '', location: '', type: '', deadline: '', posting_date: '', salary_range: '', description: '' };
 
     if (contextParts.length === 0) {
       const warning = warnings.join(' ') || 'No content could be extracted. Fill in the fields manually.';
       return NextResponse.json({ ...blank, url, source, warning });
     }
 
-    const combinedContext = contextParts.join('\n\n---\n\n').slice(0, 15000);
+    const combinedContext = contextParts.join('\n\n---\n\n').slice(0, 18000);
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 700,
+      max_tokens: 2000,
       messages: [{
         role: 'user',
         content: `Extract job posting details from these combined sources. Only extract what is explicitly present — do not infer or invent. Leave fields as empty string if not found.
@@ -133,6 +147,7 @@ Return ONLY valid JSON, no other text:
   "location": "",
   "type": "",
   "deadline": "",
+  "posting_date": "",
   "salary_range": "",
   "description": ""
 }
@@ -142,9 +157,10 @@ Rules:
 - title: exact job title as written
 - location: city/state or "Remote" — empty if not stated
 - type: one of "fall-2026-internship" | "spring-2027-internship" | "summer-internship" | "full-time" | "" — infer from context
-- deadline: YYYY-MM-DD — empty if not found
+- deadline: YYYY-MM-DD application deadline — empty if not found
+- posting_date: YYYY-MM-DD date the job was posted — empty if not found
 - salary_range: compensation as written — empty if not found
-- description: 2-3 sentence summary of the role — empty if insufficient info`,
+- description: the FULL job description including all responsibilities, requirements, and qualifications — copy the actual text, do not summarize. Empty if insufficient info.`,
       }],
     });
 
