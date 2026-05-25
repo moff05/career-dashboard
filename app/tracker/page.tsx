@@ -528,7 +528,7 @@ export default function TrackerPage() {
             {['all','saved','applied','interviewing','offer','rejected'].map(s => (
               <button key={s} onClick={() => setStatusFilter(s)} style={{
                 backgroundColor: statusFilter === s ? '#3b82f6' : '#ffffff',
-                color: statusFilter === s ? '#000' : '#64748b',
+                color: statusFilter === s ? '#fff' : '#64748b',
                 border: `1px solid ${statusFilter === s ? '#3b82f6' : '#e2e8f0'}`,
                 borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize', transition: 'all 0.1s',
               }}>{s === 'all' ? 'All' : s}</button>
@@ -553,7 +553,7 @@ export default function TrackerPage() {
             display: 'flex', alignItems: 'center', gap: '4px',
             backgroundColor: starFilter ? 'rgba(6,182,212,0.08)' : '#ffffff',
             color: starFilter ? '#3b82f6' : '#64748b',
-            border: `1px solid ${starFilter ? '#0e4f6b' : '#e2e8f0'}`,
+            border: `1px solid ${starFilter ? 'rgba(59,130,246,0.3)' : '#e2e8f0'}`,
             borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.1s',
           }}>
             <Star size={11} fill={starFilter ? '#3b82f6' : 'none'} /> Starred
@@ -821,9 +821,9 @@ export default function TrackerPage() {
                                       </div>
 
                                       {/* Your Angle — highlighted */}
-                                      <div style={{ backgroundColor: '#0a1e30', border: '1px solid #0e3a5c', borderRadius: '14px', padding: '14px 16px' }}>
-                                        <div style={{ color: '#3b82f6', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>✦ Your Angle</div>
-                                        <p style={{ color: '#5bb8d4', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.what_to_highlight}</p>
+                                      <div style={{ backgroundColor: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.18)', borderRadius: '14px', padding: '14px 16px' }}>
+                                        <div style={{ color: '#2563eb', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>✦ Your Angle</div>
+                                        <p style={{ color: '#2563eb', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.what_to_highlight}</p>
                                       </div>
 
                                       {/* Footer: refresh + raw JD toggle */}
@@ -878,7 +878,7 @@ export default function TrackerPage() {
                                   </div>
                                   <div>
                                     <div style={{ color: '#64748b', fontSize: '13px', marginBottom: '8px' }}>Score from last analysis.</div>
-                                    <button onClick={() => runAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#ffffff', color: '#3b82f6', border: '1px solid #0e3a5c', borderRadius: '10px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                    <button onClick={() => runAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#ffffff', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '10px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                                       Load full breakdown →
                                     </button>
                                   </div>
@@ -946,7 +946,7 @@ export default function TrackerPage() {
                                       }}
                                       style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                        backgroundColor: 'transparent', color: '#a855f7', border: '1px solid #3b1f6e',
+                                        backgroundColor: 'transparent', color: '#a855f7', border: '1px solid rgba(168,85,247,0.3)',
                                         borderRadius: '10px', padding: '7px 14px', fontSize: '12px', fontWeight: 600,
                                         cursor: 'pointer', fontFamily: 'inherit',
                                       }}>
@@ -973,14 +973,14 @@ export default function TrackerPage() {
                                     <button key={t} onClick={() => setCoverLetterTones(p => ({ ...p, [job.id]: t }))} style={{
                                       backgroundColor: tone === t ? 'rgba(6,182,212,0.1)' : '#ffffff',
                                       color: tone === t ? '#3b82f6' : '#64748b',
-                                      border: `1px solid ${tone === t ? '#0e4f6b' : '#e2e8f0'}`,
+                                      border: `1px solid ${tone === t ? 'rgba(59,130,246,0.3)' : '#e2e8f0'}`,
                                       borderRadius: '20px', padding: '4px 12px', fontSize: '11px', fontWeight: 600,
                                       cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize',
                                     }}>{t}</button>
                                   ))}
                                   <button onClick={() => runCoverLetter(job.id, tone)} disabled={isLoading} style={{
                                     display: 'inline-flex', alignItems: 'center', gap: '5px', marginLeft: 'auto',
-                                    backgroundColor: isLoading ? '#e2e8f0' : '#2563eb', color: isLoading ? '#94a3b8' : '#000',
+                                    backgroundColor: isLoading ? '#e2e8f0' : '#2563eb', color: isLoading ? '#94a3b8' : '#fff',
                                     border: 'none', borderRadius: '10px', padding: '6px 16px', fontSize: '12px', fontWeight: 700,
                                     cursor: isLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
                                   }}>
@@ -1053,9 +1053,9 @@ export default function TrackerPage() {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'fadeIn 0.25s ease' }}>
 
                                       {/* Positioning */}
-                                      <div style={{ backgroundColor: '#0b0f0a', border: '1px solid #1e2e1a', borderRadius: '14px', padding: '14px 16px' }}>
-                                        <div style={{ color: '#6ea86a', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Your Positioning</div>
-                                        <p style={{ color: '#8aaa85', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{g.positioning}</p>
+                                      <div style={{ backgroundColor: 'rgba(5,150,105,0.05)', border: '1px solid rgba(5,150,105,0.18)', borderRadius: '14px', padding: '14px 16px' }}>
+                                        <div style={{ color: '#059669', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Your Positioning</div>
+                                        <p style={{ color: '#059669', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{g.positioning}</p>
                                       </div>
 
                                       {/* Gaps */}
@@ -1066,7 +1066,7 @@ export default function TrackerPage() {
                                             <div key={i} style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '12px 14px', borderLeft: `3px solid ${gap.severity === 'major' ? '#ef4444' : '#3b82f6'}` }}>
                                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
                                                 <span style={{ color: gap.severity === 'major' ? '#ef4444' : '#3b82f6', fontSize: '11px', fontWeight: 700 }}>{gap.skill}</span>
-                                                <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: gap.severity === 'major' ? '#7f1d1d' : '#0e4f6b', backgroundColor: gap.severity === 'major' ? '#450a0a' : '#0a2535', borderRadius: '3px', padding: '1px 5px' }}>{gap.severity}</span>
+                                                <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: gap.severity === 'major' ? '#dc2626' : '#2563eb', backgroundColor: gap.severity === 'major' ? 'rgba(220,38,38,0.08)' : 'rgba(37,99,235,0.08)', border: `1px solid ${gap.severity === 'major' ? 'rgba(220,38,38,0.2)' : 'rgba(37,99,235,0.2)'}`, borderRadius: '3px', padding: '1px 5px' }}>{gap.severity}</span>
                                               </div>
                                               <p style={{ color: '#64748b', fontSize: '11px', margin: 0, lineHeight: 1.55 }}>{gap.how_to_address}</p>
                                             </div>
@@ -1275,7 +1275,7 @@ export default function TrackerPage() {
                   <button onClick={closeImport} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
                 </div>
                 {importWarning && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: '#0a2a3d', border: '1px solid #0e4f6b', borderRadius: '10px', padding: '10px 12px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '10px', padding: '10px 12px', marginBottom: '16px' }}>
                     <AlertCircle size={13} color="#3b82f6" style={{ flexShrink: 0, marginTop: '1px' }} />
                     <span style={{ color: '#3b82f6', fontSize: '12px', lineHeight: 1.5 }}>{importWarning}</span>
                   </div>
