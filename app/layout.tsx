@@ -26,28 +26,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
           ::-webkit-scrollbar { width: 5px; height: 5px; }
           ::-webkit-scrollbar-track { background: transparent; }
-          ::-webkit-scrollbar-thumb { background: #1e2839; border-radius: 10px; }
-          ::-webkit-scrollbar-thumb:hover { background: #2d3f58; }
-          input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.4); }
-          select option { background: #111827; }
+          ::-webkit-scrollbar-thumb { background: #263a52; border-radius: 10px; }
+          ::-webkit-scrollbar-thumb:hover { background: #3a5472; }
+          input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
+          select option { background: #182535; }
           @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
           @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
           @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
           @keyframes barGrow { from { width: 0%; } to { } }
         `}</style>
       </head>
-      <body style={{ margin: 0, padding: 0, backgroundColor: '#0d1117' }}>
+      <body style={{ margin: 0, padding: 0, backgroundColor: '#0e1520' }}>
         <div style={{ display: 'flex', minHeight: '100vh' }}>
           <aside style={{
             width: '210px', minHeight: '100vh',
-            background: 'linear-gradient(180deg, #080c13 0%, #070a10 100%)',
-            borderRight: '1px solid #131c2b',
+            background: 'linear-gradient(180deg, #0b0e18 0%, #090c15 100%)',
+            borderRight: '1px solid #1e2e42',
             position: 'fixed', top: 0, left: 0, bottom: 0,
             display: 'flex', flexDirection: 'column',
             zIndex: 50,
           }}>
             {/* Brand */}
-            <div style={{ padding: '22px 16px 20px', borderBottom: '1px solid #131c2b' }}>
+            <div style={{ padding: '22px 16px 20px', borderBottom: '1px solid #1e2e42' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{
                   width: '36px', height: '36px', borderRadius: '10px',
@@ -55,17 +55,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '13px', fontWeight: 800, color: '#000',
                   letterSpacing: '-0.5px', flexShrink: 0,
-                  boxShadow: '0 0 20px rgba(245,158,11,0.25)',
-                }}>
-                  NM
-                </div>
+                  boxShadow: '0 0 20px rgba(245,158,11,0.3)',
+                }}>NM</div>
                 <div>
-                  <div style={{ color: '#e2e8f4', fontWeight: 700, fontSize: '13px', lineHeight: 1.2 }}>
-                    Nicholas M.
-                  </div>
-                  <div style={{ color: '#3d5068', fontSize: '10px', marginTop: '2px' }}>
-                    UM · Class of 2027
-                  </div>
+                  <div style={{ color: '#eaf2ff', fontWeight: 700, fontSize: '13px', lineHeight: 1.2 }}>Nicholas M.</div>
+                  <div style={{ color: '#507090', fontSize: '10px', marginTop: '2px' }}>UM · Class of 2027</div>
                 </div>
               </div>
             </div>
@@ -77,33 +71,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 return (
                   <Link key={href} href={href} style={{
                     display: 'flex', alignItems: 'center', gap: '9px',
-                    padding: '9px 12px',
-                    textDecoration: 'none',
-                    color: isActive ? '#f0f4ff' : '#4a5d75',
-                    backgroundColor: isActive ? 'rgba(245,158,11,0.10)' : 'transparent',
-                    borderRadius: '10px',
-                    fontSize: '13px', fontWeight: isActive ? 600 : 400,
-                    transition: 'all 0.15s ease',
-                    marginBottom: '2px',
-                    border: isActive ? '1px solid rgba(245,158,11,0.18)' : '1px solid transparent',
+                    padding: '9px 12px', textDecoration: 'none',
+                    color: isActive ? '#eaf2ff' : '#7098b8',
+                    backgroundColor: isActive ? 'rgba(245,158,11,0.12)' : 'transparent',
+                    borderRadius: '10px', fontSize: '13px', fontWeight: isActive ? 600 : 400,
+                    transition: 'all 0.15s ease', marginBottom: '2px',
+                    border: isActive ? '1px solid rgba(245,158,11,0.22)' : '1px solid transparent',
                   }}
                     onMouseEnter={e => {
                       if (!isActive) {
-                        (e.currentTarget as HTMLAnchorElement).style.color = '#b0c4de';
-                        (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(255,255,255,0.04)';
+                        (e.currentTarget as HTMLAnchorElement).style.color = '#c0d8f0';
+                        (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'rgba(255,255,255,0.05)';
                       }
                     }}
                     onMouseLeave={e => {
                       if (!isActive) {
-                        (e.currentTarget as HTMLAnchorElement).style.color = '#4a5d75';
+                        (e.currentTarget as HTMLAnchorElement).style.color = '#7098b8';
                         (e.currentTarget as HTMLAnchorElement).style.backgroundColor = 'transparent';
                       }
                     }}
                   >
-                    <Icon size={14} style={{
-                      flexShrink: 0,
-                      color: isActive ? '#f59e0b' : 'inherit',
-                    }} />
+                    <Icon size={14} style={{ flexShrink: 0, color: isActive ? '#f59e0b' : 'inherit' }} />
                     {label}
                   </Link>
                 );
@@ -111,22 +99,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
 
             {/* Footer */}
-            <div style={{ padding: '14px 16px', borderTop: '1px solid #131c2b' }}>
+            <div style={{ padding: '14px 16px', borderTop: '1px solid #1e2e42' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{
-                  width: '6px', height: '6px', borderRadius: '50%',
-                  backgroundColor: '#10b981', flexShrink: 0,
-                  boxShadow: '0 0 8px rgba(16,185,129,0.6)',
-                }} />
-                <span style={{ color: '#3d5068', fontSize: '10px' }}>Powered by Claude</span>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10b981', flexShrink: 0, boxShadow: '0 0 8px rgba(16,185,129,0.6)' }} />
+                <span style={{ color: '#507090', fontSize: '10px' }}>Powered by Claude</span>
               </div>
             </div>
           </aside>
 
-          <main style={{
-            marginLeft: '210px', flex: 1, minHeight: '100vh',
-            backgroundColor: '#0d1117', overflow: 'auto',
-          }}>
+          <main style={{ marginLeft: '210px', flex: 1, minHeight: '100vh', backgroundColor: '#0e1520', overflow: 'auto' }}>
             {children}
           </main>
         </div>

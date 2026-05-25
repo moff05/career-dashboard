@@ -178,14 +178,14 @@ export default function CoachPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#0d1117' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#0e1520' }}>
 
       {/* Header */}
-      <div style={{ padding: '18px 32px', borderBottom: '1px solid #131c2b', backgroundColor: '#080c13', flexShrink: 0 }}>
-        <h1 style={{ color: '#e2e8f4', fontSize: '15px', fontWeight: 700, margin: '0 0 1px' }}>AI Career Coach</h1>
-        <p style={{ color: '#3d5068', fontSize: '11px', margin: '0 0 12px' }}>Powered by Claude — knows your full background</p>
+      <div style={{ padding: '18px 32px', borderBottom: '1px solid #1e2e42', backgroundColor: '#0b0e18', flexShrink: 0 }}>
+        <h1 style={{ color: '#eaf2ff', fontSize: '15px', fontWeight: 700, margin: '0 0 1px' }}>AI Career Coach</h1>
+        <p style={{ color: '#507090', fontSize: '11px', margin: '0 0 12px' }}>Powered by Claude — knows your full background</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <span style={{ color: '#3d5068', fontSize: '10px', fontWeight: 600, marginRight: '2px' }}>Quick actions:</span>
+          <span style={{ color: '#507090', fontSize: '10px', fontWeight: 600, marginRight: '2px' }}>Quick actions:</span>
           {[
             { label: 'Analyze a JD', text: 'Please analyze this job description for me and tell me how well I\'d fit:\n\n[paste JD here]' },
             { label: 'What should I apply to?', text: 'Based on my background and the jobs I\'ve saved, what should I be applying to right now?' },
@@ -193,13 +193,13 @@ export default function CoachPage() {
             { label: 'Cold outreach email', text: 'Help me write a cold outreach email to a recruiter at a company I\'m interested in.' },
           ].map(({ label, text }) => (
             <button key={label} onClick={() => setQuickAction(text)} style={{
-              backgroundColor: '#111827', border: '1px solid #1e2839',
-              borderRadius: '20px', padding: '5px 12px', color: '#4a5d75',
+              backgroundColor: '#182535', border: '1px solid #263a52',
+              borderRadius: '20px', padding: '5px 12px', color: '#628aaa',
               fontSize: '11px', fontWeight: 500, cursor: 'pointer',
               transition: 'all 0.15s', whiteSpace: 'nowrap', fontFamily: 'inherit',
             }}
               onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(245,158,11,0.35)'; b.style.color = '#f59e0b'; }}
-              onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = '#1e2839'; b.style.color = '#4a5d75'; }}
+              onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = '#263a52'; b.style.color = '#628aaa'; }}
             >{label}</button>
           ))}
         </div>
@@ -208,7 +208,7 @@ export default function CoachPage() {
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
         {!historyLoaded && (
-          <div style={{ textAlign: 'center', color: '#3d5068', padding: '48px', fontSize: '13px' }}>Loading…</div>
+          <div style={{ textAlign: 'center', color: '#507090', padding: '48px', fontSize: '13px' }}>Loading…</div>
         )}
 
         {historyLoaded && messages.map((msg, idx) => (
@@ -229,32 +229,32 @@ export default function CoachPage() {
 
             <div style={{
               maxWidth: '85%',
-              backgroundColor: msg.role === 'user' ? '#111827' : 'transparent',
-              border: msg.role === 'user' ? '1px solid #1e2839' : 'none',
+              backgroundColor: msg.role === 'user' ? '#182535' : 'transparent',
+              border: msg.role === 'user' ? '1px solid #263a52' : 'none',
               borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '0',
               padding: msg.role === 'user' ? '10px 15px' : '0',
-              color: '#e2e8f4', fontSize: '14px', lineHeight: '1.65',
+              color: '#eaf2ff', fontSize: '14px', lineHeight: '1.65',
             }}>
               {msg.role === 'assistant' ? (
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    p: ({ children }) => <p style={{ margin: '0 0 10px', color: '#c8d5e8' }}>{children}</p>,
-                    strong: ({ children }) => <strong style={{ color: '#e2e8f4', fontWeight: 600 }}>{children}</strong>,
-                    ul: ({ children }) => <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#c8d5e8' }}>{children}</ul>,
-                    ol: ({ children }) => <ol style={{ margin: '8px 0', paddingLeft: '20px', color: '#c8d5e8' }}>{children}</ol>,
-                    li: ({ children }) => <li style={{ margin: '4px 0', color: '#c8d5e8' }}>{children}</li>,
-                    h1: ({ children }) => <h1 style={{ color: '#e2e8f4', fontSize: '17px', fontWeight: 700, margin: '14px 0 8px' }}>{children}</h1>,
-                    h2: ({ children }) => <h2 style={{ color: '#e2e8f4', fontSize: '15px', fontWeight: 700, margin: '12px 0 6px' }}>{children}</h2>,
-                    h3: ({ children }) => <h3 style={{ color: '#e2e8f4', fontSize: '13px', fontWeight: 600, margin: '10px 0 5px' }}>{children}</h3>,
-                    code: ({ children }) => <code style={{ backgroundColor: '#151e2e', color: '#f59e0b', padding: '1px 5px', borderRadius: '5px', fontSize: '12px', fontFamily: 'monospace' }}>{children}</code>,
-                    blockquote: ({ children }) => <blockquote style={{ borderLeft: '3px solid rgba(245,158,11,0.4)', paddingLeft: '12px', margin: '8px 0', color: '#7a8fa8' }}>{children}</blockquote>,
+                    p: ({ children }) => <p style={{ margin: '0 0 10px', color: '#d5e5f5' }}>{children}</p>,
+                    strong: ({ children }) => <strong style={{ color: '#eaf2ff', fontWeight: 600 }}>{children}</strong>,
+                    ul: ({ children }) => <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#d5e5f5' }}>{children}</ul>,
+                    ol: ({ children }) => <ol style={{ margin: '8px 0', paddingLeft: '20px', color: '#d5e5f5' }}>{children}</ol>,
+                    li: ({ children }) => <li style={{ margin: '4px 0', color: '#d5e5f5' }}>{children}</li>,
+                    h1: ({ children }) => <h1 style={{ color: '#eaf2ff', fontSize: '17px', fontWeight: 700, margin: '14px 0 8px' }}>{children}</h1>,
+                    h2: ({ children }) => <h2 style={{ color: '#eaf2ff', fontSize: '15px', fontWeight: 700, margin: '12px 0 6px' }}>{children}</h2>,
+                    h3: ({ children }) => <h3 style={{ color: '#eaf2ff', fontSize: '13px', fontWeight: 600, margin: '10px 0 5px' }}>{children}</h3>,
+                    code: ({ children }) => <code style={{ backgroundColor: '#1d2d42', color: '#f59e0b', padding: '1px 5px', borderRadius: '5px', fontSize: '12px', fontFamily: 'monospace' }}>{children}</code>,
+                    blockquote: ({ children }) => <blockquote style={{ borderLeft: '3px solid rgba(245,158,11,0.4)', paddingLeft: '12px', margin: '8px 0', color: '#8eb0cc' }}>{children}</blockquote>,
                   }}
                 >
                   {msg.content || (loading && idx === messages.length - 1 ? '...' : '')}
                 </ReactMarkdown>
               ) : (
-                <span style={{ whiteSpace: 'pre-wrap', color: '#d8e6f4' }}>{msg.content}</span>
+                <span style={{ whiteSpace: 'pre-wrap', color: '#d5e5f5' }}>{msg.content}</span>
               )}
             </div>
           </div>
@@ -269,7 +269,7 @@ export default function CoachPage() {
               color: '#000', fontSize: '11px', fontWeight: 800, flexShrink: 0,
               boxShadow: '0 0 14px rgba(245,158,11,0.25)',
             }}>AI</div>
-            <Loader size={15} color="#3d5068" style={{ marginTop: '7px', animation: 'spin 1s linear infinite' }} />
+            <Loader size={15} color="#507090" style={{ marginTop: '7px', animation: 'spin 1s linear infinite' }} />
           </div>
         )}
 
@@ -277,7 +277,7 @@ export default function CoachPage() {
       </div>
 
       {/* Input bar */}
-      <div style={{ padding: '14px 32px 22px', borderTop: '1px solid #131c2b', backgroundColor: '#080c13', flexShrink: 0 }}>
+      <div style={{ padding: '14px 32px 22px', borderTop: '1px solid #1e2e42', backgroundColor: '#0b0e18', flexShrink: 0 }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
           <textarea
             ref={textareaRef}
@@ -287,31 +287,31 @@ export default function CoachPage() {
             placeholder="Ask your career coach anything…"
             rows={1}
             style={{
-              flex: 1, backgroundColor: '#111827', border: '1px solid #1e2839',
-              borderRadius: '12px', padding: '12px 16px', color: '#e2e8f4',
+              flex: 1, backgroundColor: '#182535', border: '1px solid #263a52',
+              borderRadius: '12px', padding: '12px 16px', color: '#eaf2ff',
               fontSize: '14px', outline: 'none', resize: 'none', lineHeight: '1.5',
               minHeight: '44px', maxHeight: '160px', overflow: 'auto', fontFamily: 'inherit',
               transition: 'border-color 0.15s',
             }}
             onFocus={e => (e.target.style.borderColor = 'rgba(245,158,11,0.4)')}
-            onBlur={e => (e.target.style.borderColor = '#1e2839')}
+            onBlur={e => (e.target.style.borderColor = '#263a52')}
           />
           <button
             onClick={() => handleSend()}
             disabled={loading || !input.trim()}
             style={{
               width: '44px', height: '44px', borderRadius: '12px',
-              background: loading || !input.trim() ? '#111827' : 'linear-gradient(135deg, #f59e0b, #d97706)',
-              border: loading || !input.trim() ? '1px solid #1e2839' : 'none',
+              background: loading || !input.trim() ? '#182535' : 'linear-gradient(135deg, #f59e0b, #d97706)',
+              border: loading || !input.trim() ? '1px solid #263a52' : 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', flexShrink: 0,
               boxShadow: loading || !input.trim() ? 'none' : '0 4px 12px rgba(245,158,11,0.3)',
             }}
           >
-            <Send size={16} color={loading || !input.trim() ? '#3d5068' : '#fff'} />
+            <Send size={16} color={loading || !input.trim() ? '#507090' : '#fff'} />
           </button>
         </div>
-        <p style={{ color: '#2d3f58', fontSize: '10px', margin: '7px 0 0', textAlign: 'center' }}>
+        <p style={{ color: '#3c5875', fontSize: '10px', margin: '7px 0 0', textAlign: 'center' }}>
           Enter to send · Shift+Enter for new line
         </p>
       </div>
@@ -320,8 +320,8 @@ export default function CoachPage() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: '100px', left: '50%', transform: 'translateX(-50%)',
-          backgroundColor: '#111827', border: '1px solid rgba(245,158,11,0.3)',
-          color: '#e2e8f4', padding: '10px 20px', borderRadius: '10px',
+          backgroundColor: '#182535', border: '1px solid rgba(245,158,11,0.3)',
+          color: '#eaf2ff', padding: '10px 20px', borderRadius: '10px',
           fontSize: '12px', zIndex: 1000, maxWidth: '400px', textAlign: 'center',
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
         }}>

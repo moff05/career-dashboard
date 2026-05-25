@@ -116,21 +116,21 @@ export default function DiscoverPage() {
   const visible = leads.filter(l => !dismissed.has(l.id));
 
   return (
-    <div style={{ padding: '28px 32px', minHeight: '100vh', backgroundColor: '#0d1117' }}>
+    <div style={{ padding: '28px 32px', minHeight: '100vh', backgroundColor: '#0e1520' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '22px' }}>
         <div>
-          <h1 style={{ color: '#e8f0fc', fontSize: '18px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Discover</h1>
-          <p style={{ color: '#2d3f58', fontSize: '12px', margin: '4px 0 0' }}>Research companies · explore leads</p>
+          <h1 style={{ color: '#eaf2ff', fontSize: '18px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Discover</h1>
+          <p style={{ color: '#3c5875', fontSize: '12px', margin: '4px 0 0' }}>Research companies · explore leads</p>
         </div>
         <button onClick={() => loadLeads(true)} disabled={leadsLoading} style={{
           display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'transparent',
-          color: '#2d3f58', border: '1px solid #1e2839', borderRadius: '10px', padding: '6px 12px',
+          color: '#3c5875', border: '1px solid #263a52', borderRadius: '10px', padding: '6px 12px',
           fontSize: '11px', cursor: leadsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
         }}
-          onMouseEnter={e => !leadsLoading && (e.currentTarget.style.color = '#4a5d75')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#2d3f58')}
+          onMouseEnter={e => !leadsLoading && (e.currentTarget.style.color = '#628aaa')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#3c5875')}
         >
           <RefreshCw size={11} style={leadsLoading ? { animation: 'spin 1s linear infinite' } : {}} /> Refresh leads
         </button>
@@ -143,16 +143,16 @@ export default function DiscoverPage() {
             type="text" value={query} onChange={e => setQuery(e.target.value)}
             placeholder="Search a company or role — e.g. 'CoStar', 'PropTech analyst', 'Anthropic'..."
             style={{
-              flex: 1, backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px',
-              padding: '11px 16px', color: '#e2e8f4', fontSize: '13px', outline: 'none', fontFamily: 'inherit',
+              flex: 1, backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px',
+              padding: '11px 16px', color: '#eaf2ff', fontSize: '13px', outline: 'none', fontFamily: 'inherit',
             }}
             onFocus={e => (e.target.style.borderColor = '#f59e0b')}
-            onBlur={e => (e.target.style.borderColor = '#1e2839')}
+            onBlur={e => (e.target.style.borderColor = '#263a52')}
           />
           <button type="submit" disabled={searching || !query.trim()} style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0,
-            backgroundColor: searching || !query.trim() ? '#151e2e' : '#d97706',
-            color: searching || !query.trim() ? '#3d5068' : '#000',
+            backgroundColor: searching || !query.trim() ? '#1d2d42' : '#d97706',
+            color: searching || !query.trim() ? '#507090' : '#000',
             border: 'none', borderRadius: '10px', padding: '11px 20px',
             fontSize: '13px', fontWeight: 700, cursor: searching || !query.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
           }}>
@@ -170,7 +170,7 @@ export default function DiscoverPage() {
 
       {/* Research result */}
       {result && (
-        <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px', padding: '24px', marginBottom: '36px', animation: 'fadeIn 0.25s ease' }}>
+        <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px', padding: '24px', marginBottom: '36px', animation: 'fadeIn 0.25s ease' }}>
           {/* Top row */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
             <div style={{
@@ -181,16 +181,16 @@ export default function DiscoverPage() {
             }}>{initials(result.company)}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                <span style={{ color: '#e8f0fc', fontSize: '16px', fontWeight: 700 }}>{result.company}</span>
+                <span style={{ color: '#eaf2ff', fontSize: '16px', fontWeight: 700 }}>{result.company}</span>
                 <span style={{
                   backgroundColor: `${verdictColor(result.fit_verdict)}1a`, border: `1px solid ${verdictColor(result.fit_verdict)}33`,
                   color: verdictColor(result.fit_verdict), borderRadius: '20px',
                   padding: '2px 10px', fontSize: '11px', fontWeight: 700,
                 }}>{result.fit_verdict} · {result.fit_score}/10</span>
-                {result.size !== 'Unknown' && <span style={{ color: '#2d3f58', fontSize: '11px' }}>{result.size}</span>}
-                {result.stage && <span style={{ color: '#2d3f58', fontSize: '11px' }}>· {result.stage}</span>}
+                {result.size !== 'Unknown' && <span style={{ color: '#3c5875', fontSize: '11px' }}>{result.size}</span>}
+                {result.stage && <span style={{ color: '#3c5875', fontSize: '11px' }}>· {result.stage}</span>}
               </div>
-              <p style={{ color: '#3d5068', fontSize: '12px', margin: 0, lineHeight: 1.6 }}>{result.what_they_do}</p>
+              <p style={{ color: '#507090', fontSize: '12px', margin: 0, lineHeight: 1.6 }}>{result.what_they_do}</p>
             </div>
           </div>
 
@@ -198,7 +198,7 @@ export default function DiscoverPage() {
           {result.culture_signals?.length > 0 && (
             <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '20px' }}>
               {result.culture_signals.map((s, i) => (
-                <span key={i} style={{ backgroundColor: '#131c2b', color: '#3d5068', border: '1px solid #1e2839', borderRadius: '20px', padding: '3px 9px', fontSize: '11px' }}>{s}</span>
+                <span key={i} style={{ backgroundColor: '#1e2e42', color: '#507090', border: '1px solid #263a52', borderRadius: '20px', padding: '3px 9px', fontSize: '11px' }}>{s}</span>
               ))}
             </div>
           )}
@@ -209,18 +209,18 @@ export default function DiscoverPage() {
             {/* Roles */}
             <div>
               <div style={{ marginBottom: '10px' }}>
-                <div style={{ color: '#2d3f58', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Role Types to Search</div>
-                <div style={{ color: '#2d3f58', fontSize: '10px', marginTop: '3px' }}>Suggestions — verify on their careers page</div>
+                <div style={{ color: '#3c5875', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Role Types to Search</div>
+                <div style={{ color: '#3c5875', fontSize: '10px', marginTop: '3px' }}>Suggestions — verify on their careers page</div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
                 {result.roles?.map((role, i) => {
                   return (
-                    <div key={i} style={{ backgroundColor: '#111827', borderRadius: '7px', padding: '10px 12px' }}>
-                      <div style={{ color: '#c8d5e8', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{role.title}</div>
+                    <div key={i} style={{ backgroundColor: '#182535', borderRadius: '7px', padding: '10px 12px' }}>
+                      <div style={{ color: '#d5e5f5', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{role.title}</div>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
-                        <span style={{ color: TYPE_COLORS[role.type] || '#3d5068', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[role.type] || role.type}</span>
-                        <span style={{ color: '#2d3f58', fontSize: '10px' }}>·</span>
-                        <span style={{ color: '#3d5068', fontSize: '10px' }}>{role.location}</span>
+                        <span style={{ color: TYPE_COLORS[role.type] || '#507090', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[role.type] || role.type}</span>
+                        <span style={{ color: '#3c5875', fontSize: '10px' }}>·</span>
+                        <span style={{ color: '#507090', fontSize: '10px' }}>{role.location}</span>
                       </div>
                     </div>
                   );
@@ -282,7 +282,7 @@ export default function DiscoverPage() {
               const color = badgeColor(lead.company);
               return (
                 <div key={lead.id} style={{
-                  backgroundColor: '#0f0f0f', border: '1px solid #181818', borderRadius: '10px',
+                  backgroundColor: '#182535', border: '1px solid #181818', borderRadius: '10px',
                   padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px',
                 }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = '#242424')}

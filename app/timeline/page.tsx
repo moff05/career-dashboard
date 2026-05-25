@@ -24,7 +24,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 function TypeIcon({ type, size = 16 }: { type: string; size?: number }) {
-  const color = TYPE_COLORS[type] || '#4a5d75';
+  const color = TYPE_COLORS[type] || '#628aaa';
   switch (type) {
     case 'milestone': return <Star size={size} color={color} />;
     case 'deadline': return <Flag size={size} color={color} />;
@@ -36,8 +36,8 @@ function TypeIcon({ type, size = 16 }: { type: string; size?: number }) {
 const EMPTY_FORM = { title: '', description: '', date: '', type: 'milestone' };
 
 const inputStyle = {
-  width: '100%', backgroundColor: '#0d1117', border: '1px solid #1e2839',
-  borderRadius: '10px', padding: '9px 12px', color: '#e2e8f4',
+  width: '100%', backgroundColor: '#0e1520', border: '1px solid #263a52',
+  borderRadius: '10px', padding: '9px 12px', color: '#eaf2ff',
   fontSize: '13px', outline: 'none', fontFamily: 'inherit',
 };
 
@@ -95,13 +95,13 @@ export default function TimelinePage() {
   const doneCount = events.filter(e => e.done).length;
 
   return (
-    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#0d1117' }}>
+    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#0e1520' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ color: '#e2e8f4', fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>Timeline</h1>
-          <p style={{ color: '#3d5068', fontSize: '12px', margin: '4px 0 0' }}>Milestones, deadlines, and goals</p>
+          <h1 style={{ color: '#eaf2ff', fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>Timeline</h1>
+          <p style={{ color: '#507090', fontSize: '12px', margin: '4px 0 0' }}>Milestones, deadlines, and goals</p>
         </div>
         <button onClick={() => setShowModal(true)} style={{
           display: 'flex', alignItems: 'center', gap: '6px',
@@ -115,29 +115,29 @@ export default function TimelinePage() {
       </div>
 
       {/* Progress bar */}
-      <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '14px', padding: '16px 20px', marginBottom: '28px' }}>
+      <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px', padding: '16px 20px', marginBottom: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span style={{ color: '#4a5d75', fontSize: '12px' }}>{format(minDate, 'MMM yyyy')} → {format(maxDate, 'MMM yyyy')}</span>
-          <span style={{ color: '#c8d5e8', fontSize: '12px', fontWeight: 600 }}>{progressPct}% · {doneCount}/{events.length} done</span>
+          <span style={{ color: '#628aaa', fontSize: '12px' }}>{format(minDate, 'MMM yyyy')} → {format(maxDate, 'MMM yyyy')}</span>
+          <span style={{ color: '#d5e5f5', fontSize: '12px', fontWeight: 600 }}>{progressPct}% · {doneCount}/{events.length} done</span>
         </div>
-        <div style={{ backgroundColor: '#0d1117', borderRadius: '10px', height: '7px', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: '#0e1520', borderRadius: '10px', height: '7px', overflow: 'hidden' }}>
           <div style={{ background: 'linear-gradient(90deg, #f59e0b, #d97706)', height: '100%', width: `${progressPct}%`, borderRadius: '10px', transition: 'width 0.5s ease' }} />
         </div>
       </div>
 
       {/* Timeline */}
       {loading ? (
-        <div style={{ color: '#3d5068', textAlign: 'center', padding: '60px', fontSize: '13px' }}>Loading…</div>
+        <div style={{ color: '#507090', textAlign: 'center', padding: '60px', fontSize: '13px' }}>Loading…</div>
       ) : (
         <div style={{ position: 'relative', paddingLeft: '36px' }}>
-          <div style={{ position: 'absolute', left: '10px', top: 0, bottom: 0, width: '2px', background: 'linear-gradient(180deg, #1e2839, #131c2b)' }} />
+          <div style={{ position: 'absolute', left: '10px', top: 0, bottom: 0, width: '2px', background: 'linear-gradient(180deg, #263a52, #1e2e42)' }} />
 
           {events.map((event, idx) => {
             const eventDate = parseISO(event.date);
             const isPast = eventDate < today;
             const isDone = Boolean(event.done);
             const daysUntil = differenceInDays(eventDate, today);
-            const dotColor = isDone ? '#34d399' : (isPast ? '#2d3f58' : TYPE_COLORS[event.type] || '#f59e0b');
+            const dotColor = isDone ? '#34d399' : (isPast ? '#3c5875' : TYPE_COLORS[event.type] || '#f59e0b');
 
             return (
               <div key={event.id} style={{ position: 'relative', marginBottom: idx < events.length - 1 ? '12px' : 0 }}>
@@ -150,46 +150,46 @@ export default function TimelinePage() {
                 }} />
 
                 <div style={{
-                  backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '12px',
+                  backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '12px',
                   padding: '14px 16px', opacity: isDone ? 0.5 : 1, transition: 'opacity 0.2s',
                 }}
-                  onMouseEnter={e => !isDone && (e.currentTarget.style.borderColor = '#2d3f58')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#1e2839')}
+                  onMouseEnter={e => !isDone && (e.currentTarget.style.borderColor = '#3c5875')}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#263a52')}
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
                       <TypeIcon type={event.type} size={14} />
                       <div>
-                        <div style={{ color: isDone ? '#4a5d75' : '#c8d5e8', fontWeight: 600, fontSize: '13px', textDecoration: isDone ? 'line-through' : 'none' }}>
+                        <div style={{ color: isDone ? '#628aaa' : '#d5e5f5', fontWeight: 600, fontSize: '13px', textDecoration: isDone ? 'line-through' : 'none' }}>
                           {event.title}
                         </div>
                         {event.description && (
-                          <div style={{ color: '#3d5068', fontSize: '11px', marginTop: '2px' }}>{event.description}</div>
+                          <div style={{ color: '#507090', fontSize: '11px', marginTop: '2px' }}>{event.description}</div>
                         )}
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ color: '#4a5d75', fontSize: '11px' }}>{format(eventDate, 'MMM d, yyyy')}</div>
-                        <div style={{ fontSize: '10px', color: isPast ? '#2d3f58' : (daysUntil <= 14 ? '#f59e0b' : '#3d5068'), marginTop: '2px' }}>
+                        <div style={{ color: '#628aaa', fontSize: '11px' }}>{format(eventDate, 'MMM d, yyyy')}</div>
+                        <div style={{ fontSize: '10px', color: isPast ? '#3c5875' : (daysUntil <= 14 ? '#f59e0b' : '#507090'), marginTop: '2px' }}>
                           {isPast ? `${Math.abs(daysUntil)}d ago` : `in ${daysUntil}d`}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                         {event.fromTracker ? (
-                          <span style={{ color: '#2d3f58', fontSize: '10px', fontWeight: 500 }}>from tracker</span>
+                          <span style={{ color: '#3c5875', fontSize: '10px', fontWeight: 500 }}>from tracker</span>
                         ) : (
                           <>
-                            <button onClick={() => toggleDone(event)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDone ? '#34d399' : '#3d5068', padding: '3px' }}
-                              onMouseEnter={e => !isDone && (e.currentTarget.style.color = '#7a8fa8')}
-                              onMouseLeave={e => !isDone && (e.currentTarget.style.color = '#3d5068')}
+                            <button onClick={() => toggleDone(event)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDone ? '#34d399' : '#507090', padding: '3px' }}
+                              onMouseEnter={e => !isDone && (e.currentTarget.style.color = '#8eb0cc')}
+                              onMouseLeave={e => !isDone && (e.currentTarget.style.color = '#507090')}
                               title={isDone ? 'Mark undone' : 'Mark done'}>
                               {isDone ? <CheckCircle size={15} /> : <Circle size={15} />}
                             </button>
-                            <button onClick={() => handleDelete(event.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2d3f58', padding: '3px' }}
+                            <button onClick={() => handleDelete(event.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3c5875', padding: '3px' }}
                               onMouseEnter={e => (e.currentTarget.style.color = '#f87171')}
-                              onMouseLeave={e => (e.currentTarget.style.color = '#2d3f58')}>
+                              onMouseLeave={e => (e.currentTarget.style.color = '#3c5875')}>
                               <Trash2 size={13} />
                             </button>
                           </>
@@ -208,24 +208,24 @@ export default function TimelinePage() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
           onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
-          <div style={{ backgroundColor: '#111827', border: '1px solid #1e2839', borderRadius: '18px', padding: '28px', width: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
-            <h2 style={{ color: '#e2e8f4', fontSize: '16px', fontWeight: 700, margin: '0 0 20px' }}>Add Timeline Event</h2>
+          <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '18px', padding: '28px', width: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+            <h2 style={{ color: '#eaf2ff', fontSize: '16px', fontWeight: 700, margin: '0 0 20px' }}>Add Timeline Event</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ display: 'block', color: '#4a5d75', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Title *</label>
+                <label style={{ display: 'block', color: '#628aaa', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Title *</label>
                 <input type="text" value={form.title} onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))} style={inputStyle} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#4a5d75', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Description</label>
+                <label style={{ display: 'block', color: '#628aaa', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Description</label>
                 <input type="text" value={form.description} onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} style={inputStyle} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#4a5d75', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Date *</label>
+                  <label style={{ display: 'block', color: '#628aaa', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Date *</label>
                   <input type="date" value={form.date} onChange={e => setForm(prev => ({ ...prev, date: e.target.value }))} style={inputStyle} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#4a5d75', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Type *</label>
+                  <label style={{ display: 'block', color: '#628aaa', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Type *</label>
                   <select value={form.type} onChange={e => setForm(prev => ({ ...prev, type: e.target.value }))} style={inputStyle}>
                     {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
@@ -233,7 +233,7 @@ export default function TimelinePage() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <button onClick={() => setShowModal(false)} style={{ backgroundColor: '#151e2e', color: '#7a8fa8', border: '1px solid #1e2839', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={() => setShowModal(false)} style={{ backgroundColor: '#1d2d42', color: '#8eb0cc', border: '1px solid #263a52', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
               <button onClick={handleSave} disabled={saving || !form.title || !form.date} style={{
                 background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000', border: 'none',
                 borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700,
