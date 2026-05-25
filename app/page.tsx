@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Clock, MessageSquare, Zap, Plus, RefreshCw, Bell } from 'lucide-react';
+import { AlertTriangle, Clock, MessageSquare, Zap, Plus, RefreshCw, Bell, ChevronRight } from 'lucide-react';
 
 interface Job {
   id: number; company: string; title: string; status: string;
@@ -24,6 +24,11 @@ interface Brief {
 
 const BRIEF_CACHE_KEY = 'dashboard-brief-v1';
 const BRIEF_TTL_MS = 24 * 60 * 60 * 1000;
+const STRATEGY_CACHE_KEY = 'dashboard-strategy-v1';
+const STRATEGY_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+interface StrategyJob { rank: number; job_id: number; company: string; title: string; action: string; urgency: 'high' | 'medium' | 'low'; reasoning: string; }
+interface Strategy { narrative: string; priority_jobs: StrategyJob[]; quick_actions: string[]; }
 
 function greeting() {
   const h = new Date().getHours();
@@ -87,6 +92,9 @@ export default function DashboardPage() {
   const [brief, setBrief] = useState<Brief | null>(null);
   const [briefLoading, setBriefLoading] = useState(false);
   const [briefAge, setBriefAge] = useState<string>('');
+  const [strategy, setStrategy] = useState<Strategy | null>(null);
+  const [strategyLoading, setStrategyLoading] = useState(false);
+  const [strategyAge, setStrategyAge] = useState<string>('');
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   useEffect(() => {
@@ -119,6 +127,31 @@ export default function DashboardPage() {
   };
 
   useEffect(() => { loadBrief(); }, []);
+
+  const loadStrategy = async (force = false) => {
+    if (!force) {
+      try {
+        const cached = JSON.parse(localStorage.getItem(STRATEGY_CACHE_KEY) || '{}');
+        if (cached.data && Date.now() - cached.ts < STRATEGY_TTL_MS) {
+          setStrategy(cached.data);
+          const mins = Math.round((Date.now() - cached.ts) / 60000);
+          setStrategyAge(mins < 60 ? `${mins}m ago` : `${Math.round(mins / 60)}h ago`);
+          return;
+        }
+      } catch { /* ignore */ }
+    }
+    setStrategyLoading(true);
+    try {
+      const res = await fetch('/api/strategy');
+      const data = await res.json();
+      if (!data.error) {
+        setStrategy(data);
+        setStrategyAge('just now');
+        localStorage.setItem(STRATEGY_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+      }
+    } catch { /* ignore */ }
+    setStrategyLoading(false);
+  };
 
   const stats = {
     total:        jobs.length,
@@ -369,74 +402,126 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent Jobs */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span style={{ color: '#64748b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Recent Jobs</span>
-          <Link href="/tracker" style={{ color: '#94a3b8', fontSize: '11px', textDecoration: 'none' }}
-            onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#3b82f6')}
-            onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#94a3b8')}>
-            View all →
-          </Link>
+      {/* Recent Jobs + Strategy */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+
+        {/* Recent Jobs */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <span style={{ color: '#64748b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Recent Jobs</span>
+            <Link href="/tracker" style={{ color: '#94a3b8', fontSize: '11px', textDecoration: 'none' }}
+              onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#3b82f6')}
+              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#94a3b8')}>
+              View all →
+            </Link>
+          </div>
+          {recentJobs.length === 0 ? (
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '24px 20px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+              <div style={{ color: '#94a3b8', fontSize: '12px' }}>No jobs tracked yet — import one to get started.</div>
+            </div>
+          ) : (
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+              {recentJobs.map((job, i) => {
+                const sc = STATUS_CFG[job.status] || STATUS_CFG.saved;
+                return (
+                  <Link key={job.id} href="/tracker" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 16px', textDecoration: 'none', borderBottom: i < recentJobs.length - 1 ? '1px solid #f1f5f9' : 'none', backgroundColor: 'transparent', transition: 'background 0.1s' }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0, backgroundColor: companyColor(job.company), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>
+                      {job.company.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ color: '#1e293b', fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company}</div>
+                      <div style={{ color: '#64748b', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
+                    </div>
+                    {job.match_score != null && <div style={{ fontSize: '12px', fontWeight: 700, color: scoreColor(job.match_score), flexShrink: 0 }}>{job.match_score}/10</div>}
+                    <span style={{ fontSize: '10px', fontWeight: 600, padding: '3px 9px', borderRadius: '20px', flexShrink: 0, backgroundColor: sc.bg, color: sc.color }}>{sc.label}</span>
+                    {job.deadline && (() => {
+                      const days = deadlineDays(job.deadline);
+                      if (days < 0 || days > 14) return null;
+                      return <span style={{ fontSize: '10px', color: days <= 3 ? '#dc2626' : '#64748b', flexShrink: 0, minWidth: '38px', textAlign: 'right' }}>{days === 0 ? 'Today' : `${days}d`}</span>;
+                    })()}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {recentJobs.length === 0 ? (
-          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '24px 20px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-            <div style={{ color: '#94a3b8', fontSize: '12px' }}>No jobs tracked yet — import one to get started.</div>
+        {/* Application Strategy */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: '#64748b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Strategy</span>
+              {strategyAge && !strategyLoading && <span style={{ color: '#cbd5e1', fontSize: '10px' }}>· {strategyAge}</span>}
+            </div>
+            <button onClick={() => loadStrategy(true)} disabled={strategyLoading} style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'transparent', color: '#94a3b8', border: 'none', padding: '2px', fontSize: '10px', cursor: strategyLoading ? 'wait' : 'pointer', fontFamily: 'inherit' }}
+              onMouseEnter={e => !strategyLoading && ((e.currentTarget as HTMLButtonElement).style.color = '#3b82f6')}
+              onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = '#94a3b8')}>
+              <RefreshCw size={11} style={strategyLoading ? { animation: 'spin 1s linear infinite' } : {}} />
+            </button>
           </div>
-        ) : (
-          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-            {recentJobs.map((job, i) => {
-              const sc = STATUS_CFG[job.status] || STATUS_CFG.saved;
-              return (
-                <Link key={job.id} href="/tracker" style={{
-                  display: 'flex', alignItems: 'center', gap: '14px',
-                  padding: '12px 16px', textDecoration: 'none',
-                  borderBottom: i < recentJobs.length - 1 ? '1px solid #f1f5f9' : 'none',
-                  backgroundColor: 'transparent', transition: 'background 0.1s',
-                }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <div style={{
-                    width: '32px', height: '32px', borderRadius: '8px', flexShrink: 0,
-                    backgroundColor: companyColor(job.company),
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px',
-                  }}>
-                    {job.company.slice(0, 2).toUpperCase()}
-                  </div>
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ color: '#1e293b', fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company}</div>
-                    <div style={{ color: '#64748b', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
-                  </div>
+          {!strategy && !strategyLoading && (
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '32px 20px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+              <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '12px' }}>AI-ranked application priority based on deadlines, fit scores, and your goals.</div>
+              <button onClick={() => loadStrategy(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                <Zap size={11} /> Generate Strategy
+              </button>
+            </div>
+          )}
 
-                  {job.match_score != null && (
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: scoreColor(job.match_score), flexShrink: 0 }}>
-                      {job.match_score}/10
+          {strategyLoading && !strategy && (
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '32px 20px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+              <RefreshCw size={14} color="#94a3b8" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px', display: 'block' }} />
+              <div style={{ color: '#94a3b8', fontSize: '12px' }}>Generating your strategy…</div>
+            </div>
+          )}
+
+          {strategy && (
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', animation: 'fadeIn 0.3s ease' }}>
+              {/* Narrative */}
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9', backgroundColor: 'rgba(59,130,246,0.03)' }}>
+                <p style={{ color: '#475569', fontSize: '12px', lineHeight: 1.6, margin: 0 }}>{strategy.narrative}</p>
+              </div>
+
+              {/* Priority jobs */}
+              {strategy.priority_jobs.map((job, i) => {
+                const urgencyColor = job.urgency === 'high' ? '#dc2626' : job.urgency === 'medium' ? '#3b82f6' : '#94a3b8';
+                const urgencyBg = job.urgency === 'high' ? 'rgba(220,38,38,0.07)' : job.urgency === 'medium' ? 'rgba(59,130,246,0.07)' : 'rgba(148,163,184,0.07)';
+                return (
+                  <Link key={i} href="/tracker" style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 16px', textDecoration: 'none', borderBottom: i < strategy.priority_jobs.length - 1 ? '1px solid #f1f5f9' : 'none', backgroundColor: 'transparent', transition: 'background 0.1s' }}
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
+                    <span style={{ color: '#cbd5e1', fontSize: '11px', fontWeight: 700, flexShrink: 0, width: '16px', textAlign: 'right', marginTop: '2px' }}>{job.rank}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                        <span style={{ color: '#1e293b', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company}</span>
+                        <span style={{ fontSize: '9px', fontWeight: 700, color: urgencyColor, backgroundColor: urgencyBg, padding: '1px 6px', borderRadius: '20px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{job.action}</span>
+                      </div>
+                      <div style={{ color: '#64748b', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
+                      <div style={{ color: '#94a3b8', fontSize: '10px', marginTop: '2px', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.reasoning}</div>
                     </div>
-                  )}
+                    <ChevronRight size={12} color="#cbd5e1" style={{ flexShrink: 0, marginTop: '4px' }} />
+                  </Link>
+                );
+              })}
 
-                  <span style={{
-                    fontSize: '10px', fontWeight: 600, padding: '3px 9px', borderRadius: '20px', flexShrink: 0,
-                    backgroundColor: sc.bg, color: sc.color,
-                  }}>{sc.label}</span>
-
-                  {job.deadline && (() => {
-                    const days = deadlineDays(job.deadline);
-                    if (days < 0 || days > 14) return null;
-                    return (
-                      <span style={{ fontSize: '10px', color: days <= 3 ? '#dc2626' : '#64748b', flexShrink: 0, minWidth: '38px', textAlign: 'right' }}>
-                        {days === 0 ? 'Today' : `${days}d`}
-                      </span>
-                    );
-                  })()}
-                </Link>
-              );
-            })}
-          </div>
-        )}
+              {/* Quick actions */}
+              {strategy.quick_actions?.length > 0 && (
+                <div style={{ padding: '12px 16px', borderTop: '1px solid #f1f5f9', backgroundColor: '#f8fafc' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '7px' }}>This Week</div>
+                  {strategy.quick_actions.map((a, i) => (
+                    <div key={i} style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
+                      <span style={{ color: '#3b82f6', fontSize: '10px', flexShrink: 0 }}>→</span>
+                      <span style={{ color: '#64748b', fontSize: '11px', lineHeight: 1.4 }}>{a}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
