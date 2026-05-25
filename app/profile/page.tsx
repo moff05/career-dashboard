@@ -46,7 +46,7 @@ export default function ProfilePage() {
   };
 
   const inputStyle = {
-    width: '100%', backgroundColor: '#0e1520', border: '1px solid rgba(245,158,11,0.4)',
+    width: '100%', backgroundColor: '#0d1e30', border: '1px solid rgba(59,130,246,0.4)',
     borderRadius: '10px', padding: '8px 12px', color: '#eaf2ff',
     fontSize: '13px', outline: 'none', fontFamily: 'inherit',
   };
@@ -73,11 +73,11 @@ export default function ProfilePage() {
             }
             <div style={{ display: 'flex', gap: '8px', marginTop: '7px' }}>
               <button onClick={saveField} disabled={saving} style={{
-                background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000', border: 'none',
+                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#000', border: 'none',
                 borderRadius: '8px', padding: '5px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
               }}>{saving ? 'Saving…' : 'Save'}</button>
               <button onClick={() => setEditField(null)} style={{
-                backgroundColor: '#1d2d42', color: '#8eb0cc', border: '1px solid #263a52',
+                backgroundColor: '#1a2e4a', color: '#8eb0cc', border: '1px solid #1e3d5c',
                 borderRadius: '8px', padding: '5px 12px', fontSize: '12px', cursor: 'pointer',
               }}>Cancel</button>
             </div>
@@ -85,7 +85,7 @@ export default function ProfilePage() {
         ) : (
           <div style={{ color: '#d5e5f5', fontSize: '13px', lineHeight: '1.5' }}>
             {field === 'linkedin' && value
-              ? <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noopener noreferrer" style={{ color: '#f59e0b', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>{value} <ExternalLink size={11} /></a>
+              ? <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>{value} <ExternalLink size={11} /></a>
               : value || <span style={{ color: '#3c5875', fontStyle: 'italic' }}>Not set</span>
             }
           </div>
@@ -94,12 +94,12 @@ export default function ProfilePage() {
     );
   };
 
-  const readinessColor = (s: number) => s >= 8 ? '#34d399' : s >= 6 ? '#f59e0b' : '#f87171';
+  const readinessColor = (s: number) => s >= 8 ? '#34d399' : s >= 6 ? '#3b82f6' : '#f87171';
 
-  const cardStyle = { backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '16px', padding: '20px' };
+  const cardStyle = { backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '16px', padding: '20px' };
 
   return (
-    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#0e1520' }}>
+    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#0d1e30' }}>
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ color: '#eaf2ff', fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>My Profile</h1>
         <p style={{ color: '#507090', fontSize: '12px', margin: '4px 0 0' }}>Resume info and candidate positioning</p>
@@ -124,7 +124,7 @@ export default function ProfilePage() {
             <h3 style={{ color: '#eaf2ff', fontSize: '14px', fontWeight: 700, margin: 0 }}>Candidate Strength</h3>
             <button onClick={generateSummary} disabled={loadingSummary} style={{
               display: 'flex', alignItems: 'center', gap: '6px',
-              backgroundColor: '#1d2d42', border: '1px solid #263a52', borderRadius: '10px',
+              backgroundColor: '#1a2e4a', border: '1px solid #1e3d5c', borderRadius: '10px',
               padding: '6px 14px', color: '#8eb0cc', fontSize: '12px',
               cursor: loadingSummary ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
             }}>
@@ -142,14 +142,14 @@ export default function ProfilePage() {
 
           {loadingSummary && (
             <div style={{ textAlign: 'center', padding: '48px' }}>
-              <Loader size={24} color="#f59e0b" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 12px', display: 'block' }} />
+              <Loader size={24} color="#3b82f6" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 12px', display: 'block' }} />
               <p style={{ color: '#628aaa', fontSize: '13px', margin: 0 }}>Analyzing your background…</p>
             </div>
           )}
 
           {summary && !loadingSummary && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', padding: '14px 16px', backgroundColor: '#0e1520', borderRadius: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', padding: '14px 16px', backgroundColor: '#0d1e30', borderRadius: '12px' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '32px', fontWeight: 800, color: readinessColor(summary.readiness_score), lineHeight: 1 }}>{summary.readiness_score}</div>
                   <div style={{ color: '#507090', fontSize: '10px', marginTop: '3px' }}>/10</div>

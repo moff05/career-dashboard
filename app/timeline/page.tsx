@@ -20,7 +20,7 @@ const TYPE_OPTIONS = [
 ];
 
 const TYPE_COLORS: Record<string, string> = {
-  milestone: '#6366f1', deadline: '#f87171', goal: '#34d399', application: '#f59e0b',
+  milestone: '#6366f1', deadline: '#f87171', goal: '#34d399', application: '#3b82f6',
 };
 
 function TypeIcon({ type, size = 16 }: { type: string; size?: number }) {
@@ -36,7 +36,7 @@ function TypeIcon({ type, size = 16 }: { type: string; size?: number }) {
 const EMPTY_FORM = { title: '', description: '', date: '', type: 'milestone' };
 
 const inputStyle = {
-  width: '100%', backgroundColor: '#0e1520', border: '1px solid #263a52',
+  width: '100%', backgroundColor: '#0d1e30', border: '1px solid #1e3d5c',
   borderRadius: '10px', padding: '9px 12px', color: '#eaf2ff',
   fontSize: '13px', outline: 'none', fontFamily: 'inherit',
 };
@@ -95,7 +95,7 @@ export default function TimelinePage() {
   const doneCount = events.filter(e => e.done).length;
 
   return (
-    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#0e1520' }}>
+    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#0d1e30' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -105,23 +105,23 @@ export default function TimelinePage() {
         </div>
         <button onClick={() => setShowModal(true)} style={{
           display: 'flex', alignItems: 'center', gap: '6px',
-          background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000',
+          background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#000',
           border: 'none', borderRadius: '10px', padding: '9px 18px',
           fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-          boxShadow: '0 4px 14px rgba(245,158,11,0.25)',
+          boxShadow: '0 4px 14px rgba(59,130,246,0.25)',
         }}>
           <Plus size={14} /> Add Event
         </button>
       </div>
 
       {/* Progress bar */}
-      <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px', padding: '16px 20px', marginBottom: '28px' }}>
+      <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '14px', padding: '16px 20px', marginBottom: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
           <span style={{ color: '#628aaa', fontSize: '12px' }}>{format(minDate, 'MMM yyyy')} → {format(maxDate, 'MMM yyyy')}</span>
           <span style={{ color: '#d5e5f5', fontSize: '12px', fontWeight: 600 }}>{progressPct}% · {doneCount}/{events.length} done</span>
         </div>
-        <div style={{ backgroundColor: '#0e1520', borderRadius: '10px', height: '7px', overflow: 'hidden' }}>
-          <div style={{ background: 'linear-gradient(90deg, #f59e0b, #d97706)', height: '100%', width: `${progressPct}%`, borderRadius: '10px', transition: 'width 0.5s ease' }} />
+        <div style={{ backgroundColor: '#0d1e30', borderRadius: '10px', height: '7px', overflow: 'hidden' }}>
+          <div style={{ background: 'linear-gradient(90deg, #3b82f6, #06b6d4)', height: '100%', width: `${progressPct}%`, borderRadius: '10px', transition: 'width 0.5s ease' }} />
         </div>
       </div>
 
@@ -130,14 +130,14 @@ export default function TimelinePage() {
         <div style={{ color: '#507090', textAlign: 'center', padding: '60px', fontSize: '13px' }}>Loading…</div>
       ) : (
         <div style={{ position: 'relative', paddingLeft: '36px' }}>
-          <div style={{ position: 'absolute', left: '10px', top: 0, bottom: 0, width: '2px', background: 'linear-gradient(180deg, #263a52, #1e2e42)' }} />
+          <div style={{ position: 'absolute', left: '10px', top: 0, bottom: 0, width: '2px', background: 'linear-gradient(180deg, #1e3d5c, #1a2e48)' }} />
 
           {events.map((event, idx) => {
             const eventDate = parseISO(event.date);
             const isPast = eventDate < today;
             const isDone = Boolean(event.done);
             const daysUntil = differenceInDays(eventDate, today);
-            const dotColor = isDone ? '#34d399' : (isPast ? '#3c5875' : TYPE_COLORS[event.type] || '#f59e0b');
+            const dotColor = isDone ? '#34d399' : (isPast ? '#3c5875' : TYPE_COLORS[event.type] || '#3b82f6');
 
             return (
               <div key={event.id} style={{ position: 'relative', marginBottom: idx < events.length - 1 ? '12px' : 0 }}>
@@ -150,11 +150,11 @@ export default function TimelinePage() {
                 }} />
 
                 <div style={{
-                  backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '12px',
+                  backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '12px',
                   padding: '14px 16px', opacity: isDone ? 0.5 : 1, transition: 'opacity 0.2s',
                 }}
                   onMouseEnter={e => !isDone && (e.currentTarget.style.borderColor = '#3c5875')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#263a52')}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#1e3d5c')}
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
@@ -172,7 +172,7 @@ export default function TimelinePage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ color: '#628aaa', fontSize: '11px' }}>{format(eventDate, 'MMM d, yyyy')}</div>
-                        <div style={{ fontSize: '10px', color: isPast ? '#3c5875' : (daysUntil <= 14 ? '#f59e0b' : '#507090'), marginTop: '2px' }}>
+                        <div style={{ fontSize: '10px', color: isPast ? '#3c5875' : (daysUntil <= 14 ? '#3b82f6' : '#507090'), marginTop: '2px' }}>
                           {isPast ? `${Math.abs(daysUntil)}d ago` : `in ${daysUntil}d`}
                         </div>
                       </div>
@@ -208,7 +208,7 @@ export default function TimelinePage() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
           onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
-          <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '18px', padding: '28px', width: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
+          <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '18px', padding: '28px', width: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}>
             <h2 style={{ color: '#eaf2ff', fontSize: '16px', fontWeight: 700, margin: '0 0 20px' }}>Add Timeline Event</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
@@ -233,9 +233,9 @@ export default function TimelinePage() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <button onClick={() => setShowModal(false)} style={{ backgroundColor: '#1d2d42', color: '#8eb0cc', border: '1px solid #263a52', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={() => setShowModal(false)} style={{ backgroundColor: '#1a2e4a', color: '#8eb0cc', border: '1px solid #1e3d5c', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
               <button onClick={handleSave} disabled={saving || !form.title || !form.date} style={{
-                background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000', border: 'none',
+                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#000', border: 'none',
                 borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700,
                 cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit',
               }}>{saving ? 'Saving…' : 'Add Event'}</button>

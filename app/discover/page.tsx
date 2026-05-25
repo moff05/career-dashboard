@@ -28,17 +28,17 @@ const TYPE_LABELS: Record<string, string> = {
 };
 const TYPE_COLORS: Record<string, string> = {
   'fall-2026-internship': '#7c3aed', 'spring-2027-internship': '#0891b2',
-  'summer-internship': '#059669', 'full-time': '#d97706',
+  'summer-internship': '#059669', 'full-time': '#2563eb',
 };
-const BADGE_COLORS = ['#7c3aed','#2563eb','#0891b2','#059669','#d97706','#dc2626','#db2777','#4f46e5','#0284c7','#16a34a','#ca8a04'];
+const BADGE_COLORS = ['#7c3aed','#2563eb','#0891b2','#059669','#2563eb','#dc2626','#db2777','#4f46e5','#0284c7','#16a34a','#ca8a04'];
 function badgeColor(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
   return BADGE_COLORS[Math.abs(h) % BADGE_COLORS.length];
 }
-function fitColor(s: number) { return s >= 8 ? '#22c55e' : s >= 6 ? '#f59e0b' : s >= 4 ? '#f97316' : '#ef4444'; }
+function fitColor(s: number) { return s >= 8 ? '#22c55e' : s >= 6 ? '#3b82f6' : s >= 4 ? '#f97316' : '#ef4444'; }
 function verdictColor(v: string) {
-  if (v === 'Strong Match') return '#22c55e'; if (v === 'Good Fit') return '#f59e0b';
+  if (v === 'Strong Match') return '#22c55e'; if (v === 'Good Fit') return '#3b82f6';
   if (v === 'Stretch') return '#f97316'; return '#ef4444';
 }
 function initials(name: string) { return name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase(); }
@@ -116,7 +116,7 @@ export default function DiscoverPage() {
   const visible = leads.filter(l => !dismissed.has(l.id));
 
   return (
-    <div style={{ padding: '28px 32px', minHeight: '100vh', backgroundColor: '#0e1520' }}>
+    <div style={{ padding: '28px 32px', minHeight: '100vh', backgroundColor: '#0d1e30' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '22px' }}>
@@ -126,7 +126,7 @@ export default function DiscoverPage() {
         </div>
         <button onClick={() => loadLeads(true)} disabled={leadsLoading} style={{
           display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'transparent',
-          color: '#3c5875', border: '1px solid #263a52', borderRadius: '10px', padding: '6px 12px',
+          color: '#3c5875', border: '1px solid #1e3d5c', borderRadius: '10px', padding: '6px 12px',
           fontSize: '11px', cursor: leadsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
         }}
           onMouseEnter={e => !leadsLoading && (e.currentTarget.style.color = '#628aaa')}
@@ -143,15 +143,15 @@ export default function DiscoverPage() {
             type="text" value={query} onChange={e => setQuery(e.target.value)}
             placeholder="Search a company or role — e.g. 'CoStar', 'PropTech analyst', 'Anthropic'..."
             style={{
-              flex: 1, backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px',
+              flex: 1, backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '14px',
               padding: '11px 16px', color: '#eaf2ff', fontSize: '13px', outline: 'none', fontFamily: 'inherit',
             }}
-            onFocus={e => (e.target.style.borderColor = '#f59e0b')}
-            onBlur={e => (e.target.style.borderColor = '#263a52')}
+            onFocus={e => (e.target.style.borderColor = '#3b82f6')}
+            onBlur={e => (e.target.style.borderColor = '#1e3d5c')}
           />
           <button type="submit" disabled={searching || !query.trim()} style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0,
-            backgroundColor: searching || !query.trim() ? '#1d2d42' : '#d97706',
+            backgroundColor: searching || !query.trim() ? '#1a2e4a' : '#2563eb',
             color: searching || !query.trim() ? '#507090' : '#000',
             border: 'none', borderRadius: '10px', padding: '11px 20px',
             fontSize: '13px', fontWeight: 700, cursor: searching || !query.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
@@ -170,7 +170,7 @@ export default function DiscoverPage() {
 
       {/* Research result */}
       {result && (
-        <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px', padding: '24px', marginBottom: '36px', animation: 'fadeIn 0.25s ease' }}>
+        <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '14px', padding: '24px', marginBottom: '36px', animation: 'fadeIn 0.25s ease' }}>
           {/* Top row */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
             <div style={{
@@ -198,7 +198,7 @@ export default function DiscoverPage() {
           {result.culture_signals?.length > 0 && (
             <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '20px' }}>
               {result.culture_signals.map((s, i) => (
-                <span key={i} style={{ backgroundColor: '#1e2e42', color: '#507090', border: '1px solid #263a52', borderRadius: '20px', padding: '3px 9px', fontSize: '11px' }}>{s}</span>
+                <span key={i} style={{ backgroundColor: '#1a2e48', color: '#507090', border: '1px solid #1e3d5c', borderRadius: '20px', padding: '3px 9px', fontSize: '11px' }}>{s}</span>
               ))}
             </div>
           )}
@@ -215,7 +215,7 @@ export default function DiscoverPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
                 {result.roles?.map((role, i) => {
                   return (
-                    <div key={i} style={{ backgroundColor: '#182535', borderRadius: '7px', padding: '10px 12px' }}>
+                    <div key={i} style={{ backgroundColor: '#152845', borderRadius: '7px', padding: '10px 12px' }}>
                       <div style={{ color: '#d5e5f5', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{role.title}</div>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
                         <span style={{ color: TYPE_COLORS[role.type] || '#507090', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[role.type] || role.type}</span>
@@ -234,9 +234,9 @@ export default function DiscoverPage() {
                 <div style={{ color: '#333', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '7px' }}>Why You Fit</div>
                 <p style={{ color: '#666', fontSize: '12px', margin: 0, lineHeight: 1.65 }}>{result.fit_reasoning}</p>
               </div>
-              <div style={{ backgroundColor: '#0f0e00', border: '1px solid #252200', borderRadius: '8px', padding: '13px 15px' }}>
-                <div style={{ color: '#d97706', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '7px' }}>Your Angle</div>
-                <p style={{ color: '#a07820', fontSize: '12px', margin: 0, lineHeight: 1.65 }}>{result.nicholas_angle}</p>
+              <div style={{ backgroundColor: '#0d1e30', border: '1px solid #1a2e48', borderRadius: '8px', padding: '13px 15px' }}>
+                <div style={{ color: '#60a5fa', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '7px' }}>Your Angle</div>
+                <p style={{ color: '#60a5fa', fontSize: '12px', margin: 0, lineHeight: 1.65 }}>{result.nicholas_angle}</p>
               </div>
               {result.caveat && (
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', padding: '2px 0' }}>
@@ -269,7 +269,7 @@ export default function DiscoverPage() {
         {!leadsLoading && leads.length > 0 && visible.length === 0 && (
           <div style={{ color: '#2a2a2a', fontSize: '12px', padding: '32px 0' }}>
             All leads dismissed.{' '}
-            <button onClick={() => loadLeads(true)} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Refresh</button>
+            <button onClick={() => loadLeads(true)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Refresh</button>
             {' '}for new ones.
           </div>
         )}
@@ -282,7 +282,7 @@ export default function DiscoverPage() {
               const color = badgeColor(lead.company);
               return (
                 <div key={lead.id} style={{
-                  backgroundColor: '#182535', border: '1px solid #181818', borderRadius: '10px',
+                  backgroundColor: '#152845', border: '1px solid #181818', borderRadius: '10px',
                   padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px',
                 }}
                   onMouseEnter={e => (e.currentTarget.style.borderColor = '#242424')}
@@ -345,7 +345,7 @@ export default function DiscoverPage() {
                     cursor: isSaved ? 'default' : 'pointer', fontFamily: 'inherit', width: '100%',
                     transition: 'all 0.15s',
                   }}
-                    onMouseEnter={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#d97706'; (e.currentTarget as HTMLButtonElement).style.color = '#d97706'; } }}
+                    onMouseEnter={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#2563eb'; (e.currentTarget as HTMLButtonElement).style.color = '#2563eb'; } }}
                     onMouseLeave={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#1e1e1e'; (e.currentTarget as HTMLButtonElement).style.color = '#555'; } }}
                   >
                     {isSaved ? '✓ Saved to Tracker' : <><Plus size={11} /> Save to Tracker</>}

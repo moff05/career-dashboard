@@ -16,7 +16,7 @@ interface AnalyticsData {
 const STATUS_COLORS: Record<string, string> = {
   saved: '#628aaa',
   applied: '#6366f1',
-  interviewing: '#f59e0b',
+  interviewing: '#3b82f6',
   offer: '#10b981',
   rejected: '#f87171',
 };
@@ -48,7 +48,7 @@ export default function AnalyticsPage() {
   const pipeline = ['saved', 'applied', 'interviewing', 'offer'];
 
   return (
-    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#0e1520', maxWidth: '1000px' }}>
+    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#0d1e30', maxWidth: '1000px' }}>
 
       {/* Header */}
       <div style={{ marginBottom: '28px' }}>
@@ -68,12 +68,12 @@ export default function AnalyticsPage() {
             glow: 'rgba(99,102,241,0.12)',
           },
           {
-            icon: <Target size={16} color="#f59e0b" />,
+            icon: <Target size={16} color="#3b82f6" />,
             label: 'Response Rate',
             value: data.responseRate != null ? `${data.responseRate}%` : '—',
             sub: 'interviews + offers / applied',
-            color: '#f59e0b',
-            glow: 'rgba(245,158,11,0.12)',
+            color: '#3b82f6',
+            glow: 'rgba(59,130,246,0.12)',
           },
           {
             icon: <Zap size={16} color="#10b981" />,
@@ -93,7 +93,7 @@ export default function AnalyticsPage() {
           },
         ].map(m => (
           <div key={m.label} style={{
-            backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '16px',
+            backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '16px',
             padding: '18px 16px',
             boxShadow: `0 0 24px ${m.glow}`,
           }}>
@@ -110,7 +110,7 @@ export default function AnalyticsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
 
         {/* Pipeline funnel */}
-        <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '16px', padding: '20px 20px' }}>
+        <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '16px', padding: '20px 20px' }}>
           <div style={{ color: '#628aaa', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>Pipeline Funnel</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {pipeline.map(status => {
@@ -122,7 +122,7 @@ export default function AnalyticsPage() {
                     <span style={{ color: '#8eb0cc', fontSize: '12px', fontWeight: 500 }}>{STATUS_LABELS[status]}</span>
                     <span style={{ color: STATUS_COLORS[status], fontSize: '13px', fontWeight: 700 }}>{count}</span>
                   </div>
-                  <div style={{ height: '7px', backgroundColor: '#0e1520', borderRadius: '10px', overflow: 'hidden' }}>
+                  <div style={{ height: '7px', backgroundColor: '#0d1e30', borderRadius: '10px', overflow: 'hidden' }}>
                     <div style={{
                       height: '100%', width: `${pct}%`, borderRadius: '10px',
                       backgroundColor: STATUS_COLORS[status],
@@ -139,7 +139,7 @@ export default function AnalyticsPage() {
                   <span style={{ color: '#8eb0cc', fontSize: '12px', fontWeight: 500 }}>Rejected</span>
                   <span style={{ color: '#f87171', fontSize: '13px', fontWeight: 700 }}>{data.statusCounts.rejected}</span>
                 </div>
-                <div style={{ height: '7px', backgroundColor: '#0e1520', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ height: '7px', backgroundColor: '#0d1e30', borderRadius: '10px', overflow: 'hidden' }}>
                   <div style={{
                     height: '100%', width: `${Math.round((data.statusCounts.rejected / maxStatusCount) * 100)}%`,
                     borderRadius: '10px', backgroundColor: '#f87171', opacity: 0.7,
@@ -151,7 +151,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Weekly activity */}
-        <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '16px', padding: '20px 20px' }}>
+        <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '16px', padding: '20px 20px' }}>
           <div style={{ color: '#628aaa', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>Weekly Activity</div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '90px' }}>
             {data.weeks.map((w, i) => {
@@ -162,7 +162,7 @@ export default function AnalyticsPage() {
                   <div style={{ color: '#507090', fontSize: '9px', fontWeight: 600 }}>{w.count > 0 ? w.count : ''}</div>
                   <div style={{
                     width: '100%', height: `${h}px`, borderRadius: '4px',
-                    backgroundColor: isLast ? '#f59e0b' : w.count > 0 ? '#6366f1' : '#263a52',
+                    backgroundColor: isLast ? '#3b82f6' : w.count > 0 ? '#6366f1' : '#1e3d5c',
                     opacity: isLast ? 1 : w.count > 0 ? 0.7 : 1,
                     transition: 'height 0.4s ease',
                   }} />
@@ -173,14 +173,14 @@ export default function AnalyticsPage() {
               );
             })}
           </div>
-          <div style={{ marginTop: '8px', color: '#507090', fontSize: '10px', textAlign: 'center' }}>Last 8 weeks · amber = this week</div>
+          <div style={{ marginTop: '8px', color: '#507090', fontSize: '10px', textAlign: 'center' }}>Last 8 weeks · blue = this week</div>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
 
         {/* Score distribution */}
-        <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '16px', padding: '20px 20px' }}>
+        <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '16px', padding: '20px 20px' }}>
           <div style={{ color: '#628aaa', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>Fit Score Distribution</div>
           {data.scoreBuckets.every(b => b.count === 0) ? (
             <div style={{ color: '#507090', fontSize: '12px', padding: '20px 0' }}>Run AI analysis on your jobs to see scores.</div>
@@ -189,14 +189,14 @@ export default function AnalyticsPage() {
               {data.scoreBuckets.map(b => {
                 const maxBucket = Math.max(...data.scoreBuckets.map(x => x.count), 1);
                 const pct = Math.round((b.count / maxBucket) * 100);
-                const color = b.min >= 9 ? '#10b981' : b.min >= 7 ? '#f59e0b' : b.min >= 5 ? '#f97316' : '#f87171';
+                const color = b.min >= 9 ? '#10b981' : b.min >= 7 ? '#3b82f6' : b.min >= 5 ? '#06b6d4' : '#f87171';
                 return (
                   <div key={b.label}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                       <span style={{ color: '#8eb0cc', fontSize: '11px' }}>{b.label}</span>
                       <span style={{ color, fontSize: '11px', fontWeight: 700 }}>{b.count}</span>
                     </div>
-                    <div style={{ height: '6px', backgroundColor: '#0e1520', borderRadius: '10px', overflow: 'hidden' }}>
+                    <div style={{ height: '6px', backgroundColor: '#0d1e30', borderRadius: '10px', overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct}%`, borderRadius: '10px', backgroundColor: color, opacity: 0.8 }} />
                     </div>
                   </div>
@@ -207,13 +207,13 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Avg days to stage */}
-        <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '16px', padding: '20px 20px' }}>
+        <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '16px', padding: '20px 20px' }}>
           <div style={{ color: '#628aaa', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '16px' }}>Avg Days to Stage Change</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {(['applied', 'interviewing', 'offer', 'rejected'] as const).map(stage => {
               const days = data.avgDaysToStage[stage];
               return (
-                <div key={stage} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: '#0e1520', borderRadius: '10px' }}>
+                <div key={stage} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: '#0d1e30', borderRadius: '10px' }}>
                   <span style={{ color: '#8eb0cc', fontSize: '12px', fontWeight: 500 }}>{STATUS_LABELS[stage]}</span>
                   <span style={{ color: days != null ? STATUS_COLORS[stage] : '#3c5875', fontSize: '13px', fontWeight: 700 }}>
                     {days != null ? `${days}d` : '—'}

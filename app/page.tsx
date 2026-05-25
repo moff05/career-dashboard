@@ -58,7 +58,7 @@ function getPriorities(jobs: Job[]): Priority[] {
 
 const LEVEL_CFG = {
   urgent:    { bg: 'rgba(239,68,68,0.08)',   border: 'rgba(239,68,68,0.2)',   icon: <AlertTriangle size={12} color="#f87171" />, tag: 'Urgent',    color: '#f87171' },
-  soon:      { bg: 'rgba(245,158,11,0.08)',   border: 'rgba(245,158,11,0.2)',  icon: <Clock         size={12} color="#fbbf24" />, tag: 'Soon',      color: '#fbbf24' },
+  soon:      { bg: 'rgba(59,130,246,0.08)',   border: 'rgba(59,130,246,0.2)',  icon: <Clock         size={12} color="#38bdf8" />, tag: 'Soon',      color: '#38bdf8' },
   followup:  { bg: 'rgba(139,92,246,0.08)',   border: 'rgba(139,92,246,0.2)',  icon: <Bell          size={12} color="#a78bfa" />, tag: 'Follow up', color: '#a78bfa' },
   interview: { bg: 'rgba(16,185,129,0.08)',   border: 'rgba(16,185,129,0.2)',  icon: <Zap           size={12} color="#34d399" />, tag: 'Prep',      color: '#34d399' },
 };
@@ -66,16 +66,16 @@ const LEVEL_CFG = {
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
   saved:        { label: 'Saved',        color: '#8eb0cc', bg: 'rgba(122,143,168,0.10)' },
   applied:      { label: 'Applied',      color: '#818cf8', bg: 'rgba(129,140,248,0.10)' },
-  interviewing: { label: 'Interview',    color: '#fbbf24', bg: 'rgba(251,191,36,0.10)'  },
+  interviewing: { label: 'Interview',    color: '#38bdf8', bg: 'rgba(56,189,248,0.10)'  },
   offer:        { label: 'Offer',        color: '#34d399', bg: 'rgba(52,211,153,0.10)'  },
   rejected:     { label: 'Rejected',     color: '#f87171', bg: 'rgba(248,113,113,0.10)' },
 };
 
 function scoreColor(s: number) {
-  if (s >= 8) return '#34d399'; if (s >= 6) return '#fbbf24'; return '#f87171';
+  if (s >= 8) return '#34d399'; if (s >= 6) return '#38bdf8'; return '#f87171';
 }
 
-const BADGE_COLORS = ['#7c3aed','#2563eb','#0891b2','#059669','#d97706','#dc2626','#db2777','#4f46e5','#0284c7','#16a34a','#ca8a04'];
+const BADGE_COLORS = ['#7c3aed','#2563eb','#0891b2','#059669','#2563eb','#dc2626','#db2777','#4f46e5','#0284c7','#16a34a','#ca8a04'];
 function companyColor(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
@@ -148,7 +148,7 @@ export default function DashboardPage() {
   const hasJobs = jobs.length > 0;
 
   return (
-    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#0e1520', maxWidth: '1060px' }}>
+    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#0d1e30', maxWidth: '1060px' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px' }}>
@@ -162,11 +162,11 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <Link href="/tracker" style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
-            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
             color: '#000', borderRadius: '10px',
             padding: '9px 18px', fontSize: '12px', fontWeight: 700,
             textDecoration: 'none', whiteSpace: 'nowrap',
-            boxShadow: '0 4px 14px rgba(245,158,11,0.25)',
+            boxShadow: '0 4px 14px rgba(59,130,246,0.25)',
           }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
@@ -175,12 +175,12 @@ export default function DashboardPage() {
           </Link>
           <Link href="/coach" style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
-            backgroundColor: '#182535', border: '1px solid #263a52', color: '#8eb0cc',
+            backgroundColor: '#152845', border: '1px solid #1e3d5c', color: '#8eb0cc',
             borderRadius: '10px', padding: '9px 14px', fontSize: '12px', fontWeight: 500,
             textDecoration: 'none', whiteSpace: 'nowrap',
           }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#f59e0b'; e.currentTarget.style.borderColor = 'rgba(245,158,11,0.3)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#8eb0cc'; e.currentTarget.style.borderColor = '#263a52'; }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#3b82f6'; e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#8eb0cc'; e.currentTarget.style.borderColor = '#1e3d5c'; }}
           >
             <MessageSquare size={12} /> Coach
           </Link>
@@ -192,16 +192,16 @@ export default function DashboardPage() {
         {[
           { label: 'Tracked',      value: stats.total,        color: '#eaf2ff', glow: '' },
           { label: 'Applied',      value: stats.applied,      color: '#818cf8', glow: 'rgba(129,140,248,0.1)' },
-          { label: 'Interviewing', value: stats.interviewing, color: '#fbbf24', glow: 'rgba(251,191,36,0.1)' },
+          { label: 'Interviewing', value: stats.interviewing, color: '#38bdf8', glow: 'rgba(56,189,248,0.1)' },
           { label: 'Offers',       value: stats.offers,       color: '#34d399', glow: 'rgba(52,211,153,0.1)' },
           { label: 'Due this week',value: stats.deadlines,    color: stats.deadlines > 0 ? '#f87171' : '#507090', glow: 'rgba(248,113,113,0.1)' },
         ].map(s => (
           <div key={s.label} style={{
-            backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px', padding: '16px 14px',
+            backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '14px', padding: '16px 14px',
             boxShadow: s.value > 0 && s.glow ? `0 0 20px ${s.glow}` : 'none',
           }}>
-            <div style={{ color: s.value > 0 ? s.color : '#263a52', fontSize: '28px', fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.value}</div>
-            <div style={{ color: s.value > 0 ? '#507090' : '#263a52', fontSize: '10px', marginTop: '6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</div>
+            <div style={{ color: s.value > 0 ? s.color : '#1e3d5c', fontSize: '28px', fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.value}</div>
+            <div style={{ color: s.value > 0 ? '#507090' : '#1e3d5c', fontSize: '10px', marginTop: '6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -209,12 +209,12 @@ export default function DashboardPage() {
       {/* Daily digest banner */}
       {(noResponseJobs.length > 0 || thisWeekDeadlines.length > 0) && (
         <div style={{
-          backgroundColor: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)',
+          backgroundColor: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)',
           borderRadius: '14px', padding: '14px 18px', marginBottom: '20px',
           display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center',
           animation: 'fadeIn 0.3s ease',
         }}>
-          <span style={{ color: '#f59e0b', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0 }}>Today</span>
+          <span style={{ color: '#3b82f6', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', flexShrink: 0 }}>Today</span>
           {thisWeekDeadlines.slice(0, 2).map(j => {
             const d = deadlineDays(j.deadline!);
             return (
@@ -239,7 +239,7 @@ export default function DashboardPage() {
             </Link>
           ))}
           {(noResponseJobs.length + thisWeekDeadlines.length > 4) && (
-            <Link href="/tracker" style={{ color: '#f59e0b', fontSize: '11px', textDecoration: 'none' }}>
+            <Link href="/tracker" style={{ color: '#3b82f6', fontSize: '11px', textDecoration: 'none' }}>
               +{noResponseJobs.length + thisWeekDeadlines.length - 4} more →
             </Link>
           )}
@@ -260,7 +260,7 @@ export default function DashboardPage() {
           </div>
 
           {priorities.length === 0 ? (
-            <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px', padding: '28px 20px', textAlign: 'center' }}>
+            <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '14px', padding: '28px 20px', textAlign: 'center' }}>
               {hasJobs ? (
                 <>
                   <div style={{ color: '#34d399', fontSize: '18px', fontWeight: 700, marginBottom: '6px' }}>All clear</div>
@@ -271,7 +271,7 @@ export default function DashboardPage() {
                   <div style={{ color: '#507090', fontSize: '12px', marginBottom: '12px' }}>Start by importing a job.</div>
                   <Link href="/tracker" style={{
                     display: 'inline-block',
-                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
                     color: '#000', borderRadius: '8px', padding: '7px 16px',
                     fontSize: '11px', fontWeight: 700, textDecoration: 'none',
                   }}>Import Job →</Link>
@@ -324,17 +324,17 @@ export default function DashboardPage() {
           </div>
 
           {briefLoading && !brief && (
-            <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
+            <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
               <RefreshCw size={14} color="#507090" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px', display: 'block' }} />
               <div style={{ color: '#507090', fontSize: '12px' }}>Generating your brief…</div>
             </div>
           )}
 
           {!brief && !briefLoading && (
-            <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
+            <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
               <div style={{ color: '#507090', fontSize: '12px', marginBottom: '12px' }}>Your weekly brief wasn&apos;t loaded.</div>
               <button onClick={() => loadBrief(true)} style={{
-                backgroundColor: '#1d2d42', color: '#8eb0cc', border: '1px solid #263a52',
+                backgroundColor: '#1a2e4a', color: '#8eb0cc', border: '1px solid #1e3d5c',
                 borderRadius: '8px', padding: '6px 14px', fontSize: '11px', fontWeight: 500,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}>Generate</button>
@@ -342,7 +342,7 @@ export default function DashboardPage() {
           )}
 
           {brief && (
-            <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px', padding: '16px', animation: 'fadeIn 0.3s ease', maxHeight: '300px', overflowY: 'auto' }}>
+            <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '14px', padding: '16px', animation: 'fadeIn 0.3s ease', maxHeight: '300px', overflowY: 'auto' }}>
               <p style={{ color: '#d5e5f5', fontSize: '12px', fontWeight: 600, margin: '0 0 12px', lineHeight: 1.6 }}>{brief.headline}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
                 {brief.priority_actions?.slice(0, 3).map((a, i) => (
@@ -350,16 +350,16 @@ export default function DashboardPage() {
                     <span style={{
                       fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '20px', flexShrink: 0,
                       marginTop: '1px', textTransform: 'uppercase', letterSpacing: '0.05em',
-                      backgroundColor: a.urgency === 'today' ? 'rgba(248,113,113,0.12)' : a.urgency === 'this-week' ? 'rgba(251,191,36,0.12)' : 'rgba(122,143,168,0.08)',
-                      color: a.urgency === 'today' ? '#f87171' : a.urgency === 'this-week' ? '#fbbf24' : '#628aaa',
-                      border: `1px solid ${a.urgency === 'today' ? 'rgba(248,113,113,0.25)' : a.urgency === 'this-week' ? 'rgba(251,191,36,0.25)' : '#263a52'}`,
+                      backgroundColor: a.urgency === 'today' ? 'rgba(248,113,113,0.12)' : a.urgency === 'this-week' ? 'rgba(56,189,248,0.12)' : 'rgba(122,143,168,0.08)',
+                      color: a.urgency === 'today' ? '#f87171' : a.urgency === 'this-week' ? '#38bdf8' : '#628aaa',
+                      border: `1px solid ${a.urgency === 'today' ? 'rgba(248,113,113,0.25)' : a.urgency === 'this-week' ? 'rgba(56,189,248,0.25)' : '#1e3d5c'}`,
                     }}>{a.urgency}</span>
                     <div style={{ color: '#8eb0cc', fontSize: '12px', lineHeight: 1.5 }}>{a.action}</div>
                   </div>
                 ))}
               </div>
               {brief.this_week_focus && (
-                <div style={{ borderTop: '1px solid #263a52', marginTop: '12px', paddingTop: '12px' }}>
+                <div style={{ borderTop: '1px solid #1e3d5c', marginTop: '12px', paddingTop: '12px' }}>
                   <div style={{ color: '#507090', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '5px' }}>This Week</div>
                   <p style={{ color: '#628aaa', fontSize: '11px', margin: 0, lineHeight: 1.65 }}>{brief.this_week_focus}</p>
                 </div>
@@ -381,21 +381,21 @@ export default function DashboardPage() {
         </div>
 
         {recentJobs.length === 0 ? (
-          <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px', padding: '24px 20px', textAlign: 'center' }}>
+          <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '14px', padding: '24px 20px', textAlign: 'center' }}>
             <div style={{ color: '#507090', fontSize: '12px' }}>No jobs tracked yet — import one to get started.</div>
           </div>
         ) : (
-          <div style={{ backgroundColor: '#182535', border: '1px solid #263a52', borderRadius: '14px', overflow: 'hidden' }}>
+          <div style={{ backgroundColor: '#152845', border: '1px solid #1e3d5c', borderRadius: '14px', overflow: 'hidden' }}>
             {recentJobs.map((job, i) => {
               const sc = STATUS_CFG[job.status] || STATUS_CFG.saved;
               return (
                 <Link key={job.id} href="/tracker" style={{
                   display: 'flex', alignItems: 'center', gap: '14px',
                   padding: '12px 16px', textDecoration: 'none',
-                  borderBottom: i < recentJobs.length - 1 ? '1px solid #1e2e42' : 'none',
+                  borderBottom: i < recentJobs.length - 1 ? '1px solid #1a2e48' : 'none',
                   backgroundColor: 'transparent', transition: 'background 0.1s',
                 }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1d2d42')}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1a2e4a')}
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   <div style={{

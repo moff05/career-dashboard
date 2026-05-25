@@ -178,10 +178,10 @@ export default function CoachPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#0e1520' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#0d1e30' }}>
 
       {/* Header */}
-      <div style={{ padding: '18px 32px', borderBottom: '1px solid #1e2e42', backgroundColor: '#0b0e18', flexShrink: 0 }}>
+      <div style={{ padding: '18px 32px', borderBottom: '1px solid #1a2e48', backgroundColor: '#091525', flexShrink: 0 }}>
         <h1 style={{ color: '#eaf2ff', fontSize: '15px', fontWeight: 700, margin: '0 0 1px' }}>AI Career Coach</h1>
         <p style={{ color: '#507090', fontSize: '11px', margin: '0 0 12px' }}>Powered by Claude — knows your full background</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
@@ -193,13 +193,13 @@ export default function CoachPage() {
             { label: 'Cold outreach email', text: 'Help me write a cold outreach email to a recruiter at a company I\'m interested in.' },
           ].map(({ label, text }) => (
             <button key={label} onClick={() => setQuickAction(text)} style={{
-              backgroundColor: '#182535', border: '1px solid #263a52',
+              backgroundColor: '#152845', border: '1px solid #1e3d5c',
               borderRadius: '20px', padding: '5px 12px', color: '#628aaa',
               fontSize: '11px', fontWeight: 500, cursor: 'pointer',
               transition: 'all 0.15s', whiteSpace: 'nowrap', fontFamily: 'inherit',
             }}
-              onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(245,158,11,0.35)'; b.style.color = '#f59e0b'; }}
-              onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = '#263a52'; b.style.color = '#628aaa'; }}
+              onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = 'rgba(59,130,246,0.35)'; b.style.color = '#3b82f6'; }}
+              onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.borderColor = '#1e3d5c'; b.style.color = '#628aaa'; }}
             >{label}</button>
           ))}
         </div>
@@ -219,18 +219,18 @@ export default function CoachPage() {
             {msg.role === 'assistant' && (
               <div style={{
                 width: '30px', height: '30px', borderRadius: '10px',
-                background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: '#000', fontSize: '11px', fontWeight: 800,
                 flexShrink: 0, marginTop: '2px', letterSpacing: '-0.5px',
-                boxShadow: '0 0 14px rgba(245,158,11,0.25)',
+                boxShadow: '0 0 14px rgba(59,130,246,0.25)',
               }}>AI</div>
             )}
 
             <div style={{
               maxWidth: '85%',
-              backgroundColor: msg.role === 'user' ? '#182535' : 'transparent',
-              border: msg.role === 'user' ? '1px solid #263a52' : 'none',
+              backgroundColor: msg.role === 'user' ? '#152845' : 'transparent',
+              border: msg.role === 'user' ? '1px solid #1e3d5c' : 'none',
               borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '0',
               padding: msg.role === 'user' ? '10px 15px' : '0',
               color: '#eaf2ff', fontSize: '14px', lineHeight: '1.65',
@@ -247,8 +247,8 @@ export default function CoachPage() {
                     h1: ({ children }) => <h1 style={{ color: '#eaf2ff', fontSize: '17px', fontWeight: 700, margin: '14px 0 8px' }}>{children}</h1>,
                     h2: ({ children }) => <h2 style={{ color: '#eaf2ff', fontSize: '15px', fontWeight: 700, margin: '12px 0 6px' }}>{children}</h2>,
                     h3: ({ children }) => <h3 style={{ color: '#eaf2ff', fontSize: '13px', fontWeight: 600, margin: '10px 0 5px' }}>{children}</h3>,
-                    code: ({ children }) => <code style={{ backgroundColor: '#1d2d42', color: '#f59e0b', padding: '1px 5px', borderRadius: '5px', fontSize: '12px', fontFamily: 'monospace' }}>{children}</code>,
-                    blockquote: ({ children }) => <blockquote style={{ borderLeft: '3px solid rgba(245,158,11,0.4)', paddingLeft: '12px', margin: '8px 0', color: '#8eb0cc' }}>{children}</blockquote>,
+                    code: ({ children }) => <code style={{ backgroundColor: '#1a2e4a', color: '#3b82f6', padding: '1px 5px', borderRadius: '5px', fontSize: '12px', fontFamily: 'monospace' }}>{children}</code>,
+                    blockquote: ({ children }) => <blockquote style={{ borderLeft: '3px solid rgba(59,130,246,0.4)', paddingLeft: '12px', margin: '8px 0', color: '#8eb0cc' }}>{children}</blockquote>,
                   }}
                 >
                   {msg.content || (loading && idx === messages.length - 1 ? '...' : '')}
@@ -264,10 +264,10 @@ export default function CoachPage() {
           <div style={{ display: 'flex', gap: '10px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
             <div style={{
               width: '30px', height: '30px', borderRadius: '10px',
-              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#000', fontSize: '11px', fontWeight: 800, flexShrink: 0,
-              boxShadow: '0 0 14px rgba(245,158,11,0.25)',
+              boxShadow: '0 0 14px rgba(59,130,246,0.25)',
             }}>AI</div>
             <Loader size={15} color="#507090" style={{ marginTop: '7px', animation: 'spin 1s linear infinite' }} />
           </div>
@@ -277,7 +277,7 @@ export default function CoachPage() {
       </div>
 
       {/* Input bar */}
-      <div style={{ padding: '14px 32px 22px', borderTop: '1px solid #1e2e42', backgroundColor: '#0b0e18', flexShrink: 0 }}>
+      <div style={{ padding: '14px 32px 22px', borderTop: '1px solid #1a2e48', backgroundColor: '#091525', flexShrink: 0 }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
           <textarea
             ref={textareaRef}
@@ -287,25 +287,25 @@ export default function CoachPage() {
             placeholder="Ask your career coach anything…"
             rows={1}
             style={{
-              flex: 1, backgroundColor: '#182535', border: '1px solid #263a52',
+              flex: 1, backgroundColor: '#152845', border: '1px solid #1e3d5c',
               borderRadius: '12px', padding: '12px 16px', color: '#eaf2ff',
               fontSize: '14px', outline: 'none', resize: 'none', lineHeight: '1.5',
               minHeight: '44px', maxHeight: '160px', overflow: 'auto', fontFamily: 'inherit',
               transition: 'border-color 0.15s',
             }}
-            onFocus={e => (e.target.style.borderColor = 'rgba(245,158,11,0.4)')}
-            onBlur={e => (e.target.style.borderColor = '#263a52')}
+            onFocus={e => (e.target.style.borderColor = 'rgba(59,130,246,0.4)')}
+            onBlur={e => (e.target.style.borderColor = '#1e3d5c')}
           />
           <button
             onClick={() => handleSend()}
             disabled={loading || !input.trim()}
             style={{
               width: '44px', height: '44px', borderRadius: '12px',
-              background: loading || !input.trim() ? '#182535' : 'linear-gradient(135deg, #f59e0b, #d97706)',
-              border: loading || !input.trim() ? '1px solid #263a52' : 'none',
+              background: loading || !input.trim() ? '#152845' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+              border: loading || !input.trim() ? '1px solid #1e3d5c' : 'none',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', flexShrink: 0,
-              boxShadow: loading || !input.trim() ? 'none' : '0 4px 12px rgba(245,158,11,0.3)',
+              boxShadow: loading || !input.trim() ? 'none' : '0 4px 12px rgba(59,130,246,0.3)',
             }}
           >
             <Send size={16} color={loading || !input.trim() ? '#507090' : '#fff'} />
@@ -320,7 +320,7 @@ export default function CoachPage() {
       {toast && (
         <div style={{
           position: 'fixed', bottom: '100px', left: '50%', transform: 'translateX(-50%)',
-          backgroundColor: '#182535', border: '1px solid rgba(245,158,11,0.3)',
+          backgroundColor: '#152845', border: '1px solid rgba(59,130,246,0.3)',
           color: '#eaf2ff', padding: '10px 20px', borderRadius: '10px',
           fontSize: '12px', zIndex: 1000, maxWidth: '400px', textAlign: 'center',
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
