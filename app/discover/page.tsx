@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, RefreshCw, Plus, X, Loader, AlertCircle, ExternalLink } from 'lucide-react';
+import { Search, RefreshCw, Plus, X, Loader, AlertCircle } from 'lucide-react';
 
 interface Lead {
   id: number;
@@ -9,7 +9,7 @@ interface Lead {
   fit_score: number; why: string; tags: string[];
 }
 
-interface ResearchRole { title: string; location: string; type: string; url: string | null; }
+interface ResearchRole { title: string; location: string; type: string; }
 
 interface ResearchResult {
   company: string; what_they_do: string; size: string; stage: string;
@@ -119,7 +119,7 @@ export default function DiscoverPage() {
     if (savedRoles.has(key)) return;
     await fetch('/api/jobs', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company, title: role.title, type: role.type, status: 'saved', location: role.location, source: 'Discover', url: role.url || '' }),
+      body: JSON.stringify({ company, title: role.title, type: role.type, status: 'saved', location: role.location, source: 'Discover' }),
     });
     setSavedRoles(prev => new Set([...prev, key]));
   };
@@ -219,7 +219,10 @@ export default function DiscoverPage() {
 
             {/* Roles */}
             <div>
-              <div style={{ color: '#333', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Relevant Roles</div>
+              <div style={{ marginBottom: '10px' }}>
+                <div style={{ color: '#333', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Role Types to Search</div>
+                <div style={{ color: '#252525', fontSize: '10px', marginTop: '3px' }}>Suggestions — verify on their careers page</div>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
                 {result.roles?.map((role, i) => {
                   const key = `${result.company}::${role.title}`;
@@ -235,16 +238,6 @@ export default function DiscoverPage() {
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                        {role.url && (
-                          <a href={role.url} target="_blank" rel="noopener noreferrer" style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            width: '26px', height: '26px', borderRadius: '5px',
-                            backgroundColor: '#161616', color: '#444', textDecoration: 'none',
-                          }}
-                            onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#f59e0b')}
-                            onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#444')}
-                          ><ExternalLink size={11} /></a>
-                        )}
                         <button onClick={() => saveRole(role, result.company)} disabled={isSaved} style={{
                           display: 'inline-flex', alignItems: 'center', gap: '3px',
                           backgroundColor: isSaved ? '#0a1f0a' : '#161616',
