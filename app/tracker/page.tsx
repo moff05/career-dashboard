@@ -18,6 +18,15 @@ type AnalysisState = AnalysisResult | 'loading' | 'error';
 interface DetailsResult { company_overview: string; role_summary: string; key_qualifications: string[]; what_to_highlight: string; }
 type DetailsState = DetailsResult | 'loading' | 'error';
 
+interface GapsResult { gaps: { skill: string; severity: string; how_to_address: string }[]; positioning: string; quick_wins: string[]; should_apply: boolean; apply_reasoning: string; }
+type GapsState = GapsResult | 'loading' | 'error';
+
+interface BulletsResult { lead_with: { experience: string; why: string }[]; tailored_bullets: { original: string; tailored: string; why: string }[]; keywords_to_add: string[]; deprioritize: string[]; }
+type BulletsState = BulletsResult | 'loading' | 'error';
+
+interface CoverLetterResult { letter: string; tone: string; }
+type CoverLetterState = CoverLetterResult | 'loading' | 'error';
+
 // ─── Colors ──────────────────────────────────────────────────────────────────
 const BADGE_PALETTE: [string, string][] = [
   ['#7c3aed','#fff'],['#2563eb','#fff'],['#059669','#fff'],['#d97706','#fff'],
@@ -198,6 +207,17 @@ export default function TrackerPage() {
   const [detailsResults, setDetailsResults] = useState<Record<number, DetailsState>>({});
   const [showRawJd, setShowRawJd] = useState<Record<number, boolean>>({});
 
+  const gapsCacheRef = useRef<Record<number, GapsState>>({});
+  const [gapsResults, setGapsResults] = useState<Record<number, GapsState>>({});
+
+  const bulletsCacheRef = useRef<Record<number, BulletsState>>({});
+  const [bulletsResults, setBulletsResults] = useState<Record<number, BulletsState>>({});
+
+  const coverLetterCacheRef = useRef<Record<number, CoverLetterState>>({});
+  const [coverLetterResults, setCoverLetterResults] = useState<Record<number, CoverLetterState>>({});
+  const [coverLetterTones, setCoverLetterTones] = useState<Record<number, string>>({});
+  const [copiedJobId, setCopiedJobId] = useState<number | null>(null);
+
   const runAnalysis = useCallback((id: number) => {
     analysisCacheRef.current[id] = 'loading';
     setAnalysisResults(prev => ({ ...prev, [id]: 'loading' }));
@@ -244,6 +264,45 @@ export default function TrackerPage() {
     delete detailsCacheRef.current[id];
     runDetails(id);
   }, [runDetails]);
+
+  const runGaps = useCallback((id: number) => {
+    gapsCacheRef.current[id] = 'loading';
+    setGapsResults(prev => ({ ...prev, [id]: 'loading' }));
+    fetch(`/api/jobs/${id}/gaps`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        const result: GapsState = data.error ? 'error' : data;
+        gapsCacheRef.current[id] = result;
+        setGapsResults(prev => ({ ...prev, [id]: result }));
+      })
+      .catch(() => { gapsCacheRef.current[id] = 'error'; setGapsResults(prev => ({ ...prev, [id]: 'error' })); });
+  }, []);
+
+  const runBullets = useCallback((id: number) => {
+    bulletsCacheRef.current[id] = 'loading';
+    setBulletsResults(prev => ({ ...prev, [id]: 'loading' }));
+    fetch(`/api/jobs/${id}/bullets`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        const result: BulletsState = data.error ? 'error' : data;
+        bulletsCacheRef.current[id] = result;
+        setBulletsResults(prev => ({ ...prev, [id]: result }));
+      })
+      .catch(() => { bulletsCacheRef.current[id] = 'error'; setBulletsResults(prev => ({ ...prev, [id]: 'error' })); });
+  }, []);
+
+  const runCoverLetter = useCallback((id: number, tone: string) => {
+    coverLetterCacheRef.current[id] = 'loading';
+    setCoverLetterResults(prev => ({ ...prev, [id]: 'loading' }));
+    fetch(`/api/jobs/${id}/cover-letter`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tone }) })
+      .then(r => r.json())
+      .then(data => {
+        const result: CoverLetterState = data.error ? 'error' : data;
+        coverLetterCacheRef.current[id] = result;
+        setCoverLetterResults(prev => ({ ...prev, [id]: result }));
+      })
+      .catch(() => { coverLetterCacheRef.current[id] = 'error'; setCoverLetterResults(prev => ({ ...prev, [id]: 'error' })); });
+  }, []);
 
   // Import modal
   const [importStep, setImportStep] = useState<null | 'input' | 'loading' | 'review'>(null);
@@ -340,15 +399,24 @@ export default function TrackerPage() {
       if (n.has(id)) { n.delete(id); }
       else {
         n.add(id);
-        if (!analysisCacheRef.current[id]) runAnalysis(id);
-        if (!detailsCacheRef.current[id]) runDetails(id);
+        // Only auto-score if this job has never been scored — avoids re-calling on every page load
+        const thisJob = jobs.find(j => j.id === id);
+        if (!analysisCacheRef.current[id] && !thisJob?.match_score) runAnalysis(id);
+        // Details load on-demand when the tab is clicked (see setTab)
       }
       return n;
     });
     setJobTabs(prev => prev[id] ? prev : { ...prev, [id]: 'overview' });
-  }, [runAnalysis, runDetails]);
+  }, [runAnalysis, jobs]);
 
-  const setTab = (id: number, tab: string) => setJobTabs(prev => ({ ...prev, [id]: tab }));
+  const setTab = (id: number, tab: string) => {
+    setJobTabs(prev => ({ ...prev, [id]: tab }));
+    if (tab === 'score' && !analysisCacheRef.current[id]) runAnalysis(id);
+    if (tab === 'description' && !detailsCacheRef.current[id]) runDetails(id);
+    if (tab === 'gaps' && !gapsCacheRef.current[id]) runGaps(id);
+    if (tab === 'bullets' && !bulletsCacheRef.current[id]) runBullets(id);
+    // cover-letter: user-triggered via Generate button, not auto-loaded
+  };
 
   const openEdit = (job: Job) => {
     setEditingJob(job);
@@ -641,11 +709,14 @@ export default function TrackerPage() {
                       {isJobExpanded && (
                         <div style={{ backgroundColor: '#0c0c0c', borderBottom: '1px solid #1a1a1a', padding: '0 16px 24px' }}>
                           {/* Tabs */}
-                          <div style={{ display: 'flex', gap: '2px', borderBottom: '1px solid #1a1a1a', marginBottom: '20px', paddingTop: '14px' }}>
+                          <div style={{ display: 'flex', gap: '0px', borderBottom: '1px solid #1a1a1a', marginBottom: '20px', paddingTop: '14px', flexWrap: 'nowrap', overflowX: 'auto' }}>
                             {[
-                              { id: 'overview', label: 'Overview' },
-                              { id: 'description', label: 'Job Details' },
-                              { id: 'score', label: '✦ AI Score' },
+                              { id: 'overview',      label: 'Overview' },
+                              { id: 'description',   label: 'Job Details' },
+                              { id: 'score',         label: '✦ AI Score' },
+                              { id: 'cover-letter',  label: 'Cover Letter' },
+                              { id: 'gaps',          label: 'Fit Gaps' },
+                              { id: 'bullets',       label: 'Bullets' },
                             ].map(tab => (
                               <button key={tab.id} onClick={() => setTab(job.id, tab.id)} style={{
                                 backgroundColor: 'transparent',
@@ -837,20 +908,276 @@ export default function TrackerPage() {
                                         </div>
                                       ))}
                                     </div>
-                                    <button onClick={() => window.location.href = `/coach?prefill=job-score&company=${encodeURIComponent(job.company)}&title=${encodeURIComponent(job.title)}`}
+                                    <button onClick={() => {
+                                        const scoreData = analysisResults[job.id];
+                                        if (scoreData && scoreData !== 'loading' && scoreData !== 'error') {
+                                          sessionStorage.setItem('coach-score-brief', JSON.stringify({
+                                            company: job.company, title: job.title,
+                                            ...(scoreData as AnalysisResult),
+                                          }));
+                                        }
+                                        window.location.href = '/coach';
+                                      }}
                                       style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '5px',
                                         backgroundColor: 'transparent', color: '#a855f7', border: '1px solid #3b1f6e',
                                         borderRadius: '6px', padding: '7px 14px', fontSize: '12px', fontWeight: 600,
                                         cursor: 'pointer', fontFamily: 'inherit',
                                       }}>
-                                      <MessageSquare size={12} /> Discuss this score in Coach
+                                      <MessageSquare size={12} /> Discuss with Coach
                                     </button>
                                   </div>
                                 );
                               })()}
                             </div>
                           )}
+                          {/* Cover Letter tab */}
+                          {activeTab === 'cover-letter' && (() => {
+                            const cl = coverLetterResults[job.id];
+                            const tone = coverLetterTones[job.id] || 'professional';
+                            const isLoading = cl === 'loading';
+                            const isError = cl === 'error';
+                            const result = cl && cl !== 'loading' && cl !== 'error' ? cl as CoverLetterResult : null;
+                            return (
+                              <div>
+                                {/* Tone selector + generate */}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                                  <span style={{ color: '#444', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>Tone:</span>
+                                  {(['professional', 'confident', 'concise'] as const).map(t => (
+                                    <button key={t} onClick={() => setCoverLetterTones(p => ({ ...p, [job.id]: t }))} style={{
+                                      backgroundColor: tone === t ? '#1a1200' : '#0f0f0f',
+                                      color: tone === t ? '#f59e0b' : '#505050',
+                                      border: `1px solid ${tone === t ? '#713f12' : '#1e1e1e'}`,
+                                      borderRadius: '5px', padding: '4px 12px', fontSize: '11px', fontWeight: 600,
+                                      cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize',
+                                    }}>{t}</button>
+                                  ))}
+                                  <button onClick={() => runCoverLetter(job.id, tone)} disabled={isLoading} style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '5px', marginLeft: 'auto',
+                                    backgroundColor: isLoading ? '#1a1a1a' : '#d97706', color: isLoading ? '#444' : '#000',
+                                    border: 'none', borderRadius: '6px', padding: '6px 16px', fontSize: '12px', fontWeight: 700,
+                                    cursor: isLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
+                                  }}>
+                                    {isLoading ? <><Loader size={11} style={{ animation: 'spin 1s linear infinite' }} /> Generating…</> : result ? 'Regenerate' : 'Generate'}
+                                  </button>
+                                </div>
+
+                                {isError && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '12px', padding: '12px 0' }}>
+                                    <AlertCircle size={13} color="#ef4444" /> Failed.{' '}
+                                    <button onClick={() => runCoverLetter(job.id, tone)} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
+                                  </div>
+                                )}
+
+                                {!cl && !isLoading && (
+                                  <div style={{ backgroundColor: '#0f0f0f', border: '1px solid #1a1a1a', borderRadius: '8px', padding: '32px 20px', textAlign: 'center' }}>
+                                    <div style={{ color: '#2a2a2a', fontSize: '12px' }}>Select a tone and click Generate</div>
+                                  </div>
+                                )}
+
+                                {result && (
+                                  <div>
+                                    <div style={{ backgroundColor: '#0f0f0f', border: '1px solid #1a1a1a', borderRadius: '8px', padding: '20px', marginBottom: '12px', maxHeight: '360px', overflowY: 'auto', animation: 'fadeIn 0.25s ease' }}>
+                                      <pre style={{ color: '#d0d0d0', fontSize: '12px', lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
+                                        {result.letter}
+                                      </pre>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(result.letter);
+                                        setCopiedJobId(job.id);
+                                        setTimeout(() => setCopiedJobId(null), 2000);
+                                      }}
+                                      style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                        backgroundColor: copiedJobId === job.id ? '#14532d' : '#111',
+                                        color: copiedJobId === job.id ? '#86efac' : '#888',
+                                        border: `1px solid ${copiedJobId === job.id ? '#166534' : '#222'}`,
+                                        borderRadius: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 600,
+                                        cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+                                      }}>
+                                      {copiedJobId === job.id ? '✓ Copied!' : 'Copy to Clipboard'}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+
+                          {/* Fit Gaps tab */}
+                          {activeTab === 'gaps' && (() => {
+                            const gaps = gapsResults[job.id];
+                            return (
+                              <div>
+                                {(!gaps || gaps === 'loading') && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#444', fontSize: '12px', padding: '20px 0' }}>
+                                    <Loader size={14} color="#f59e0b" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                                    Analyzing fit gaps...
+                                  </div>
+                                )}
+                                {gaps === 'error' && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '12px', padding: '12px 0' }}>
+                                    <AlertCircle size={13} color="#ef4444" /> Failed.{' '}
+                                    <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
+                                  </div>
+                                )}
+                                {gaps && gaps !== 'loading' && gaps !== 'error' && (() => {
+                                  const g = gaps as GapsResult;
+                                  return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'fadeIn 0.25s ease' }}>
+
+                                      {/* Positioning */}
+                                      <div style={{ backgroundColor: '#0d0f00', border: '1px solid #2a3000', borderRadius: '8px', padding: '14px 16px' }}>
+                                        <div style={{ color: '#a3e635', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Your Positioning</div>
+                                        <p style={{ color: '#8aab30', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{g.positioning}</p>
+                                      </div>
+
+                                      {/* Gaps */}
+                                      <div>
+                                        <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Gaps to Address</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                          {g.gaps.map((gap, i) => (
+                                            <div key={i} style={{ backgroundColor: '#111', borderRadius: '7px', padding: '12px 14px', borderLeft: `3px solid ${gap.severity === 'major' ? '#ef4444' : '#f59e0b'}` }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
+                                                <span style={{ color: gap.severity === 'major' ? '#ef4444' : '#f59e0b', fontSize: '11px', fontWeight: 700 }}>{gap.skill}</span>
+                                                <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: gap.severity === 'major' ? '#7f1d1d' : '#713f12', backgroundColor: gap.severity === 'major' ? '#450a0a' : '#1c1000', borderRadius: '3px', padding: '1px 5px' }}>{gap.severity}</span>
+                                              </div>
+                                              <p style={{ color: '#777', fontSize: '11px', margin: 0, lineHeight: 1.55 }}>{gap.how_to_address}</p>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      {/* Quick wins + apply signal */}
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '14px', alignItems: 'start' }}>
+                                        <div>
+                                          <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Quick Wins</div>
+                                          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                            {g.quick_wins.map((w, i) => (
+                                              <div key={i} style={{ display: 'flex', gap: '7px', alignItems: 'flex-start' }}>
+                                                <span style={{ color: '#22c55e', fontSize: '11px', flexShrink: 0, marginTop: '1px' }}>→</span>
+                                                <span style={{ color: '#888', fontSize: '11px', lineHeight: 1.5 }}>{w}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                        <div style={{
+                                          backgroundColor: g.should_apply ? '#0a1f0a' : '#1a0808',
+                                          border: `1px solid ${g.should_apply ? '#166534' : '#7f1d1d'}`,
+                                          borderRadius: '8px', padding: '10px 14px', textAlign: 'center', flexShrink: 0, minWidth: '120px',
+                                        }}>
+                                          <div style={{ color: g.should_apply ? '#22c55e' : '#ef4444', fontSize: '14px', fontWeight: 800, marginBottom: '4px' }}>
+                                            {g.should_apply ? '✓ Apply' : '✗ Skip'}
+                                          </div>
+                                          <div style={{ color: '#555', fontSize: '10px', lineHeight: 1.4 }}>{g.apply_reasoning}</div>
+                                        </div>
+                                      </div>
+
+                                      <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}
+                                        onMouseEnter={e => (e.currentTarget.style.color = '#666')} onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+                                        <RotateCcw size={10} /> Regenerate
+                                      </button>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            );
+                          })()}
+
+                          {/* Bullets tab */}
+                          {activeTab === 'bullets' && (() => {
+                            const bl = bulletsResults[job.id];
+                            return (
+                              <div>
+                                {(!bl || bl === 'loading') && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#444', fontSize: '12px', padding: '20px 0' }}>
+                                    <Loader size={14} color="#f59e0b" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                                    Tailoring resume bullets...
+                                  </div>
+                                )}
+                                {bl === 'error' && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '12px', padding: '12px 0' }}>
+                                    <AlertCircle size={13} color="#ef4444" /> Failed.{' '}
+                                    <button onClick={() => { delete bulletsCacheRef.current[job.id]; runBullets(job.id); }} style={{ background: 'none', border: 'none', color: '#f59e0b', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
+                                  </div>
+                                )}
+                                {bl && bl !== 'loading' && bl !== 'error' && (() => {
+                                  const b = bl as BulletsResult;
+                                  return (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', animation: 'fadeIn 0.25s ease' }}>
+
+                                      {/* Lead With */}
+                                      <div>
+                                        <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Lead With These</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                          {b.lead_with.map((item, i) => (
+                                            <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', backgroundColor: '#111', borderRadius: '7px', padding: '10px 13px' }}>
+                                              <span style={{ color: '#f59e0b', fontWeight: 800, fontSize: '12px', flexShrink: 0, marginTop: '1px' }}>{i + 1}</span>
+                                              <div>
+                                                <div style={{ color: '#d0d0d0', fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>{item.experience}</div>
+                                                <div style={{ color: '#555', fontSize: '11px', lineHeight: 1.5 }}>{item.why}</div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      {/* Tailored bullets */}
+                                      <div>
+                                        <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Tailored Bullets</div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                          {b.tailored_bullets.map((item, i) => (
+                                            <div key={i} style={{ backgroundColor: '#111', borderRadius: '7px', padding: '12px 14px' }}>
+                                              <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', alignItems: 'flex-start' }}>
+                                                <span style={{ color: '#333', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginTop: '2px', lineHeight: 1.6 }}>Before</span>
+                                                <span style={{ color: '#555', fontSize: '11px', lineHeight: 1.55, textDecoration: 'line-through' }}>{item.original}</span>
+                                              </div>
+                                              <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', alignItems: 'flex-start' }}>
+                                                <span style={{ color: '#22c55e', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginTop: '2px', lineHeight: 1.6 }}>After</span>
+                                                <span style={{ color: '#d0d0d0', fontSize: '11px', lineHeight: 1.55, fontWeight: 500 }}>{item.tailored}</span>
+                                              </div>
+                                              <div style={{ color: '#3a3a3a', fontSize: '10px', lineHeight: 1.5, borderTop: '1px solid #1a1a1a', paddingTop: '6px', marginTop: '4px' }}>{item.why}</div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+
+                                      {/* Keywords + Deprioritize */}
+                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                                        <div>
+                                          <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Add These Keywords</div>
+                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                            {b.keywords_to_add.map((k, i) => (
+                                              <span key={i} style={{ backgroundColor: '#111', color: '#3b82f6', border: '1px solid #1e3a8a', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 500 }}>{k}</span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                        {b.deprioritize.length > 0 && (
+                                          <div>
+                                            <div style={{ color: '#444', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Deprioritize</div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                              {b.deprioritize.map((item, i) => (
+                                                <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                                                  <span style={{ color: '#ef4444', fontSize: '11px', flexShrink: 0 }}>↓</span>
+                                                  <span style={{ color: '#555', fontSize: '11px', lineHeight: 1.5 }}>{item}</span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      <button onClick={() => { delete bulletsCacheRef.current[job.id]; runBullets(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#333', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}
+                                        onMouseEnter={e => (e.currentTarget.style.color = '#666')} onMouseLeave={e => (e.currentTarget.style.color = '#333')}>
+                                        <RotateCcw size={10} /> Regenerate
+                                      </button>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            );
+                          })()}
+
                         </div>
                       )}
                     </div>
