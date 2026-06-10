@@ -227,10 +227,13 @@ On first API call, `lib/resume-parser.ts` checks the `resume` table. If empty, p
 13. Import extracts full job description + posting_date
 14. "Posted" column in tracker table (sortable), replacing Location column
 
+### Tier 0 — Critical fixes (do first)
+0. **Profile → AI context disconnect** — `lib/ai-context.ts` hardcodes target cities and preferences instead of reading from the `profile` table. `target_roles` and `target_cities` in the DB are never used by `buildSystemPrompt()`. Fix: read profile row in `buildSystemPrompt()` and inject `target_roles`, `target_cities`, graduation_date, and internship location constraint into the system prompt dynamically.
+
 ### Tier 1 — Foundation (next to build)
 1. **UI/UX polish pass** — More breathing room in the table and expanded panel, better typography hierarchy, smoother interactions throughout
-2. **AI-enriched Job Details tab** — When a job is saved, auto-generate: company overview, role summary, key qualifications, and what to highlight given Nicholas's background. Replaces the "No description saved" dead state.
-3. **Home Dashboard** — Replace `/` redirect with a real landing page: pipeline stats, today's action items, upcoming deadlines, follow-up nudges, quick links. The daily-open hook.
+2. **AI-enriched Job Details tab** — When a job is saved, auto-generate: company overview, role summary, key qualifications, and what to highlight given Nicholas's background. Replaces the "No description saved" dead state. *(DONE)*
+3. **Home Dashboard** — Replace `/` redirect with a real landing page: pipeline stats, today's action items, upcoming deadlines, follow-up nudges, quick links. The daily-open hook. *(DONE)*
 
 ### Tier 2 — Application quality
 4. **Full cover letter generator** — Dedicated flow inside each job's detail panel. Pull JD + resume, pick tone, generate formatted output, copy. One click per job.
@@ -238,8 +241,12 @@ On first API call, `lib/resume-parser.ts` checks the `resume` table. If empty, p
 6. **Resume bullet tailoring** — Given a saved job, suggest which resume bullets to lead with or rephrase for that specific application.
 
 ### Tier 3 — Discovery
-7. **Discover as research tool** — Search company name or role type → all current openings, company profile (culture, mission, size, recent news), quick fit verdict.
-8. **Discover feed** — Daily-refreshed "for you" card grid. Dismissible. Each card saves to tracker with one click. Constrained to Remote/Miami internships and target cities for full-time.
+7. **Discover as research tool** — Search company name or role type → all current openings, company profile (culture, mission, size, recent news), quick fit verdict. *(DONE)*
+8. **Job Hunt Agent (on-demand, smarter)** — Triggered by a "Hunt for Jobs" button on Discover. Multi-step agentic loop: builds 4–6 targeted search queries from Nicholas's profile (role types × locations × constraints) → runs each via `web_search` tool_use (Sonnet, multi-turn) → scores fit per result → deduplicates against existing tracker jobs → saves survivors to a `leads` table in SQLite → renders as persistent card grid on Discover. Key differences from current "For You": multi-turn tool use (not one-shot Haiku), persisted to DB (survive refresh), deduplicated against tracker, sorted by fit score. Leads can be dismissed or saved to tracker with one click.
+   - Schema: `leads` table (company, title, url, location, fit_score, source_query, created_at, dismissed)
+   - API: `POST /api/discover/hunt` — the agentic loop
+   - UI: "Hunt for Jobs" button on Discover, leads grid reads from `leads` table
+9. **Search preferences on Profile/Discover** — User should be able to edit their target locations, role types, and internship constraints from the UI (not just hardcoded). These flow into the Hunt agent's search queries and all AI calls via `buildSystemPrompt()`.
 
 ### Tier 4 — Stats & motivation
 9. **Analytics page** — Applications sent by week, response rate, avg fit score, pipeline by status, time-in-stage. Gamified progress view.

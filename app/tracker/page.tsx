@@ -522,7 +522,7 @@ export default function TrackerPage() {
   const isStale = (job: Job) => job.status === 'applied' && !!job.status_updated_at && (Date.now() - new Date(job.status_updated_at).getTime()) / 86400000 >= 14;
 
   return (
-    <div style={{ padding: '28px 32px', minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
+    <div className="page-container" style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', maxWidth: 'none' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>

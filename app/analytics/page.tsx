@@ -48,7 +48,7 @@ export default function AnalyticsPage() {
   const pipeline = ['saved', 'applied', 'interviewing', 'offer'];
 
   return (
-    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#f1f5f9', maxWidth: '1000px' }}>
+    <div className="page-container" style={{ minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
 
       {/* Header */}
       <div style={{ marginBottom: '28px' }}>

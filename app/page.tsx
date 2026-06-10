@@ -180,7 +180,7 @@ export default function DashboardPage() {
   const hasJobs = jobs.length > 0;
 
   return (
-    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#f1f5f9', maxWidth: '1060px' }}>
+    <div className="page-container" style={{ minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px' }}>
@@ -221,7 +221,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginBottom: '24px' }}>
+      <div className="stats-grid">
         {[
           { label: 'Tracked',       value: stats.total,        color: '#0f172a', glow: '' },
           { label: 'Applied',       value: stats.applied,      color: '#6366f1', glow: 'rgba(99,102,241,0.1)' },
@@ -279,7 +279,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+      <div className="grid-2col" style={{ marginBottom: '20px' }}>
 
         {/* Today's Priorities */}
         <div>
@@ -403,7 +403,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Jobs + Strategy */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      <div className="grid-2col">
 
         {/* Recent Jobs */}
         <div>

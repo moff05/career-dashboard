@@ -99,13 +99,13 @@ export default function ProfilePage() {
   const cardStyle = { backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' };
 
   return (
-    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
+    <div className="page-container" style={{ minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ color: '#0f172a', fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>My Profile</h1>
         <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0' }}>Resume info and candidate positioning</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
+      <div className="grid-2col" style={{ gap: '20px', alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {[
             { title: 'Personal', fields: [{ field: 'name', label: 'Full Name' }, { field: 'email', label: 'Email' }, { field: 'phone', label: 'Phone' }, { field: 'linkedin', label: 'LinkedIn' }] },

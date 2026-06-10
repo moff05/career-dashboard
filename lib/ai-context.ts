@@ -2,12 +2,23 @@ import { getDb } from './db';
 
 interface Memory { content: string; category: string; }
 interface Job { type: string; status: string; company: string; title: string; }
+interface Profile {
+  name?: string; graduation_date?: string; target_roles?: string;
+  target_cities?: string; notes?: string;
+}
 
 export async function buildSystemPrompt(): Promise<string> {
   const db = getDb();
 
   const resumeRow = (await db.execute('SELECT raw_text FROM resume WHERE id = 1')).rows[0] as unknown as { raw_text: string } | undefined;
   const resumeText = resumeRow?.raw_text || 'Resume not yet parsed.';
+
+  const profileRow = (await db.execute('SELECT name, graduation_date, target_roles, target_cities, notes FROM profile WHERE id = 1')).rows[0] as unknown as Profile | undefined;
+  const name = profileRow?.name || 'Nicholas';
+  const graduationDate = profileRow?.graduation_date || 'May 2027';
+  const targetRoles = profileRow?.target_roles || 'PropTech Analyst, AI Product Manager, Business Technology Analyst, Solutions Engineer, Real Estate Technology Associate';
+  const targetCities = profileRow?.target_cities || 'San Francisco, New York City, Atlanta, Dallas-Fort Worth, Miami';
+  const profileNotes = profileRow?.notes || '';
 
   const memoriesRows = (await db.execute('SELECT content, category FROM memories ORDER BY category, created_at DESC')).rows as unknown as Memory[];
   const memoriesByCategory: Record<string, string[]> = {};
@@ -33,24 +44,23 @@ export async function buildSystemPrompt(): Promise<string> {
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  return `You are an expert AI career coach for Nicholas Moffett. You have full context about him:
+  return `You are an expert AI career coach for ${name}. You have full context about them:
 
 RESUME:
 ${resumeText}
 
-WHAT I KNOW ABOUT NICHOLAS (Saved Memories):
+WHAT I KNOW ABOUT ${name.toUpperCase()} (Saved Memories):
 ${memoriesText}
 
 CURRENT JOBS IN TRACKER:
 ${jobsSummaryText || 'No jobs tracked yet.'}
 
 PREFERENCES & CONTEXT:
-- Target cities (internships): Open to anywhere
-- Target cities (full-time post-grad): San Francisco, New York City, Atlanta, Dallas-Fort Worth, Miami; open internationally: Sydney, London, Dubai
-- Graduation: May 2027 (college junior)
-- Currently in a summer internship at Goldenrod Companies (Real Estate Tech)
-- Looking for: fall 2026 internships, spring 2027 internships, full-time starting May 2027
-- Today's date: ${today}
+- Target roles: ${targetRoles}
+- Target cities (full-time post-grad): ${targetCities}
+- Internship constraint: Remote or Miami, FL only (still in school)
+- Graduation: ${graduationDate}
+- Today's date: ${today}${profileNotes ? `\n- Additional context: ${profileNotes}` : ''}
 
-Be specific, personalized, and reference his actual background. Proactively identify opportunities based on his CRE tech + AI automation background. Be concise but thorough. Format responses with markdown when helpful.`;
+Be specific, personalized, and reference their actual background. Proactively identify opportunities based on their CRE tech + AI automation background. Be concise but thorough. Format responses with markdown when helpful.`;
 }

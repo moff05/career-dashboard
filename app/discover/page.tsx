@@ -126,7 +126,7 @@ export default function DiscoverPage() {
   const visible = leads.filter(l => !dismissed.has(l.id));
 
   return (
-    <div style={{ padding: '28px 32px', minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
+    <div className="page-container" style={{ minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '22px' }}>
@@ -219,7 +219,7 @@ export default function DiscoverPage() {
           )}
 
           {/* Roles + Fit grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div className="grid-2col" style={{ gap: '20px' }}>
 
             {/* Roles */}
             <div>
@@ -288,7 +288,7 @@ export default function DiscoverPage() {
         )}
 
         {!leadsLoading && visible.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+          <div className="grid-3col">
             {visible.map(lead => {
               const isSaved = saved.has(lead.id);
               const friendly = lead.type !== 'full-time' && isStudentFriendly(lead.location);

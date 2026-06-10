@@ -3,7 +3,7 @@
 import './globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Compass, MessageSquare, CalendarDays, User, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Compass, MessageSquare, CalendarDays, User, BarChart2, Brain } from 'lucide-react';
 
 const navItems = [
   { href: '/',          label: 'Dashboard', icon: LayoutDashboard },
@@ -13,38 +13,33 @@ const navItems = [
   { href: '/analytics', label: 'Analytics', icon: BarChart2 },
   { href: '/timeline',  label: 'Timeline',  icon: CalendarDays },
   { href: '/profile',   label: 'Profile',   icon: User },
+  { href: '/memory',    label: 'Memory',    icon: Brain },
 ];
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
+  const mobileNavItems = navItems.filter(n => ['/', '/tracker', '/discover', '/coach', '/profile'].includes(n.href));
+
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         <style>{`
-          * { box-sizing: border-box; }
-          body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-          ::-webkit-scrollbar { width: 5px; height: 5px; }
-          ::-webkit-scrollbar-track { background: transparent; }
-          ::-webkit-scrollbar-thumb { background: #1e3d5c; border-radius: 10px; }
-          ::-webkit-scrollbar-thumb:hover { background: #3a5472; }
-          input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
-          select option { background: #152845; }
           @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
           @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
           @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
           @keyframes barGrow { from { width: 0%; } to { } }
         `}</style>
       </head>
-      <body style={{ margin: 0, padding: 0, backgroundColor: '#f1f5f9' }}>
+      <body style={{ backgroundColor: '#f1f5f9' }}>
         <div style={{ display: 'flex', minHeight: '100vh' }}>
-          <aside style={{
-            width: '210px', minHeight: '100vh',
+          <aside className="app-sidebar" style={{
             background: 'linear-gradient(180deg, #091525 0%, #091525 100%)',
             borderRight: '1px solid #1a2e48',
-            position: 'fixed', top: 0, left: 0, bottom: 0,
-            display: 'flex', flexDirection: 'column',
-            zIndex: 50,
           }}>
             {/* Brand */}
             <div style={{ padding: '22px 16px 20px', borderBottom: '1px solid #1a2e48' }}>
@@ -107,10 +102,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </aside>
 
-          <main style={{ marginLeft: '210px', flex: 1, minHeight: '100vh', backgroundColor: '#f1f5f9', overflow: 'auto' }}>
+          <main className="app-main" style={{ backgroundColor: '#f1f5f9' }}>
             {children}
           </main>
         </div>
+
+        {/* Bottom nav — mobile only */}
+        <nav className="bottom-nav">
+          {mobileNavItems.map(({ href, label, icon: Icon }) => {
+            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
+            return (
+              <Link key={href} href={href} className={isActive ? 'active' : ''}>
+                <Icon size={18} />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
       </body>
     </html>
   );
