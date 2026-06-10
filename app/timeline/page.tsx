@@ -95,7 +95,7 @@ export default function TimelinePage() {
   const doneCount = events.filter(e => e.done).length;
 
   return (
-    <div className="page-container" style={{ minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
+    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
