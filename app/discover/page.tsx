@@ -50,6 +50,21 @@ function verdictColor(v: string) {
 }
 function initials(name: string) { return name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase(); }
 function isStudentFriendly(location: string) { return location === 'Remote' || location.toLowerCase().includes('miami'); }
+function urlDomain(url: string): string {
+  try {
+    const h = new URL(url).hostname.replace('www.', '');
+    if (h.includes('linkedin')) return 'LinkedIn';
+    if (h.includes('greenhouse')) return 'Greenhouse';
+    if (h.includes('lever')) return 'Lever';
+    if (h.includes('workday')) return 'Workday';
+    if (h.includes('handshake')) return 'Handshake';
+    if (h.includes('indeed')) return 'Indeed';
+    if (h.includes('jobvite')) return 'Jobvite';
+    if (h.includes('smartrecruiters')) return 'SmartRecruit';
+    if (h.includes('ashbyhq')) return 'Ashby';
+    return h.split('.')[0].charAt(0).toUpperCase() + h.split('.')[0].slice(1);
+  } catch { return 'Job Board'; }
+}
 function ageStr(ts: number) {
   const m = Math.round((Date.now() - ts) / 60000);
   return m < 1 ? 'just now' : m < 60 ? `${m}m ago` : `${Math.round(m / 60)}h ago`;
@@ -399,6 +414,17 @@ export default function DiscoverPage() {
                       <span style={{ marginLeft: 'auto', color: fitColor(lead.fit_score), fontSize: '13px', fontWeight: 800 }}>{lead.fit_score}/10</span>
                     </div>
 
+                    {lead.url && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span style={{
+                          backgroundColor: 'rgba(59,130,246,0.07)', color: '#2563eb',
+                          border: '1px solid rgba(59,130,246,0.2)', borderRadius: '4px',
+                          padding: '1px 6px', fontSize: '9px', fontWeight: 700,
+                        }}>{urlDomain(lead.url)}</span>
+                        <span style={{ color: '#cbd5e1', fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{lead.url}</span>
+                      </div>
+                    )}
+
                     <p style={{ color: '#475569', fontSize: '11px', lineHeight: 1.6, margin: 0 }}>{lead.fit_reasoning}</p>
 
                     {lead.tags?.length > 0 && (
@@ -409,23 +435,17 @@ export default function DiscoverPage() {
                       </div>
                     )}
 
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      {lead.url && (
-                        <a href={lead.url} target="_blank" rel="noopener noreferrer" style={{
-                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                          backgroundColor: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0',
-                          borderRadius: '6px', padding: '7px 10px', fontSize: '11px', fontWeight: 600,
-                          textDecoration: 'none', transition: 'all 0.15s',
-                        }}
-                          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(59,130,246,0.3)'; (e.currentTarget as HTMLAnchorElement).style.color = '#3b82f6'; }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = '#e2e8f0'; (e.currentTarget as HTMLAnchorElement).style.color = '#64748b'; }}
-                        >
-                          <ExternalLink size={10} /> View
-                        </a>
-                      )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                      <a href={lead.url!} target="_blank" rel="noopener noreferrer" style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                        background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff',
+                        borderRadius: '6px', padding: '8px', fontSize: '11px', fontWeight: 700,
+                        textDecoration: 'none', boxShadow: '0 2px 8px rgba(59,130,246,0.25)',
+                      }}>
+                        <ExternalLink size={11} /> View Job Posting on {urlDomain(lead.url!)}
+                      </a>
                       <button onClick={() => saveHunted(lead)} disabled={isSaved} style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                        flex: 1,
                         backgroundColor: isSaved ? 'rgba(5,150,105,0.06)' : '#f8fafc',
                         color: isSaved ? '#059669' : '#94a3b8',
                         border: `1px solid ${isSaved ? 'rgba(5,150,105,0.3)' : '#e2e8f0'}`,
@@ -436,7 +456,7 @@ export default function DiscoverPage() {
                         onMouseEnter={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(59,130,246,0.3)'; (e.currentTarget as HTMLButtonElement).style.color = '#3b82f6'; } }}
                         onMouseLeave={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#e2e8f0'; (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; } }}
                       >
-                        {isSaved ? '✓ Saved' : <><Plus size={11} /> Save to Tracker</>}
+                        {isSaved ? '✓ Saved to Tracker' : <><Plus size={11} /> Save to Tracker</>}
                       </button>
                     </div>
                   </div>

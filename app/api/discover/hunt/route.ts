@@ -8,7 +8,7 @@ export const maxDuration = 120;
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 interface HuntLead {
-  company?: string; title?: string; url?: string | null; location?: string;
+  company?: string; title?: string; url?: string; location?: string;
   type?: string; fit_score?: number | string; fit_reasoning?: string;
   tags?: string[]; source_query?: string;
 }
@@ -62,42 +62,49 @@ export async function POST() {
 
     const systemPrompt = await buildSystemPrompt();
 
-    const huntPrompt = `You are actively hunting for real, currently open job postings for Nicholas. Use web_search to find actual job listings on LinkedIn, Greenhouse, Lever, Workday, Handshake, and company career pages.
+    const huntPrompt = `You are a job search agent. Your ONLY job is to find real, currently open job postings with direct links Nicholas can click to apply.
 
-Run 5-6 targeted searches:
-1. Fall 2026 internship PropTech CRE technology analyst Remote OR Miami
-2. Fall 2026 internship AI automation product SaaS operations Remote OR Miami
-3. Fall 2026 internship business technology solutions engineer enterprise Remote OR Miami
-4. Spring 2027 internship technology analyst CRE proptech Remote OR Miami
-5. New grad 2025 2026 entry level PropTech analyst full-time ${topCities}
-6. New grad entry level AI product business technology analyst full-time ${topCities}
+Run these 6 web searches to find actual job listings:
+1. "fall 2026 internship proptech analyst remote" site:linkedin.com OR site:greenhouse.io OR site:lever.co
+2. "fall 2026 intern AI product operations SaaS remote OR miami" site:linkedin.com OR site:handshake.com
+3. "business technology analyst intern 2026 remote" site:greenhouse.io OR site:lever.co OR site:workday.com
+4. "solutions engineer intern fall 2026 remote OR miami" site:linkedin.com OR site:greenhouse.io
+5. "proptech analyst new grad 2026 entry level ${topCities}" site:linkedin.com OR site:greenhouse.io
+6. "CRE technology analyst entry level full time 2026 ${topCities}" site:linkedin.com OR site:lever.co
 
 Nicholas is looking for: ${targetRoles}
 
-After all searches, return ONLY valid JSON (no other text before or after):
+ABSOLUTE REQUIREMENTS — violating these means the lead is worthless:
+1. Every single lead MUST have a "url" field containing the actual URL of that job posting page from your search results
+2. The URL must go directly to the job listing (linkedin.com/jobs/view/..., boards.greenhouse.io/..., jobs.lever.co/..., etc.)
+3. If you found a company but could not find the specific job posting URL, DO NOT include that lead
+4. Do NOT use training data knowledge to generate leads — every lead must come from what you found in web search results
+5. Only include jobs posted in 2025 or later (currently open)
+
+Return ONLY valid JSON, nothing else:
 {
   "leads": [
     {
-      "company": "Exact company name from the posting",
+      "company": "Exact company name from the job posting",
       "title": "Exact job title from the posting",
-      "url": "Direct URL to the job posting or null",
+      "url": "https://... full URL to the specific job listing page",
       "location": "City, ST or Remote",
       "type": "fall-2026-internship | spring-2027-internship | summer-internship | full-time",
       "fit_score": 8,
-      "fit_reasoning": "1-2 sentences: why this fits Nicholas — reference his Goldenrod CRE internship, StackingPlanner SaaS, n8n/Zapier automation, Python, AI tools background",
+      "fit_reasoning": "1-2 sentences why this fits Nicholas — reference his Goldenrod CRE internship, StackingPlanner SaaS, n8n/Zapier automation, Python, AI tools background specifically",
       "tags": ["PropTech", "AI", "Python"],
-      "source_query": "brief label of which search found this"
+      "source_query": "which of the 6 searches above found this"
     }
   ]
 }
 
-RULES:
-- ONLY include postings found via web search — never invent jobs
-- Internships: ONLY Remote or Miami, FL (Nicholas is at University of Miami, cannot relocate for internships)
+Additional rules:
+- Internships: ONLY Remote or Miami, FL (Nicholas is at University of Miami, cannot relocate)
 - Full-time: ONLY San Francisco, New York, Atlanta, Dallas, or Miami
-- Only include if fit_score >= 5 (be honest — not every role is a 9/10)
+- Minimum fit_score 5 to include
 - Maximum 15 leads, sorted by fit_score descending
-- No duplicate companies/titles`;
+- No duplicate companies/titles
+- REPEAT: if there is no direct job posting URL, omit the lead entirely`;
 
     let text = '';
 
@@ -134,8 +141,9 @@ RULES:
     try { parsed = JSON.parse(match[0]); } catch { return NextResponse.json({ leads: [] }); }
 
     const newLeads = (parsed.leads || []).filter((lead: HuntLead) => {
+      const hasUrl = typeof lead.url === 'string' && lead.url.startsWith('http') && lead.url.includes('.');
       const key = `${lead.company?.toLowerCase()}::${lead.title?.toLowerCase()}`;
-      return !existingSet.has(key) && lead.company && lead.title;
+      return hasUrl && !existingSet.has(key) && lead.company && lead.title;
     });
 
     await db.execute('DELETE FROM leads WHERE dismissed = 0');
