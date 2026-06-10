@@ -1,12 +1,19 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Search, RefreshCw, Plus, X, Loader, AlertCircle } from 'lucide-react';
+import { Search, RefreshCw, Plus, X, Loader, AlertCircle, ExternalLink, Target } from 'lucide-react';
 
 interface Lead {
   id: number;
   company: string; title: string; type: string; location: string;
   fit_score: number; why: string; tags: string[];
+}
+
+interface HuntedLead {
+  id: number;
+  company: string; title: string; url: string | null; location: string;
+  type: string; fit_score: number; fit_reasoning: string; tags: string[];
+  source_query: string; created_at: string;
 }
 
 interface ResearchRole { title: string; location: string; type: string; }
@@ -61,6 +68,11 @@ export default function DiscoverPage() {
   const [saved, setSaved] = useState<Set<number>>(new Set());
   const [connectedCompanies, setConnectedCompanies] = useState<Set<string>>(new Set());
 
+  const [hunted, setHunted] = useState<HuntedLead[]>([]);
+  const [hunting, setHunting] = useState(false);
+  const [huntErr, setHuntErr] = useState('');
+  const [savedHunted, setSavedHunted] = useState<Set<number>>(new Set());
+
   const loadLeads = useCallback(async (force = false) => {
     if (!force) {
       try {
@@ -88,7 +100,14 @@ export default function DiscoverPage() {
     setLeadsLoading(false);
   }, []);
 
-  useEffect(() => { loadLeads(); }, [loadLeads]);
+  const loadHunted = useCallback(async () => {
+    try {
+      const data = await fetch('/api/discover/leads').then(r => r.json());
+      if (Array.isArray(data)) setHunted(data);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadLeads(); loadHunted(); }, [loadLeads, loadHunted]);
 
   useEffect(() => {
     fetch('/api/connections')
@@ -114,6 +133,43 @@ export default function DiscoverPage() {
     setSearching(false);
   };
 
+  const huntJobs = async () => {
+    if (hunting) return;
+    setHunting(true); setHuntErr('');
+    try {
+      const res = await fetch('/api/discover/hunt', { method: 'POST' });
+      const data = await res.json();
+      if (data.error && !data.leads?.length) {
+        setHuntErr('Hunt failed — try again');
+      } else {
+        setHunted(Array.isArray(data.leads) ? data.leads : []);
+        setSavedHunted(new Set());
+      }
+    } catch { setHuntErr('Hunt failed — try again'); }
+    setHunting(false);
+  };
+
+  const dismissHunted = async (id: number) => {
+    await fetch(`/api/discover/leads/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dismissed: true }),
+    });
+    setHunted(prev => prev.filter(l => l.id !== id));
+  };
+
+  const saveHunted = async (lead: HuntedLead) => {
+    if (savedHunted.has(lead.id)) return;
+    await fetch('/api/jobs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        company: lead.company, title: lead.title, type: lead.type,
+        status: 'saved', location: lead.location, url: lead.url || '',
+        source: 'Hunt Agent', notes: lead.fit_reasoning,
+      }),
+    });
+    setSavedHunted(prev => new Set([...prev, lead.id]));
+  };
+
   const saveLead = async (lead: Lead) => {
     if (saved.has(lead.id)) return;
     await fetch('/api/jobs', {
@@ -124,6 +180,7 @@ export default function DiscoverPage() {
   };
 
   const visible = leads.filter(l => !dismissed.has(l.id));
+  const huntedAt = hunted.length > 0 ? ageStr(new Date(hunted[0].created_at).getTime()) : '';
 
   return (
     <div style={{ padding: '28px 32px', minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
@@ -134,17 +191,33 @@ export default function DiscoverPage() {
           <h1 style={{ color: '#0f172a', fontSize: '18px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Discover</h1>
           <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0' }}>Research companies · explore leads</p>
         </div>
-        <button onClick={() => loadLeads(true)} disabled={leadsLoading} style={{
-          display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#ffffff',
-          color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '6px 12px',
-          fontSize: '11px', cursor: leadsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        }}
-          onMouseEnter={e => !leadsLoading && (e.currentTarget.style.color = '#3b82f6')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}
-        >
-          <RefreshCw size={11} style={leadsLoading ? { animation: 'spin 1s linear infinite' } : {}} /> Refresh leads
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button onClick={() => loadLeads(true)} disabled={leadsLoading} style={{
+            display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#ffffff',
+            color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '6px 12px',
+            fontSize: '11px', cursor: leadsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          }}
+            onMouseEnter={e => !leadsLoading && (e.currentTarget.style.color = '#3b82f6')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}
+          >
+            <RefreshCw size={11} style={leadsLoading ? { animation: 'spin 1s linear infinite' } : {}} /> Refresh
+          </button>
+          <button onClick={huntJobs} disabled={hunting} style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            background: hunting ? '#f1f5f9' : 'linear-gradient(135deg, #d97706, #b45309)',
+            color: hunting ? '#94a3b8' : '#fff',
+            border: hunting ? '1px solid #e2e8f0' : 'none',
+            borderRadius: '10px', padding: '6px 14px',
+            fontSize: '12px', fontWeight: 700, cursor: hunting ? 'wait' : 'pointer',
+            fontFamily: 'inherit',
+            boxShadow: hunting ? 'none' : '0 4px 14px rgba(180,83,9,0.3)',
+          }}>
+            {hunting
+              ? <><Loader size={11} style={{ animation: 'spin 1s linear infinite' }} /> Hunting…</>
+              : <><Target size={11} /> Hunt for Jobs</>}
+          </button>
+        </div>
       </div>
 
       {/* Search bar */}
@@ -186,7 +259,6 @@ export default function DiscoverPage() {
       {/* Research result */}
       {result && (
         <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '24px', marginBottom: '36px', animation: 'fadeIn 0.25s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-          {/* Top row */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
             <div style={{
               width: '42px', height: '42px', borderRadius: '10px', flexShrink: 0,
@@ -209,7 +281,6 @@ export default function DiscoverPage() {
             </div>
           </div>
 
-          {/* Culture signals */}
           {result.culture_signals?.length > 0 && (
             <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '20px' }}>
               {result.culture_signals.map((s, i) => (
@@ -218,10 +289,7 @@ export default function DiscoverPage() {
             </div>
           )}
 
-          {/* Roles + Fit grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-            {/* Roles */}
             <div>
               <div style={{ marginBottom: '10px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Role Types to Search</div>
@@ -241,7 +309,6 @@ export default function DiscoverPage() {
               </div>
             </div>
 
-            {/* Fit analysis */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: '8px', padding: '13px 15px' }}>
                 <div style={{ color: '#64748b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '7px' }}>Why You Fit</div>
@@ -259,6 +326,153 @@ export default function DiscoverPage() {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Hunted Leads */}
+      {(hunted.length > 0 || hunting) && (
+        <div style={{ marginBottom: '36px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Target size={13} color="#d97706" />
+              <span style={{ color: '#64748b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Hunted Leads</span>
+              {huntedAt && !hunting && <span style={{ color: '#cbd5e1', fontSize: '10px' }}>· {huntedAt}</span>}
+              {hunting && <span style={{ color: '#d97706', fontSize: '10px' }}>· searching the web…</span>}
+            </div>
+            <span style={{ color: '#94a3b8', fontSize: '11px' }}>Live postings via web search · verify before applying</span>
+          </div>
+
+          {hunting && (
+            <div style={{ backgroundColor: '#ffffff', border: '1px solid rgba(217,119,6,0.2)', borderRadius: '12px', padding: '28px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+              <Loader size={20} color="#d97706" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 10px', display: 'block' }} />
+              <div style={{ color: '#92400e', fontSize: '13px', fontWeight: 600, marginBottom: '4px' }}>Hunting across 5-6 search queries…</div>
+              <div style={{ color: '#94a3b8', fontSize: '11px' }}>This takes 30-60 seconds — searching live job boards</div>
+            </div>
+          )}
+
+          {!hunting && hunted.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {hunted.map(lead => {
+                const isSaved = savedHunted.has(lead.id);
+                const friendly = lead.type !== 'full-time' && isStudentFriendly(lead.location);
+                const color = badgeColor(lead.company);
+                return (
+                  <div key={lead.id} style={{
+                    backgroundColor: '#ffffff', border: '1px solid rgba(217,119,6,0.15)', borderRadius: '12px',
+                    padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                    transition: 'box-shadow 0.15s, border-color 0.15s',
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(217,119,6,0.35)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(217,119,6,0.15)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; }}
+                  >
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                      <div style={{
+                        width: '32px', height: '32px', borderRadius: '7px', flexShrink: 0,
+                        backgroundColor: color,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px',
+                      }}>{initials(lead.company)}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ color: '#1e293b', fontSize: '12px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.company}</div>
+                        <div style={{ color: '#64748b', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.title}</div>
+                      </div>
+                      <button onClick={() => dismissHunted(lead.id)} style={{
+                        background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px', display: 'flex', flexShrink: 0,
+                      }}
+                        onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
+                        onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}
+                      ><X size={13} /></button>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                      <span style={{ color: TYPE_COLORS[lead.type] || '#64748b', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[lead.type] || lead.type}</span>
+                      <span style={{ color: '#cbd5e1', fontSize: '10px' }}>·</span>
+                      <span style={{ color: '#64748b', fontSize: '10px' }}>{lead.location}</span>
+                      {lead.type !== 'full-time' && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px',
+                          backgroundColor: friendly ? 'rgba(5,150,105,0.07)' : 'rgba(220,38,38,0.07)',
+                          color: friendly ? '#059669' : '#dc2626',
+                        }}>{friendly ? 'Student-friendly' : 'On-site only'}</span>
+                      )}
+                      <span style={{ marginLeft: 'auto', color: fitColor(lead.fit_score), fontSize: '13px', fontWeight: 800 }}>{lead.fit_score}/10</span>
+                    </div>
+
+                    <p style={{ color: '#475569', fontSize: '11px', lineHeight: 1.6, margin: 0 }}>{lead.fit_reasoning}</p>
+
+                    {lead.tags?.length > 0 && (
+                      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                        {lead.tags.map((t, i) => (
+                          <span key={i} style={{ backgroundColor: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '3px', padding: '2px 7px', fontSize: '10px' }}>{t}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {lead.url && (
+                        <a href={lead.url} target="_blank" rel="noopener noreferrer" style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                          backgroundColor: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0',
+                          borderRadius: '6px', padding: '7px 10px', fontSize: '11px', fontWeight: 600,
+                          textDecoration: 'none', transition: 'all 0.15s',
+                        }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(59,130,246,0.3)'; (e.currentTarget as HTMLAnchorElement).style.color = '#3b82f6'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = '#e2e8f0'; (e.currentTarget as HTMLAnchorElement).style.color = '#64748b'; }}
+                        >
+                          <ExternalLink size={10} /> View
+                        </a>
+                      )}
+                      <button onClick={() => saveHunted(lead)} disabled={isSaved} style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                        flex: 1,
+                        backgroundColor: isSaved ? 'rgba(5,150,105,0.06)' : '#f8fafc',
+                        color: isSaved ? '#059669' : '#94a3b8',
+                        border: `1px solid ${isSaved ? 'rgba(5,150,105,0.3)' : '#e2e8f0'}`,
+                        borderRadius: '6px', padding: '7px', fontSize: '11px', fontWeight: 600,
+                        cursor: isSaved ? 'default' : 'pointer', fontFamily: 'inherit',
+                        transition: 'all 0.15s',
+                      }}
+                        onMouseEnter={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(59,130,246,0.3)'; (e.currentTarget as HTMLButtonElement).style.color = '#3b82f6'; } }}
+                        onMouseLeave={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#e2e8f0'; (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; } }}
+                      >
+                        {isSaved ? '✓ Saved' : <><Plus size={11} /> Save to Tracker</>}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Hunt CTA if no hunted leads yet */}
+      {!hunting && hunted.length === 0 && (
+        <div style={{
+          backgroundColor: '#ffffff', border: '1px solid rgba(217,119,6,0.2)', borderRadius: '14px',
+          padding: '20px 24px', marginBottom: '36px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '4px' }}>
+              <Target size={14} color="#d97706" />
+              <span style={{ color: '#92400e', fontSize: '13px', fontWeight: 700 }}>Hunt for Jobs</span>
+            </div>
+            <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
+              AI searches live job boards across 5-6 targeted queries, scores fit, and saves the best matches here permanently.
+            </p>
+          </div>
+          <button onClick={huntJobs} style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0,
+            background: 'linear-gradient(135deg, #d97706, #b45309)',
+            color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 18px',
+            fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+            boxShadow: '0 4px 14px rgba(180,83,9,0.3)',
+          }}>
+            <Target size={13} /> Hunt Now
+          </button>
         </div>
       )}
 
@@ -303,7 +517,6 @@ export default function DiscoverPage() {
                   onMouseEnter={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; }}
                 >
-                  {/* Top: badge + info + dismiss */}
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                     <div style={{ position: 'relative', flexShrink: 0 }}>
                       <div style={{
@@ -332,7 +545,6 @@ export default function DiscoverPage() {
                     ><X size={13} /></button>
                   </div>
 
-                  {/* Type + location + score */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                     <span style={{ color: TYPE_COLORS[lead.type] || '#64748b', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[lead.type] || lead.type}</span>
                     <span style={{ color: '#cbd5e1', fontSize: '10px' }}>·</span>
@@ -347,10 +559,8 @@ export default function DiscoverPage() {
                     <span style={{ marginLeft: 'auto', color: fitColor(lead.fit_score), fontSize: '13px', fontWeight: 800 }}>{lead.fit_score}/10</span>
                   </div>
 
-                  {/* Why */}
                   <p style={{ color: '#475569', fontSize: '11px', lineHeight: 1.6, margin: 0 }}>{lead.why}</p>
 
-                  {/* Tags */}
                   {lead.tags?.length > 0 && (
                     <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                       {lead.tags.map((t, i) => (
@@ -359,7 +569,6 @@ export default function DiscoverPage() {
                     </div>
                   )}
 
-                  {/* Save button */}
                   <button onClick={() => saveLead(lead)} disabled={isSaved} style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
                     backgroundColor: isSaved ? 'rgba(5,150,105,0.06)' : '#f8fafc',
