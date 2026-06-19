@@ -2,6 +2,8 @@
 
 A personal AI-powered job search command center built with Next.js, TypeScript, and Claude. Tracks applications, surfaces leads, generates cover letters, runs mock interviews, and advises on application strategy — all from one dashboard.
 
+> **Note:** This is a single-user personal tool. It has no auth layer — whoever runs it has full access to the data.
+
 **Live:** [career-dashboard-ten.vercel.app](https://career-dashboard-ten.vercel.app)
 
 ---
@@ -15,7 +17,7 @@ A personal AI-powered job search command center built with Next.js, TypeScript, 
 - AI match scorecard (5 categories × 100) auto-fires on panel open, cached per session
 
 ### AI-Powered Detail Panel
-- **Gaps & positioning** — what's missing for this role and how to frame your background against it
+- **Gaps & positioning** — what is missing for this role and how to frame your background against it
 - **Tailored resume bullets** — which bullets to lead with and how to rephrase them
 - **Cover letter generator** — full draft in seconds, prefilled from the job record
 - **Network section** — save contacts at each company, track outreach status (not reached out → reached out → responded → warm), company-keyed so contacts appear across all jobs at that company
@@ -55,6 +57,8 @@ A personal AI-powered job search command center built with Next.js, TypeScript, 
 ---
 
 ## Running locally
+
+You will need an [Anthropic API key](https://console.anthropic.com) and a free [Turso](https://turso.tech) database.
 
 ```bash
 git clone https://github.com/moff05/career-dashboard.git
