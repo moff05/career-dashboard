@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { apiFetch } from '@/lib/apiFetch';
 import { Edit2, ExternalLink, RefreshCw, Loader } from 'lucide-react';
 
 interface Profile {
@@ -20,7 +21,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch('/api/profile').then(r => r.json()).then(data => setProfile(data));
+    apiFetch('/api/profile').then(r => r.json()).then(data => setProfile(data));
   }, []);
 
   const startEdit = (field: string, value: string) => { setEditField(field); setEditValue(value || ''); };
@@ -29,7 +30,7 @@ export default function ProfilePage() {
     if (!editField) return;
     setSaving(true);
     const updated = { ...profile, [editField]: editValue };
-    const res = await fetch('/api/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
+    const res = await apiFetch('/api/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
     const data = await res.json();
     setProfile(data);
     setEditField(null);
@@ -39,15 +40,15 @@ export default function ProfilePage() {
   const generateSummary = async () => {
     setLoadingSummary(true);
     try {
-      const res = await fetch('/api/profile/summary', { method: 'POST' });
+      const res = await apiFetch('/api/profile/summary', { method: 'POST' });
       setSummary(await res.json());
     } catch { setSummary(null); }
     setLoadingSummary(false);
   };
 
   const inputStyle = {
-    width: '100%', backgroundColor: '#f8fafc', border: '1px solid rgba(59,130,246,0.3)',
-    borderRadius: '10px', padding: '8px 12px', color: '#0f172a',
+    width: '100%', background: 'rgba(125,220,255,0.025)', border: '1px solid rgba(59,130,246,0.3)',
+    borderRadius: '10px', padding: '8px 12px', color: 'rgba(232,244,255,0.95)',
     fontSize: '13px', outline: 'none', fontFamily: 'inherit',
   };
 
@@ -56,11 +57,11 @@ export default function ProfilePage() {
     return (
       <div style={{ marginBottom: '14px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <span style={{ color: '#64748b', fontSize: '10px', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{label}</span>
+          <span style={{ color: 'rgba(158,202,242,0.72)', fontSize: '10px', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>{label}</span>
           {!isEditing && (
-            <button onClick={() => startEdit(field, value || '')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: '0 2px' }}
+            <button onClick={() => startEdit(field, value || '')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(125,175,230,0.35)', padding: '0 2px' }}
               onMouseEnter={e => (e.currentTarget.style.color = '#3b82f6')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}>
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(125,175,230,0.35)')}>
               <Edit2 size={12} />
             </button>
           )}
@@ -77,16 +78,16 @@ export default function ProfilePage() {
                 borderRadius: '8px', padding: '5px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
               }}>{saving ? 'Saving…' : 'Save'}</button>
               <button onClick={() => setEditField(null)} style={{
-                backgroundColor: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0',
+                background: 'rgba(125,220,255,0.025)', color: 'rgba(158,202,242,0.72)', border: '1px solid rgba(125,220,255,0.13)',
                 borderRadius: '8px', padding: '5px 12px', fontSize: '12px', cursor: 'pointer',
               }}>Cancel</button>
             </div>
           </div>
         ) : (
-          <div style={{ color: '#334155', fontSize: '13px', lineHeight: '1.5' }}>
+          <div style={{ color: 'rgba(200,228,255,0.85)', fontSize: '13px', lineHeight: '1.5' }}>
             {field === 'linkedin' && value
               ? <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>{value} <ExternalLink size={11} /></a>
-              : value || <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>Not set</span>
+              : value || <span style={{ color: 'rgba(125,175,230,0.35)', fontStyle: 'italic' }}>Not set</span>
             }
           </div>
         )}
@@ -96,13 +97,13 @@ export default function ProfilePage() {
 
   const readinessColor = (s: number) => s >= 8 ? '#059669' : s >= 6 ? '#3b82f6' : '#dc2626';
 
-  const cardStyle = { backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' };
+  const cardStyle = { background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '14px', padding: '20px' };
 
   return (
-    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
+    <div style={{ padding: '32px 36px', minHeight: '100vh', background: 'transparent' }}>
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ color: '#0f172a', fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>My Profile</h1>
-        <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0' }}>Resume info and candidate positioning</p>
+        <h1 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>My Profile</h1>
+        <p style={{ color: 'rgba(135,185,230,0.65)', fontSize: '12px', margin: '4px 0 0' }}>Resume info and candidate positioning</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
@@ -113,7 +114,7 @@ export default function ProfilePage() {
             { title: 'Targets', fields: [{ field: 'target_roles', label: 'Target Roles', multiline: true }, { field: 'target_cities', label: 'Target Cities', multiline: true }, { field: 'notes', label: 'Notes', multiline: true }] },
           ].map(section => (
             <div key={section.title} style={cardStyle}>
-              <h3 style={{ color: '#64748b', fontSize: '10px', fontWeight: 700, margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{section.title}</h3>
+              <h3 style={{ color: 'rgba(158,202,242,0.72)', fontSize: '10px', fontWeight: 700, margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{section.title}</h3>
               {section.fields.map(f => <EditableField key={f.field} field={f.field} label={f.label} value={(profile as Record<string, string | undefined>)[f.field]} multiline={f.multiline} />)}
             </div>
           ))}
@@ -121,11 +122,11 @@ export default function ProfilePage() {
 
         <div style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ color: '#0f172a', fontSize: '14px', fontWeight: 700, margin: 0 }}>Candidate Strength</h3>
+            <h3 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '14px', fontWeight: 700, margin: 0 }}>Candidate Strength</h3>
             <button onClick={generateSummary} disabled={loadingSummary} style={{
               display: 'flex', alignItems: 'center', gap: '6px',
-              backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px',
-              padding: '6px 14px', color: '#64748b', fontSize: '12px',
+              background: 'rgba(125,220,255,0.025)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '10px',
+              padding: '6px 14px', color: 'rgba(158,202,242,0.72)', fontSize: '12px',
               cursor: loadingSummary ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
             }}>
               {loadingSummary ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={12} />}
@@ -135,41 +136,41 @@ export default function ProfilePage() {
 
           {!summary && !loadingSummary && (
             <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-              <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 8px' }}>Click &quot;Generate&quot; for an AI assessment of your candidacy.</p>
-              <p style={{ color: '#cbd5e1', fontSize: '12px', margin: 0 }}>Analyzes your resume, experiences, and saved context.</p>
+              <p style={{ color: 'rgba(135,185,230,0.65)', fontSize: '13px', margin: '0 0 8px' }}>Click &quot;Generate&quot; for an AI assessment of your candidacy.</p>
+              <p style={{ color: 'rgba(125,175,230,0.35)', fontSize: '12px', margin: 0 }}>Analyzes your resume, experiences, and saved context.</p>
             </div>
           )}
 
           {loadingSummary && (
             <div style={{ textAlign: 'center', padding: '48px' }}>
               <Loader size={24} color="#3b82f6" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 12px', display: 'block' }} />
-              <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>Analyzing your background…</p>
+              <p style={{ color: 'rgba(158,202,242,0.72)', fontSize: '13px', margin: 0 }}>Analyzing your background…</p>
             </div>
           )}
 
           {summary && !loadingSummary && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', padding: '14px 16px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', padding: '14px 16px', background: 'rgba(125,220,255,0.025)', borderRadius: '12px', border: '1px solid rgba(125,220,255,0.06)' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '32px', fontWeight: 800, color: readinessColor(summary.readiness_score), lineHeight: 1 }}>{summary.readiness_score}</div>
-                  <div style={{ color: '#94a3b8', fontSize: '10px', marginTop: '3px' }}>/10</div>
+                  <div style={{ color: 'rgba(135,185,230,0.65)', fontSize: '10px', marginTop: '3px' }}>/10</div>
                 </div>
                 <div>
-                  <div style={{ color: '#0f172a', fontWeight: 700, fontSize: '13px' }}>Readiness Score</div>
-                  <div style={{ color: '#64748b', fontSize: '12px', marginTop: '3px' }}>For competitive tech/CRE roles</div>
+                  <div style={{ color: 'rgba(232,244,255,0.95)', fontWeight: 700, fontSize: '13px' }}>Readiness Score</div>
+                  <div style={{ color: 'rgba(158,202,242,0.72)', fontSize: '12px', marginTop: '3px' }}>For competitive tech/CRE roles</div>
                 </div>
               </div>
-              <p style={{ color: '#334155', fontSize: '13px', lineHeight: '1.65', margin: '0 0 16px' }}>{summary.summary}</p>
+              <p style={{ color: 'rgba(200,228,255,0.85)', fontSize: '13px', lineHeight: '1.65', margin: '0 0 16px' }}>{summary.summary}</p>
               <div style={{ marginBottom: '14px' }}>
                 <h4 style={{ color: '#059669', fontSize: '11px', fontWeight: 700, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Strengths</h4>
                 <ul style={{ margin: 0, paddingLeft: '16px' }}>
-                  {summary.strengths.map((s, i) => <li key={i} style={{ color: '#334155', fontSize: '13px', marginBottom: '5px' }}>{s}</li>)}
+                  {summary.strengths.map((s, i) => <li key={i} style={{ color: 'rgba(200,228,255,0.85)', fontSize: '13px', marginBottom: '5px' }}>{s}</li>)}
                 </ul>
               </div>
               <div>
                 <h4 style={{ color: '#3b82f6', fontSize: '11px', fontWeight: 700, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Areas to Develop</h4>
                 <ul style={{ margin: 0, paddingLeft: '16px' }}>
-                  {summary.gaps.map((g, i) => <li key={i} style={{ color: '#334155', fontSize: '13px', marginBottom: '5px' }}>{g}</li>)}
+                  {summary.gaps.map((g, i) => <li key={i} style={{ color: 'rgba(200,228,255,0.85)', fontSize: '13px', marginBottom: '5px' }}>{g}</li>)}
                 </ul>
               </div>
             </div>

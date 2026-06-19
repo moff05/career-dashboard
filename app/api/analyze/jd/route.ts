@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildSystemPrompt } from '@/lib/ai-context';
+import { getApiKey } from '@/lib/user';
 
 export const maxDuration = 60;
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 export async function POST(request: NextRequest) {
   try {
+    const apiKey = getApiKey(request);
+    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
+    const anthropic = new Anthropic({ apiKey });
     const { jd } = await request.json();
     if (!jd?.trim()) return NextResponse.json({ error: 'No job description provided' }, { status: 400 });
 
-    const systemPrompt = await buildSystemPrompt();
+    const systemPrompt = await buildSystemPrompt('anonymous');
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',

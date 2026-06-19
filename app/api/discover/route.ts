@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildSystemPrompt } from '@/lib/ai-context';
+import { getUserId, getApiKey } from '@/lib/user';
 
 export const maxDuration = 60;
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 
 const PROMPT = (query: string) => `Research "${query}" for Nicholas and return a structured JSON analysis.
 
@@ -35,10 +36,14 @@ For fit_verdict: Strong Match (8-10), Good Fit (6-7), Stretch (4-5), Not a Match
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = getUserId(request);
+    const apiKey = getApiKey(request);
+    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
+    const anthropic = new Anthropic({ apiKey });
     const { query } = await request.json();
     if (!query?.trim()) return NextResponse.json({ error: 'Query required' }, { status: 400 });
 
-    const systemPrompt = await buildSystemPrompt();
+    const systemPrompt = await buildSystemPrompt(userId);
     const userContent = PROMPT(query.trim());
     let text = '';
 

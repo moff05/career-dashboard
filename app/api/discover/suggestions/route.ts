@@ -1,14 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserId, getApiKey } from '@/lib/user';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildSystemPrompt } from '@/lib/ai-context';
 
 export const maxDuration = 60;
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-export async function GET() {
+
+export async function GET(request: NextRequest) {
   try {
-    const systemPrompt = await buildSystemPrompt();
+    const userId = getUserId(request);
+    const apiKey = getApiKey(request);
+    if (!apiKey) return NextResponse.json([], { status: 200 });
+    const anthropic = new Anthropic({ apiKey });
+    const systemPrompt = await buildSystemPrompt(userId);
 
     const response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',

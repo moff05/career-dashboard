@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { getUserId } from '@/lib/user';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const userId = getUserId(request);
     const db = getDb();
-    const result = await db.execute('SELECT * FROM timeline_events ORDER BY date ASC');
+    const result = await db.execute({ sql: 'SELECT * FROM timeline_events WHERE user_id = ? ORDER BY date ASC', args: [userId] });
     return NextResponse.json(result.rows);
   } catch (error) {
     console.error('GET /api/timeline error:', error);
@@ -14,13 +16,13 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = getUserId(request);
     const db = getDb();
     const { title, description, date, type } = await request.json();
     if (!title || !date || !type) return NextResponse.json({ error: 'title, date, type are required' }, { status: 400 });
-
     const result = await db.execute({
-      sql: 'INSERT INTO timeline_events (title, description, date, type) VALUES (?, ?, ?, ?)',
-      args: [title, description || null, date, type],
+      sql: 'INSERT INTO timeline_events (user_id, title, description, date, type) VALUES (?, ?, ?, ?, ?)',
+      args: [userId, title, description || null, date, type],
     });
     const newEvent = (await db.execute({ sql: 'SELECT * FROM timeline_events WHERE id = ?', args: [Number(result.lastInsertRowid)] })).rows[0];
     return NextResponse.json(newEvent, { status: 201 });

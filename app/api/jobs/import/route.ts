@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { getApiKey } from '@/lib/user';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 
 const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 type ImageMediaType = typeof VALID_IMAGE_TYPES[number];
@@ -53,6 +54,9 @@ async function fetchAndStrip(url: string): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
+    const apiKey = getApiKey(request);
+    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
+    const anthropic = new Anthropic({ apiKey });
     const body = await request.json();
     const { url, extraText, imageBase64, imageMediaType, extraLink } = body as {
       url: string;

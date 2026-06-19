@@ -1,18 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
+import { getUserId, getApiKey } from '@/lib/user';
 
 export const maxDuration = 60;
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    const userId = getUserId(request);
+    const apiKey = getApiKey(request);
+    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
+    const anthropic = new Anthropic({ apiKey });
     const db = getDb();
-    const resumeRow = (await db.execute('SELECT raw_text FROM resume WHERE id = 1')).rows[0] as unknown as { raw_text: string } | undefined;
-    const resumeText = resumeRow?.raw_text || 'Nicholas Moffett, junior at University of Miami, GPA 3.71, CRE tech + AI automation background.';
 
-    const memRows = (await db.execute('SELECT content, category FROM memories ORDER BY created_at DESC LIMIT 20')).rows as unknown as { content: string; category: string }[];
+    const resumeRow = (await db.execute({
+      sql: 'SELECT raw_text FROM resume WHERE user_id = ?',
+      args: [userId],
+    })).rows[0] as unknown as { raw_text: string } | undefined;
+    const resumeText = resumeRow?.raw_text || 'No resume provided.';
+
+    const memRows = (await db.execute({
+      sql: 'SELECT content, category FROM memories WHERE user_id = ? ORDER BY created_at DESC LIMIT 20',
+      args: [userId],
+    })).rows as unknown as { content: string; category: string }[];
     const memoriesText = memRows.length > 0
       ? memRows.map(m => `[${m.category}] ${m.content}`).join('\n')
       : 'No additional memories.';
@@ -22,7 +32,7 @@ export async function POST() {
       max_tokens: 1024,
       messages: [{
         role: 'user',
-        content: `Based on this candidate's resume and saved context, generate a candidate strength summary for competitive job applications.
+        content: `Based on this candidate's resume and saved context, generate a strength summary for competitive job applications.
 
 RESUME:
 ${resumeText}
@@ -38,7 +48,7 @@ Return ONLY valid JSON:
   "summary": "2-3 sentence overall summary"
 }
 
-Be specific and reference actual details from the resume. readiness_score is 1-10 for competitive tech/finance/real estate roles.`,
+Be specific and reference actual details from the resume. readiness_score is 1-10 for competitive tech/finance roles.`,
       }],
     });
 
@@ -46,12 +56,7 @@ Be specific and reference actual details from the resume. readiness_score is 1-1
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) return NextResponse.json(JSON.parse(jsonMatch[0]));
 
-    return NextResponse.json({
-      strengths: ['Strong CRE tech + AI automation background', 'Entrepreneurial experience (N&S Digital)', 'High GPA at competitive school', 'Real-world internship experience'],
-      gaps: ['Limited software engineering portfolio', 'Could benefit from more formal CS courses'],
-      readiness_score: 7,
-      summary: 'Nicholas is a strong candidate with unique intersection of real estate technology and AI automation skills.',
-    });
+    return NextResponse.json({ error: 'Parse failed' }, { status: 500 });
   } catch (error) {
     console.error('POST /api/profile/summary error:', error);
     return NextResponse.json({ error: 'Failed to generate summary' }, { status: 500 });

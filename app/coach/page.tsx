@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { apiFetch } from '@/lib/apiFetch';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Send, Loader, Mic, ChevronRight } from 'lucide-react';
@@ -71,7 +72,7 @@ export default function CoachPage() {
   // ── Chat: load history ────────────────────────────────────────────────────
   const loadHistory = useCallback(async () => {
     try {
-      const res = await fetch(`/api/chat/history?session_id=${sessionId}`);
+      const res = await apiFetch(`/api/chat/history?session_id=${sessionId}`);
       const data = await res.json();
       setMessages(data?.length > 0 ? data : [{
         role: 'assistant',
@@ -126,7 +127,7 @@ export default function CoachPage() {
     setLoading(true);
     setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
     try {
-      const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, session_id: sessionId }) });
+      const res = await apiFetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, session_id: sessionId }) });
       if (!res.body) throw new Error('No stream');
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -139,7 +140,7 @@ export default function CoachPage() {
       }
       setLoading(false);
       try {
-        const memRes = await fetch('/api/chat/memories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, response: fullResponse, session_id: sessionId }) });
+        const memRes = await apiFetch('/api/chat/memories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, response: fullResponse, session_id: sessionId }) });
         const memData = await memRes.json();
         if (memData.saved > 0 && memData.memories?.[0]) {
           const snippet = memData.memories[0].content.slice(0, 60);
@@ -185,7 +186,7 @@ export default function CoachPage() {
     setIntQNumber(0);
     setIntFinalSummary('');
     if (savedJobs.length === 0) {
-      const data = await fetch('/api/jobs').then(r => r.json()).catch(() => []);
+      const data = await apiFetch('/api/jobs').then(r => r.json()).catch(() => []);
       setSavedJobs((data || []).map((j: { id: number; company: string; title: string }) => ({ id: j.id, company: j.company, title: j.title })));
     }
   };
@@ -200,7 +201,7 @@ export default function CoachPage() {
     setIntStreaming(true);
     let streamed = '';
     try {
-      const res = await fetch('/api/interview', {
+      const res = await apiFetch('/api/interview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -283,16 +284,16 @@ export default function CoachPage() {
   const intTypeLabel = INTERVIEW_TYPES.find(t => t.value === intSetup.type)?.label || '';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f8fafc' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'rgba(125,220,255,0.025)' }}>
 
       {/* Header */}
-      <div style={{ padding: '16px 32px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff', flexShrink: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div style={{ padding: '16px 32px', borderBottom: '1px solid rgba(125,220,255,0.10)', background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
           <div>
-            <h1 style={{ color: '#0f172a', fontSize: '15px', fontWeight: 700, margin: 0 }}>
+            <h1 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '15px', fontWeight: 700, margin: 0 }}>
               {mode === 'chat' ? 'AI Career Coach' : 'Mock Interview'}
             </h1>
-            <p style={{ color: '#94a3b8', fontSize: '11px', margin: '2px 0 0' }}>
+            <p style={{ color: 'rgba(135,185,230,0.65)', fontSize: '11px', margin: '2px 0 0' }}>
               {mode === 'chat' ? 'Powered by Claude — knows your full background' : 'Practice with realistic interview questions and live feedback'}
             </p>
           </div>
@@ -300,9 +301,9 @@ export default function CoachPage() {
             {(['chat', 'interview'] as const).map(m => (
               <button key={m} onClick={() => m === 'interview' ? switchToInterview() : setMode('chat')} style={{
                 display: 'flex', alignItems: 'center', gap: '5px',
-                backgroundColor: mode === m ? (m === 'interview' ? 'rgba(139,92,246,0.1)' : 'rgba(59,130,246,0.1)') : '#f8fafc',
+                backgroundColor: mode === m ? (m === 'interview' ? 'rgba(139,92,246,0.1)' : 'rgba(59,130,246,0.1)') : 'rgba(125,220,255,0.04)',
                 color: mode === m ? (m === 'interview' ? '#7c3aed' : '#3b82f6') : '#64748b',
-                border: `1px solid ${mode === m ? (m === 'interview' ? 'rgba(139,92,246,0.3)' : 'rgba(59,130,246,0.3)') : '#e2e8f0'}`,
+                border: `1px solid ${mode === m ? (m === 'interview' ? 'rgba(139,92,246,0.3)' : 'rgba(59,130,246,0.3)') : 'rgba(125,220,255,0.13)'}`,
                 borderRadius: '20px', padding: '5px 14px', fontSize: '11px', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
               }}>
@@ -316,7 +317,7 @@ export default function CoachPage() {
         {/* Chat quick actions */}
         {mode === 'chat' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-            <span style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 600, marginRight: '2px' }}>Quick:</span>
+            <span style={{ color: 'rgba(135,185,230,0.65)', fontSize: '10px', fontWeight: 600, marginRight: '2px' }}>Quick:</span>
             {[
               { label: 'What should I apply to?', text: "Based on my background and saved jobs, what should I prioritize applying to right now?" },
               { label: 'Interview prep', text: "I have an upcoming interview. Help me prepare with likely questions and strong answers based on my background." },
@@ -324,12 +325,12 @@ export default function CoachPage() {
               { label: 'Analyze a JD', text: "Please analyze this job description and tell me how well I'd fit:\n\n[paste JD here]" },
             ].map(({ label, text }) => (
               <button key={label} onClick={() => setQuickAction(text)} style={{
-                backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '20px',
-                padding: '5px 12px', color: '#64748b', fontSize: '11px', fontWeight: 500,
+                background: 'transparent', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '20px',
+                padding: '5px 12px', color: 'rgba(158,202,242,0.72)', fontSize: '11px', fontWeight: 500,
                 cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap', fontFamily: 'inherit',
               }}
                 onMouseEnter={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(59,130,246,0.35)'; b.style.color = '#3b82f6'; b.style.backgroundColor = 'rgba(59,130,246,0.05)'; }}
-                onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = '#e2e8f0'; b.style.color = '#64748b'; b.style.backgroundColor = '#f1f5f9'; }}
+                onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(125,220,255,0.13)'; b.style.color = '#64748b'; b.style.backgroundColor = 'rgba(125,220,255,0.06)'; }}
               >{label}</button>
             ))}
           </div>
@@ -340,30 +341,30 @@ export default function CoachPage() {
       {mode === 'chat' && (
         <>
           <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
-            {!historyLoaded && <div style={{ textAlign: 'center', color: '#94a3b8', padding: '48px', fontSize: '13px' }}>Loading…</div>}
+            {!historyLoaded && <div style={{ textAlign: 'center', color: 'rgba(135,185,230,0.65)', padding: '48px', fontSize: '13px' }}>Loading…</div>}
             {historyLoaded && messages.map((msg, idx) => (
               <div key={idx} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: '10px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
                 {msg.role === 'assistant' && (
                   <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 800, flexShrink: 0, marginTop: '2px', boxShadow: '0 2px 8px rgba(59,130,246,0.25)' }}>AI</div>
                 )}
-                <div style={{ maxWidth: '85%', backgroundColor: msg.role === 'user' ? '#f1f5f9' : 'transparent', border: msg.role === 'user' ? '1px solid #e2e8f0' : 'none', borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '0', padding: msg.role === 'user' ? '10px 15px' : '0', fontSize: '14px', lineHeight: '1.65' }}>
+                <div style={{ maxWidth: '85%', backgroundColor: msg.role === 'user' ? 'rgba(125,220,255,0.06)' : 'transparent', border: msg.role === 'user' ? '1px solid rgba(125,220,255,0.13)' : 'none', borderRadius: msg.role === 'user' ? '14px 14px 4px 14px' : '0', padding: msg.role === 'user' ? '10px 15px' : '0', fontSize: '14px', lineHeight: '1.65' }}>
                   {msg.role === 'assistant' ? (
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
-                      p: ({ children }) => <p style={{ margin: '0 0 10px', color: '#334155' }}>{children}</p>,
-                      strong: ({ children }) => <strong style={{ color: '#0f172a', fontWeight: 600 }}>{children}</strong>,
-                      ul: ({ children }) => <ul style={{ margin: '8px 0', paddingLeft: '20px', color: '#334155' }}>{children}</ul>,
-                      ol: ({ children }) => <ol style={{ margin: '8px 0', paddingLeft: '20px', color: '#334155' }}>{children}</ol>,
-                      li: ({ children }) => <li style={{ margin: '4px 0', color: '#334155' }}>{children}</li>,
-                      h1: ({ children }) => <h1 style={{ color: '#0f172a', fontSize: '17px', fontWeight: 700, margin: '14px 0 8px' }}>{children}</h1>,
-                      h2: ({ children }) => <h2 style={{ color: '#0f172a', fontSize: '15px', fontWeight: 700, margin: '12px 0 6px' }}>{children}</h2>,
-                      h3: ({ children }) => <h3 style={{ color: '#0f172a', fontSize: '13px', fontWeight: 600, margin: '10px 0 5px' }}>{children}</h3>,
-                      code: ({ children }) => <code style={{ backgroundColor: '#f1f5f9', color: '#3b82f6', padding: '1px 5px', borderRadius: '5px', fontSize: '12px', fontFamily: 'monospace', border: '1px solid #e2e8f0' }}>{children}</code>,
-                      blockquote: ({ children }) => <blockquote style={{ borderLeft: '3px solid rgba(59,130,246,0.3)', paddingLeft: '12px', margin: '8px 0', color: '#64748b' }}>{children}</blockquote>,
+                      p: ({ children }) => <p style={{ margin: '0 0 10px', color: 'rgba(200,228,255,0.85)' }}>{children}</p>,
+                      strong: ({ children }) => <strong style={{ color: 'rgba(232,244,255,0.95)', fontWeight: 600 }}>{children}</strong>,
+                      ul: ({ children }) => <ul style={{ margin: '8px 0', paddingLeft: '20px', color: 'rgba(200,228,255,0.85)' }}>{children}</ul>,
+                      ol: ({ children }) => <ol style={{ margin: '8px 0', paddingLeft: '20px', color: 'rgba(200,228,255,0.85)' }}>{children}</ol>,
+                      li: ({ children }) => <li style={{ margin: '4px 0', color: 'rgba(200,228,255,0.85)' }}>{children}</li>,
+                      h1: ({ children }) => <h1 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '17px', fontWeight: 700, margin: '14px 0 8px' }}>{children}</h1>,
+                      h2: ({ children }) => <h2 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '15px', fontWeight: 700, margin: '12px 0 6px' }}>{children}</h2>,
+                      h3: ({ children }) => <h3 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '13px', fontWeight: 600, margin: '10px 0 5px' }}>{children}</h3>,
+                      code: ({ children }) => <code style={{ background: 'transparent', color: '#3b82f6', padding: '1px 5px', borderRadius: '5px', fontSize: '12px', fontFamily: 'monospace', border: '1px solid rgba(125,220,255,0.13)' }}>{children}</code>,
+                      blockquote: ({ children }) => <blockquote style={{ borderLeft: '3px solid rgba(59,130,246,0.3)', paddingLeft: '12px', margin: '8px 0', color: 'rgba(158,202,242,0.72)' }}>{children}</blockquote>,
                     }}>
                       {msg.content || (loading && idx === messages.length - 1 ? '…' : '')}
                     </ReactMarkdown>
                   ) : (
-                    <span style={{ whiteSpace: 'pre-wrap', color: '#1e293b' }}>{msg.content}</span>
+                    <span style={{ whiteSpace: 'pre-wrap', color: 'rgba(220,235,255,0.90)' }}>{msg.content}</span>
                   )}
                 </div>
               </div>
@@ -377,14 +378,14 @@ export default function CoachPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          <div style={{ padding: '14px 32px 22px', borderTop: '1px solid #e2e8f0', backgroundColor: '#ffffff', flexShrink: 0, boxShadow: '0 -1px 3px rgba(0,0,0,0.04)' }}>
+          <div style={{ padding: '14px 32px 22px', borderTop: '1px solid rgba(125,220,255,0.10)', background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', flexShrink: 0, boxShadow: '0 -1px 3px rgba(0,0,0,0.04)' }}>
             <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
-              <textarea ref={textareaRef} value={input} onChange={handleTextareaChange} onKeyDown={handleKeyDown} placeholder="Ask your career coach anything…" rows={1} style={{ flex: 1, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 16px', color: '#0f172a', fontSize: '14px', outline: 'none', resize: 'none', lineHeight: '1.5', minHeight: '44px', maxHeight: '160px', overflow: 'auto', fontFamily: 'inherit', transition: 'border-color 0.15s' }} onFocus={e => (e.target.style.borderColor = 'rgba(59,130,246,0.4)')} onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
-              <button onClick={() => handleSend()} disabled={loading || !input.trim()} style={{ width: '44px', height: '44px', borderRadius: '12px', background: loading || !input.trim() ? '#f1f5f9' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)', border: loading || !input.trim() ? '1px solid #e2e8f0' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', flexShrink: 0, boxShadow: loading || !input.trim() ? 'none' : '0 4px 12px rgba(59,130,246,0.3)' }}>
+              <textarea ref={textareaRef} value={input} onChange={handleTextareaChange} onKeyDown={handleKeyDown} placeholder="Ask your career coach anything…" rows={1} style={{ flex: 1, background: 'rgba(125,220,255,0.025)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '12px', padding: '12px 16px', color: 'rgba(232,244,255,0.95)', fontSize: '14px', outline: 'none', resize: 'none', lineHeight: '1.5', minHeight: '44px', maxHeight: '160px', overflow: 'auto', fontFamily: 'inherit', transition: 'border-color 0.15s' }} onFocus={e => (e.target.style.borderColor = 'rgba(59,130,246,0.4)')} onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.13)')} />
+              <button onClick={() => handleSend()} disabled={loading || !input.trim()} style={{ width: '44px', height: '44px', borderRadius: '12px', background: loading || !input.trim() ? 'rgba(125,220,255,0.06)' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)', border: loading || !input.trim() ? '1px solid rgba(125,220,255,0.13)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', flexShrink: 0, boxShadow: loading || !input.trim() ? 'none' : '0 4px 12px rgba(59,130,246,0.3)' }}>
                 <Send size={16} color={loading || !input.trim() ? '#94a3b8' : '#fff'} />
               </button>
             </div>
-            <p style={{ color: '#cbd5e1', fontSize: '10px', margin: '7px 0 0', textAlign: 'center' }}>Enter to send · Shift+Enter for new line</p>
+            <p style={{ color: 'rgba(125,175,230,0.35)', fontSize: '10px', margin: '7px 0 0', textAlign: 'center' }}>Enter to send · Shift+Enter for new line</p>
           </div>
         </>
       )}
@@ -396,52 +397,52 @@ export default function CoachPage() {
 
             {/* Setup */}
             {intPhase === 'setup' && (
-              <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                <h2 style={{ color: '#0f172a', fontSize: '16px', fontWeight: 700, margin: '0 0 6px' }}>Set up your interview</h2>
-                <p style={{ color: '#94a3b8', fontSize: '12px', margin: '0 0 24px' }}>5 questions · live feedback · personalized to your background</p>
+              <div style={{ background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '18px', padding: '28px' }}>
+                <h2 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '16px', fontWeight: 700, margin: '0 0 6px' }}>Set up your interview</h2>
+                <p style={{ color: 'rgba(135,185,230,0.65)', fontSize: '12px', margin: '0 0 24px' }}>5 questions · live feedback · personalized to your background</p>
 
                 {/* Job selection */}
                 <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', color: '#64748b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>Role</label>
+                  <label style={{ display: 'block', color: 'rgba(158,202,242,0.72)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>Role</label>
                   <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
                     {(['saved', 'custom'] as const).map(opt => (
                       <button key={opt} onClick={() => setIntSetup(p => ({ ...p, useCustom: opt === 'custom' }))} style={{
-                        backgroundColor: (intSetup.useCustom ? opt === 'custom' : opt === 'saved') ? 'rgba(59,130,246,0.08)' : '#f8fafc',
+                        backgroundColor: (intSetup.useCustom ? opt === 'custom' : opt === 'saved') ? 'rgba(59,130,246,0.08)' : 'rgba(125,220,255,0.04)',
                         color: (intSetup.useCustom ? opt === 'custom' : opt === 'saved') ? '#3b82f6' : '#64748b',
-                        border: `1px solid ${(intSetup.useCustom ? opt === 'custom' : opt === 'saved') ? 'rgba(59,130,246,0.3)' : '#e2e8f0'}`,
+                        border: `1px solid ${(intSetup.useCustom ? opt === 'custom' : opt === 'saved') ? 'rgba(59,130,246,0.3)' : 'rgba(125,220,255,0.13)'}`,
                         borderRadius: '20px', padding: '5px 14px', fontSize: '11px', fontWeight: 600,
                         cursor: 'pointer', fontFamily: 'inherit',
                       }}>{opt === 'saved' ? 'From my tracker' : 'Custom role'}</button>
                     ))}
                   </div>
                   {!intSetup.useCustom ? (
-                    <select value={intSetup.jobId} onChange={e => setIntSetup(p => ({ ...p, jobId: e.target.value }))} style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '9px 12px', color: '#0f172a', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }}>
+                    <select value={intSetup.jobId} onChange={e => setIntSetup(p => ({ ...p, jobId: e.target.value }))} style={{ width: '100%', background: 'rgba(125,220,255,0.025)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '10px', padding: '9px 12px', color: 'rgba(232,244,255,0.95)', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }}>
                       <option value="">Select a job…</option>
                       {savedJobs.map(j => <option key={j.id} value={j.id}>{j.company} — {j.title}</option>)}
                     </select>
                   ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <input placeholder="Company" value={intSetup.customCompany} onChange={e => setIntSetup(p => ({ ...p, customCompany: e.target.value }))} style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '9px 12px', color: '#0f172a', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
-                      <input placeholder="Role title" value={intSetup.customTitle} onChange={e => setIntSetup(p => ({ ...p, customTitle: e.target.value }))} style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '9px 12px', color: '#0f172a', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
+                      <input placeholder="Company" value={intSetup.customCompany} onChange={e => setIntSetup(p => ({ ...p, customCompany: e.target.value }))} style={{ background: 'rgba(125,220,255,0.025)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '10px', padding: '9px 12px', color: 'rgba(232,244,255,0.95)', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
+                      <input placeholder="Role title" value={intSetup.customTitle} onChange={e => setIntSetup(p => ({ ...p, customTitle: e.target.value }))} style={{ background: 'rgba(125,220,255,0.025)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '10px', padding: '9px 12px', color: 'rgba(232,244,255,0.95)', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }} />
                     </div>
                   )}
                 </div>
 
                 {/* Interview type */}
                 <div style={{ marginBottom: '28px' }}>
-                  <label style={{ display: 'block', color: '#64748b', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Interview Type</label>
+                  <label style={{ display: 'block', color: 'rgba(158,202,242,0.72)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Interview Type</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {INTERVIEW_TYPES.map(t => (
                       <button key={t.value} onClick={() => setIntSetup(p => ({ ...p, type: t.value }))} style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        backgroundColor: intSetup.type === t.value ? 'rgba(124,58,237,0.06)' : '#f8fafc',
-                        border: `1px solid ${intSetup.type === t.value ? 'rgba(124,58,237,0.25)' : '#e2e8f0'}`,
+                        backgroundColor: intSetup.type === t.value ? 'rgba(124,58,237,0.06)' : 'rgba(125,220,255,0.04)',
+                        border: `1px solid ${intSetup.type === t.value ? 'rgba(124,58,237,0.25)' : 'rgba(125,220,255,0.13)'}`,
                         borderRadius: '12px', padding: '10px 14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
                         transition: 'all 0.1s',
                       }}>
                         <div>
-                          <div style={{ color: intSetup.type === t.value ? '#7c3aed' : '#334155', fontSize: '13px', fontWeight: 600 }}>{t.label}</div>
-                          <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '1px' }}>{t.desc}</div>
+                          <div style={{ color: intSetup.type === t.value ? '#7c3aed' : 'rgba(200,228,255,0.85)', fontSize: '13px', fontWeight: 600 }}>{t.label}</div>
+                          <div style={{ color: 'rgba(135,185,230,0.65)', fontSize: '11px', marginTop: '1px' }}>{t.desc}</div>
                         </div>
                         {intSetup.type === t.value && <ChevronRight size={14} color="#7c3aed" />}
                       </button>
@@ -466,32 +467,32 @@ export default function CoachPage() {
               <div>
                 {/* Progress bar */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                  <div style={{ flex: 1, height: '4px', backgroundColor: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                  <div style={{ flex: 1, height: '4px', backgroundColor: 'rgba(125,220,255,0.13)', borderRadius: '10px', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${Math.min(((intQNumber - 1) / 5) * 100, 100)}%`, background: 'linear-gradient(90deg, #7c3aed, #6d28d9)', borderRadius: '10px', transition: 'width 0.4s ease' }} />
                   </div>
-                  <span style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>Q{intQNumber} of 5</span>
-                  <span style={{ color: '#cbd5e1', fontSize: '10px', flexShrink: 0 }}>{intTypeLabel} · {intCompany}</span>
+                  <span style={{ color: 'rgba(135,185,230,0.65)', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>Q{intQNumber} of 5</span>
+                  <span style={{ color: 'rgba(125,175,230,0.35)', fontSize: '10px', flexShrink: 0 }}>{intTypeLabel} · {intCompany}</span>
                 </div>
 
                 {/* Past exchanges */}
                 {intExchanges.map((ex, i) => (
                   <div key={i} style={{ marginBottom: '24px' }}>
-                    <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', borderLeft: '3px solid rgba(124,58,237,0.3)' }}>
-                      <div style={{ color: '#94a3b8', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '6px' }}>Question {i + 1}</div>
-                      <p style={{ color: '#334155', fontSize: '13px', lineHeight: 1.65, margin: 0 }}>{ex.question}</p>
+                    <div style={{ background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '14px', padding: '14px 16px', marginBottom: '10px', borderLeft: '3px solid rgba(124,58,237,0.3)' }}>
+                      <div style={{ color: 'rgba(135,185,230,0.65)', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '6px' }}>Question {i + 1}</div>
+                      <p style={{ color: 'rgba(200,228,255,0.85)', fontSize: '13px', lineHeight: 1.65, margin: 0 }}>{ex.question}</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '10px' }}>
-                      <div style={{ maxWidth: '80%', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '14px 14px 4px 14px', padding: '10px 14px' }}>
-                        <p style={{ color: '#1e293b', fontSize: '13px', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>{ex.answer}</p>
+                      <div style={{ maxWidth: '80%', background: 'transparent', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '14px 14px 4px 14px', padding: '10px 14px' }}>
+                        <p style={{ color: 'rgba(220,235,255,0.90)', fontSize: '13px', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>{ex.answer}</p>
                       </div>
                     </div>
                     {ex.response && (
                       <div style={{ display: 'flex', gap: '10px' }}>
                         <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 800, flexShrink: 0 }}>AI</div>
-                        <div style={{ flex: 1, color: '#334155', fontSize: '13px', lineHeight: 1.65 }}>
+                        <div style={{ flex: 1, color: 'rgba(200,228,255,0.85)', fontSize: '13px', lineHeight: 1.65 }}>
                           <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
-                            p: ({ children }) => <p style={{ margin: '0 0 8px', color: '#334155' }}>{children}</p>,
-                            strong: ({ children }) => <strong style={{ color: '#0f172a', fontWeight: 600 }}>{children}</strong>,
+                            p: ({ children }) => <p style={{ margin: '0 0 8px', color: 'rgba(200,228,255,0.85)' }}>{children}</p>,
+                            strong: ({ children }) => <strong style={{ color: 'rgba(232,244,255,0.95)', fontWeight: 600 }}>{children}</strong>,
                           }}>{ex.response}</ReactMarkdown>
                         </div>
                       </div>
@@ -502,26 +503,26 @@ export default function CoachPage() {
                 {/* Current question */}
                 {intCurrentQ && (
                   <div style={{ marginBottom: '16px' }}>
-                    <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px 16px', borderLeft: '3px solid #7c3aed', marginBottom: '14px' }}>
+                    <div style={{ background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '14px', padding: '14px 16px', borderLeft: '3px solid #7c3aed', marginBottom: '14px' }}>
                       <div style={{ color: '#7c3aed', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '6px' }}>Question {intQNumber}</div>
-                      <p style={{ color: '#0f172a', fontSize: '13px', lineHeight: 1.65, margin: 0 }}>
+                      <p style={{ color: 'rgba(232,244,255,0.95)', fontSize: '13px', lineHeight: 1.65, margin: 0 }}>
                         {intStreaming && !intCurrentQ ? <Loader size={14} color="#94a3b8" style={{ animation: 'spin 1s linear infinite' }} /> : intCurrentQ}
                       </p>
                     </div>
                     {!intStreaming && (
                       <div>
-                        <textarea ref={intAnswerRef} value={intAnswer} onChange={e => setIntAnswer(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) submitAnswer(); }} placeholder="Type your answer… (⌘+Enter to submit)" rows={4} style={{ width: '100%', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 16px', color: '#0f172a', fontSize: '13px', outline: 'none', resize: 'vertical', lineHeight: '1.6', fontFamily: 'inherit', boxSizing: 'border-box', transition: 'border-color 0.15s' }} onFocus={e => (e.target.style.borderColor = 'rgba(124,58,237,0.4)')} onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
+                        <textarea ref={intAnswerRef} value={intAnswer} onChange={e => setIntAnswer(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) submitAnswer(); }} placeholder="Type your answer… (⌘+Enter to submit)" rows={4} style={{ width: '100%', background: 'rgba(125,220,255,0.025)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '12px', padding: '12px 16px', color: 'rgba(232,244,255,0.95)', fontSize: '13px', outline: 'none', resize: 'vertical', lineHeight: '1.6', fontFamily: 'inherit', boxSizing: 'border-box', transition: 'border-color 0.15s' }} onFocus={e => (e.target.style.borderColor = 'rgba(124,58,237,0.4)')} onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.13)')} />
                         <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                          <button onClick={submitAnswer} disabled={!intAnswer.trim()} style={{ flex: 1, background: intAnswer.trim() ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : '#f1f5f9', color: intAnswer.trim() ? '#fff' : '#94a3b8', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 700, cursor: intAnswer.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', boxShadow: intAnswer.trim() ? '0 4px 12px rgba(124,58,237,0.25)' : 'none' }}>
+                          <button onClick={submitAnswer} disabled={!intAnswer.trim()} style={{ flex: 1, background: intAnswer.trim() ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : 'rgba(125,220,255,0.06)', color: intAnswer.trim() ? '#fff' : '#94a3b8', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 700, cursor: intAnswer.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', boxShadow: intAnswer.trim() ? '0 4px 12px rgba(124,58,237,0.25)' : 'none' }}>
                             Submit Answer {intQNumber < 5 ? `→ Q${intQNumber + 1}` : '· Finish'}
                           </button>
-                          <button onClick={resetInterview} style={{ backgroundColor: '#f8fafc', color: '#94a3b8', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 16px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>End</button>
+                          <button onClick={resetInterview} style={{ background: 'rgba(125,220,255,0.025)', color: 'rgba(135,185,230,0.65)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '10px', padding: '10px 16px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>End</button>
                         </div>
-                        <p style={{ color: '#cbd5e1', fontSize: '10px', margin: '6px 0 0', textAlign: 'center' }}>Take your time — answer as you would in a real interview</p>
+                        <p style={{ color: 'rgba(125,175,230,0.35)', fontSize: '10px', margin: '6px 0 0', textAlign: 'center' }}>Take your time — answer as you would in a real interview</p>
                       </div>
                     )}
                     {intStreaming && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '12px', padding: '8px 0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(135,185,230,0.65)', fontSize: '12px', padding: '8px 0' }}>
                         <Loader size={13} color="#7c3aed" style={{ animation: 'spin 1s linear infinite' }} />
                         Getting feedback…
                       </div>
@@ -531,7 +532,7 @@ export default function CoachPage() {
 
                 {/* Streaming state for start */}
                 {!intCurrentQ && intStreaming && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '12px', padding: '16px 0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(135,185,230,0.65)', fontSize: '12px', padding: '16px 0' }}>
                     <Loader size={13} color="#7c3aed" style={{ animation: 'spin 1s linear infinite' }} />
                     Starting your interview…
                   </div>
@@ -546,10 +547,10 @@ export default function CoachPage() {
               <div>
                 {/* Past exchanges summary */}
                 {intExchanges.map((ex, i) => (
-                  <div key={i} style={{ marginBottom: '16px', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px 16px' }}>
-                    <div style={{ color: '#94a3b8', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>Q{i + 1}</div>
-                    <p style={{ color: '#64748b', fontSize: '12px', margin: '0 0 8px', fontStyle: 'italic' }}>{ex.question}</p>
-                    <p style={{ color: '#334155', fontSize: '12px', margin: 0, lineHeight: 1.6, borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>{ex.answer}</p>
+                  <div key={i} style={{ marginBottom: '16px', background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '14px', padding: '14px 16px' }}>
+                    <div style={{ color: 'rgba(135,185,230,0.65)', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>Q{i + 1}</div>
+                    <p style={{ color: 'rgba(158,202,242,0.72)', fontSize: '12px', margin: '0 0 8px', fontStyle: 'italic' }}>{ex.question}</p>
+                    <p style={{ color: 'rgba(200,228,255,0.85)', fontSize: '12px', margin: 0, lineHeight: 1.6, borderTop: '1px solid rgba(125,220,255,0.06)', paddingTop: '8px' }}>{ex.answer}</p>
                   </div>
                 ))}
 
@@ -559,11 +560,11 @@ export default function CoachPage() {
                     <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', fontWeight: 800, flexShrink: 0 }}>AI</div>
                     <span style={{ color: '#7c3aed', fontSize: '12px', fontWeight: 700 }}>Interview Assessment</span>
                   </div>
-                  <div style={{ color: '#334155', fontSize: '13px', lineHeight: 1.7 }}>
+                  <div style={{ color: 'rgba(200,228,255,0.85)', fontSize: '13px', lineHeight: 1.7 }}>
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
-                      p: ({ children }) => <p style={{ margin: '0 0 10px', color: '#334155' }}>{children}</p>,
-                      strong: ({ children }) => <strong style={{ color: '#0f172a', fontWeight: 700 }}>{children}</strong>,
-                      li: ({ children }) => <li style={{ margin: '4px 0', color: '#334155' }}>{children}</li>,
+                      p: ({ children }) => <p style={{ margin: '0 0 10px', color: 'rgba(200,228,255,0.85)' }}>{children}</p>,
+                      strong: ({ children }) => <strong style={{ color: 'rgba(232,244,255,0.95)', fontWeight: 700 }}>{children}</strong>,
+                      li: ({ children }) => <li style={{ margin: '4px 0', color: 'rgba(200,228,255,0.85)' }}>{children}</li>,
                       ul: ({ children }) => <ul style={{ margin: '8px 0', paddingLeft: '18px' }}>{children}</ul>,
                     }}>{intFinalSummary}</ReactMarkdown>
                   </div>
@@ -573,7 +574,7 @@ export default function CoachPage() {
                   <button onClick={resetInterview} style={{ flex: 1, background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: '#fff', border: 'none', borderRadius: '12px', padding: '11px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 12px rgba(124,58,237,0.25)' }}>
                     Practice Again
                   </button>
-                  <button onClick={() => setMode('chat')} style={{ backgroundColor: '#ffffff', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '11px 18px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <button onClick={() => setMode('chat')} style={{ background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', color: 'rgba(158,202,242,0.72)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '12px', padding: '11px 18px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>
                     Go to Coach
                   </button>
                 </div>
@@ -586,7 +587,7 @@ export default function CoachPage() {
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', bottom: '100px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#ffffff', border: '1px solid rgba(59,130,246,0.2)', color: '#0f172a', padding: '10px 20px', borderRadius: '10px', fontSize: '12px', zIndex: 1000, maxWidth: '400px', textAlign: 'center', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
+        <div style={{ position: 'fixed', bottom: '100px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', border: '1px solid rgba(59,130,246,0.2)', color: 'rgba(232,244,255,0.95)', padding: '10px 20px', borderRadius: '10px', fontSize: '12px', zIndex: 1000, maxWidth: '400px', textAlign: 'center', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }}>
           {toast}
         </div>
       )}

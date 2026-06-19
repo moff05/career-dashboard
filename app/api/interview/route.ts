@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { getUserId, getApiKey } from '@/lib/user';
 import { buildSystemPrompt } from '@/lib/ai-context';
 
 export const maxDuration = 60;
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 
 const TYPE_LABELS: Record<string, string> = {
   behavioral: 'behavioral (STAR-method questions about past experiences and how you handled situations)',
@@ -15,9 +16,13 @@ const TYPE_LABELS: Record<string, string> = {
 
 export async function POST(request: NextRequest) {
   try {
+    const apiKey = getApiKey(request);
+    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
+    const anthropic = new Anthropic({ apiKey });
+    void getUserId(request);
     const { company, title, interview_type, exchanges, action, current_answer, question_number } = await request.json();
 
-    const candidateContext = await buildSystemPrompt();
+    const candidateContext = await buildSystemPrompt('anonymous');
     const totalQuestions = 5;
     const isLast = question_number >= totalQuestions;
 

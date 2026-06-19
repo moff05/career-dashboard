@@ -1,11 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildSystemPrompt } from '@/lib/ai-context';
+import { getUserId, getApiKey } from '@/lib/user';
 import { getDb } from '@/lib/db';
 
 export const maxDuration = 120;
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 
 interface HuntLead {
   company?: string; title?: string; url?: string; location?: string;
@@ -41,12 +42,16 @@ function parseTags(v: string | null | undefined): string[] {
   try { return JSON.parse(v || '[]'); } catch { return []; }
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    const userId = getUserId(request);
+    const apiKey = getApiKey(request);
+    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
+    const anthropic = new Anthropic({ apiKey });
     const db = await ensureLeadsTable();
 
     const profileRow = (await db.execute(
-      'SELECT target_roles, target_cities FROM profile WHERE id = 1'
+      { sql: 'SELECT target_roles, target_cities FROM profile WHERE user_id = ?', args: [userId] }
     )).rows[0] as unknown as { target_roles?: string; target_cities?: string } | undefined;
 
     const targetRoles = profileRow?.target_roles
@@ -55,12 +60,12 @@ export async function POST() {
       || 'San Francisco, New York City, Atlanta, Dallas-Fort Worth, Miami';
     const topCities = targetCities.split(',').slice(0, 3).map(c => c.trim()).join(', ');
 
-    const existingJobs = (await db.execute('SELECT company, title FROM jobs')).rows as unknown as { company: string; title: string }[];
+    const existingJobs = (await db.execute({ sql: 'SELECT company, title FROM jobs WHERE user_id = ?', args: [userId] })).rows as unknown as { company: string; title: string }[];
     const existingSet = new Set(
       existingJobs.map(j => `${j.company?.toLowerCase()}::${j.title?.toLowerCase()}`)
     );
 
-    const systemPrompt = await buildSystemPrompt();
+    const systemPrompt = await buildSystemPrompt(userId);
 
     const huntPrompt = `You are a job search agent. Your ONLY job is to find real, currently open job postings with direct links Nicholas can click to apply.
 

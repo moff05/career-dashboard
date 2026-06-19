@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '@/lib/apiFetch';
 import { Plus, Target, Flag, Star, Calendar, CheckCircle, Circle, Trash2 } from 'lucide-react';
 import { format, parseISO, differenceInDays } from 'date-fns';
 
@@ -36,8 +37,8 @@ function TypeIcon({ type, size = 16 }: { type: string; size?: number }) {
 const EMPTY_FORM = { title: '', description: '', date: '', type: 'milestone' };
 
 const inputStyle = {
-  width: '100%', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0',
-  borderRadius: '10px', padding: '9px 12px', color: '#0f172a',
+  width: '100%', background: 'rgba(125,220,255,0.025)', border: '1px solid rgba(125,220,255,0.13)',
+  borderRadius: '10px', padding: '9px 12px', color: 'rgba(232,244,255,0.95)',
   fontSize: '13px', outline: 'none', fontFamily: 'inherit',
 };
 
@@ -50,7 +51,7 @@ export default function TimelinePage() {
 
   const fetchEvents = useCallback(async () => {
     setLoading(true);
-    const [timelineRes, jobsRes] = await Promise.all([fetch('/api/timeline'), fetch('/api/jobs')]);
+    const [timelineRes, jobsRes] = await Promise.all([apiFetch('/api/timeline'), apiFetch('/api/jobs')]);
     const timelineData: TimelineEvent[] = await timelineRes.json();
     const jobsData: TrackerJob[] = await jobsRes.json();
     const jobDeadlines: TimelineEvent[] = jobsData
@@ -72,18 +73,18 @@ export default function TimelinePage() {
   const handleSave = async () => {
     if (!form.title || !form.date) return;
     setSaving(true);
-    await fetch('/api/timeline', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+    await apiFetch('/api/timeline', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
     setSaving(false); setShowModal(false); setForm(EMPTY_FORM); fetchEvents();
   };
 
   const toggleDone = async (event: TimelineEvent) => {
-    await fetch(`/api/timeline/${event.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...event, done: event.done ? 0 : 1 }) });
+    await apiFetch(`/api/timeline/${event.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...event, done: event.done ? 0 : 1 }) });
     fetchEvents();
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this event?')) return;
-    await fetch(`/api/timeline/${id}`, { method: 'DELETE' }); fetchEvents();
+    await apiFetch(`/api/timeline/${id}`, { method: 'DELETE' }); fetchEvents();
   };
 
   const today = new Date();
@@ -95,13 +96,13 @@ export default function TimelinePage() {
   const doneCount = events.filter(e => e.done).length;
 
   return (
-    <div style={{ padding: '32px 36px', minHeight: '100vh', backgroundColor: '#f1f5f9' }}>
+    <div style={{ padding: '32px 36px', minHeight: '100vh', background: 'transparent' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ color: '#0f172a', fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>Timeline</h1>
-          <p style={{ color: '#94a3b8', fontSize: '12px', margin: '4px 0 0' }}>Milestones, deadlines, and goals</p>
+          <h1 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '20px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>Timeline</h1>
+          <p style={{ color: 'rgba(135,185,230,0.65)', fontSize: '12px', margin: '4px 0 0' }}>Milestones, deadlines, and goals</p>
         </div>
         <button onClick={() => setShowModal(true)} style={{
           display: 'flex', alignItems: 'center', gap: '6px',
@@ -115,29 +116,29 @@ export default function TimelinePage() {
       </div>
 
       {/* Progress bar */}
-      <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '16px 20px', marginBottom: '28px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+      <div style={{ background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '14px', padding: '16px 20px', marginBottom: '28px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-          <span style={{ color: '#64748b', fontSize: '12px' }}>{format(minDate, 'MMM yyyy')} → {format(maxDate, 'MMM yyyy')}</span>
-          <span style={{ color: '#334155', fontSize: '12px', fontWeight: 600 }}>{progressPct}% · {doneCount}/{events.length} done</span>
+          <span style={{ color: 'rgba(158,202,242,0.72)', fontSize: '12px' }}>{format(minDate, 'MMM yyyy')} → {format(maxDate, 'MMM yyyy')}</span>
+          <span style={{ color: 'rgba(200,228,255,0.85)', fontSize: '12px', fontWeight: 600 }}>{progressPct}% · {doneCount}/{events.length} done</span>
         </div>
-        <div style={{ backgroundColor: '#f1f5f9', borderRadius: '10px', height: '7px', overflow: 'hidden' }}>
+        <div style={{ background: 'transparent', borderRadius: '10px', height: '7px', overflow: 'hidden' }}>
           <div style={{ background: 'linear-gradient(90deg, #3b82f6, #06b6d4)', height: '100%', width: `${progressPct}%`, borderRadius: '10px', transition: 'width 0.5s ease' }} />
         </div>
       </div>
 
       {/* Timeline */}
       {loading ? (
-        <div style={{ color: '#94a3b8', textAlign: 'center', padding: '60px', fontSize: '13px' }}>Loading…</div>
+        <div style={{ color: 'rgba(135,185,230,0.65)', textAlign: 'center', padding: '60px', fontSize: '13px' }}>Loading…</div>
       ) : (
         <div style={{ position: 'relative', paddingLeft: '36px' }}>
-          <div style={{ position: 'absolute', left: '10px', top: 0, bottom: 0, width: '2px', background: 'linear-gradient(180deg, #e2e8f0, #e2e8f0)' }} />
+          <div style={{ position: 'absolute', left: '10px', top: 0, bottom: 0, width: '2px', background: 'linear-gradient(180deg, rgba(125,220,255,0.13), rgba(125,220,255,0.13))' }} />
 
           {events.map((event, idx) => {
             const eventDate = parseISO(event.date);
             const isPast = eventDate < today;
             const isDone = Boolean(event.done);
             const daysUntil = differenceInDays(eventDate, today);
-            const dotColor = isDone ? '#10b981' : (isPast ? '#cbd5e1' : TYPE_COLORS[event.type] || '#3b82f6');
+            const dotColor = isDone ? '#10b981' : (isPast ? 'rgba(125,175,230,0.35)' : TYPE_COLORS[event.type] || '#3b82f6');
 
             return (
               <div key={event.id} style={{ position: 'relative', marginBottom: idx < events.length - 1 ? '12px' : 0 }}>
@@ -150,12 +151,12 @@ export default function TimelinePage() {
                 }} />
 
                 <div style={{
-                  backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px',
+                  background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '12px',
                   padding: '14px 16px', opacity: isDone ? 0.5 : 1, transition: 'opacity 0.2s',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                 }}
-                  onMouseEnter={e => !isDone && (e.currentTarget.style.borderColor = '#cbd5e1')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+                  onMouseEnter={e => !isDone && (e.currentTarget.style.borderColor = 'rgba(125,175,230,0.35)')}
+                  onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(125,220,255,0.13)')}
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
@@ -165,21 +166,21 @@ export default function TimelinePage() {
                           {event.title}
                         </div>
                         {event.description && (
-                          <div style={{ color: '#94a3b8', fontSize: '11px', marginTop: '2px' }}>{event.description}</div>
+                          <div style={{ color: 'rgba(135,185,230,0.65)', fontSize: '11px', marginTop: '2px' }}>{event.description}</div>
                         )}
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ color: '#64748b', fontSize: '11px' }}>{format(eventDate, 'MMM d, yyyy')}</div>
-                        <div style={{ fontSize: '10px', color: isPast ? '#cbd5e1' : (daysUntil <= 14 ? '#3b82f6' : '#94a3b8'), marginTop: '2px' }}>
+                        <div style={{ color: 'rgba(158,202,242,0.72)', fontSize: '11px' }}>{format(eventDate, 'MMM d, yyyy')}</div>
+                        <div style={{ fontSize: '10px', color: isPast ? 'rgba(125,175,230,0.35)' : (daysUntil <= 14 ? '#3b82f6' : '#94a3b8'), marginTop: '2px' }}>
                           {isPast ? `${Math.abs(daysUntil)}d ago` : `in ${daysUntil}d`}
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                         {event.fromTracker ? (
-                          <span style={{ color: '#cbd5e1', fontSize: '10px', fontWeight: 500 }}>from tracker</span>
+                          <span style={{ color: 'rgba(125,175,230,0.35)', fontSize: '10px', fontWeight: 500 }}>from tracker</span>
                         ) : (
                           <>
                             <button onClick={() => toggleDone(event)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDone ? '#10b981' : '#94a3b8', padding: '3px' }}
@@ -188,9 +189,9 @@ export default function TimelinePage() {
                               title={isDone ? 'Mark undone' : 'Mark done'}>
                               {isDone ? <CheckCircle size={15} /> : <Circle size={15} />}
                             </button>
-                            <button onClick={() => handleDelete(event.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: '3px' }}
+                            <button onClick={() => handleDelete(event.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(125,175,230,0.35)', padding: '3px' }}
                               onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
-                              onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}>
+                              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(125,175,230,0.35)')}>
                               <Trash2 size={13} />
                             </button>
                           </>
@@ -209,24 +210,24 @@ export default function TimelinePage() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
           onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
-          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '18px', padding: '28px', width: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
-            <h2 style={{ color: '#0f172a', fontSize: '16px', fontWeight: 700, margin: '0 0 20px' }}>Add Timeline Event</h2>
+          <div style={{ background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '18px', padding: '28px', width: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+            <h2 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '16px', fontWeight: 700, margin: '0 0 20px' }}>Add Timeline Event</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <label style={{ display: 'block', color: '#64748b', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Title *</label>
+                <label style={{ display: 'block', color: 'rgba(158,202,242,0.72)', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Title *</label>
                 <input type="text" value={form.title} onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))} style={inputStyle} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#64748b', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Description</label>
+                <label style={{ display: 'block', color: 'rgba(158,202,242,0.72)', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Description</label>
                 <input type="text" value={form.description} onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))} style={inputStyle} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', color: '#64748b', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Date *</label>
+                  <label style={{ display: 'block', color: 'rgba(158,202,242,0.72)', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Date *</label>
                   <input type="date" value={form.date} onChange={e => setForm(prev => ({ ...prev, date: e.target.value }))} style={inputStyle} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: '#64748b', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Type *</label>
+                  <label style={{ display: 'block', color: 'rgba(158,202,242,0.72)', fontSize: '10px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '5px' }}>Type *</label>
                   <select value={form.type} onChange={e => setForm(prev => ({ ...prev, type: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
                     {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
@@ -234,7 +235,7 @@ export default function TimelinePage() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <button onClick={() => setShowModal(false)} style={{ backgroundColor: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+              <button onClick={() => setShowModal(false)} style={{ background: 'rgba(125,220,255,0.025)', color: 'rgba(158,202,242,0.72)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
               <button onClick={handleSave} disabled={saving || !form.title || !form.date} style={{
                 background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', border: 'none',
                 borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700,

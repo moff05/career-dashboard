@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
+import { getUserId, getApiKey } from '@/lib/user';
 
 export const maxDuration = 60;
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const TONE_INSTRUCTIONS: Record<string, string> = {
   professional: 'professional and polished — formal but warm, demonstrates competence and enthusiasm',
@@ -15,43 +14,28 @@ const TONE_INSTRUCTIONS: Record<string, string> = {
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const userId = getUserId(request);
+    const apiKey = getApiKey(request);
+    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
     const { id } = await params;
-    const { tone = 'professional' } = await request.json().catch(() => ({}));
+    const body = await request.json().catch(() => ({}));
+    const tone = body.tone || 'professional';
     const db = getDb();
-    const job = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ?', args: [parseInt(id)] })).rows[0] as unknown as {
+    const job = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ? AND user_id = ?', args: [parseInt(id), userId] })).rows[0] as unknown as {
       company: string; title: string; location: string | null; description: string | null;
     } | undefined;
-
     if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
 
-    const systemPrompt = await buildSystemPrompt();
+    const anthropic = new Anthropic({ apiKey });
+    const systemPrompt = await buildSystemPrompt(userId);
     const toneInstruction = TONE_INSTRUCTIONS[tone] || TONE_INSTRUCTIONS.professional;
-
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1500,
-      system: systemPrompt,
-      messages: [{
-        role: 'user',
-        content: `Write a tailored cover letter for Nicholas for this role. Tone: ${toneInstruction}.
-
-JOB:
-Company: ${job.company}
-Title: ${job.title}
-Location: ${job.location || 'not specified'}
-${job.description ? `Full JD:\n${String(job.description).slice(0, 6000)}` : '(No JD — use company name and role to infer context)'}
-
-RULES:
-- Open with "Dear Hiring Team,"
-- Strong hook: connect Nicholas's most relevant experience to THIS company's specific needs — not generic
-- Body: concrete examples from his background — use what's most relevant to this role (Goldenrod AI automation, StackingPlanner SaaS, n8n/Zapier, Python, CRE angle)
-- Close: confident, brief, clear call to action
-- Sign off: "Sincerely,\nNicholas Moffett\nnicmoffett5@gmail.com | (470) 421-5955 | linkedin.com/in/nicholas-moffett"
-- NEVER use: "I am writing to express my interest", "I believe I would be a great fit", "I am passionate about"
-- Output the letter text only — no subject line, no commentary`,
-      }],
+      model: 'claude-haiku-4-5-20251001', max_tokens: 1500, system: systemPrompt,
+      messages: [{ role: 'user', content: `Write a tailored cover letter for this role. Tone: ${toneInstruction}. Output letter text only.
+JOB: Company: ${job.company} | Title: ${job.title} | Location: ${job.location || 'not specified'}
+${job.description ? `JD:\n${String(job.description).slice(0, 6000)}` : '(No JD)'}
+Open with "Dear Hiring Team,". Never use: "I am writing to express my interest", "I believe I would be a great fit", "I am passionate about".` }],
     });
-
     const letter = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
     return NextResponse.json({ letter, tone });
   } catch (error) {

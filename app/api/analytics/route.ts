@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserId } from '@/lib/user';
 import { getDb } from '@/lib/db';
 
 interface JobRow {
@@ -10,10 +11,11 @@ interface JobRow {
   deadline: string | null;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const userId = getUserId(request);
     const db = getDb();
-    const rows = (await db.execute('SELECT id, status, match_score, created_at, status_updated_at, deadline FROM jobs')).rows as unknown as JobRow[];
+    const rows = (await db.execute({ sql: 'SELECT id, status, match_score, created_at, status_updated_at, deadline FROM jobs WHERE user_id = ?', args: [userId] })).rows as unknown as JobRow[];
 
     const statusCounts: Record<string, number> = { saved: 0, applied: 0, interviewing: 0, offer: 0, rejected: 0 };
     for (const r of rows) statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;

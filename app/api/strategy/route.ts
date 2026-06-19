@@ -1,19 +1,24 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserId, getApiKey } from '@/lib/user';
 import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-export async function GET() {
+
+export async function GET(request: NextRequest) {
   try {
+    const userId = getUserId(request);
+    const apiKey = getApiKey(request);
+    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
+    const anthropic = new Anthropic({ apiKey });
     const db = getDb();
-    const systemPrompt = await buildSystemPrompt();
+    const systemPrompt = await buildSystemPrompt(userId);
 
     const jobs = (await db.execute({
       sql: `SELECT id, company, title, status, match_score, deadline, location, type, posting_date
-            FROM jobs WHERE status NOT IN ('rejected', 'offer') ORDER BY created_at DESC`,
-      args: [],
+            FROM jobs WHERE user_id = ? AND status NOT IN ('rejected', 'offer') ORDER BY created_at DESC`,
+      args: [userId],
     })).rows;
 
     if (jobs.length === 0) {

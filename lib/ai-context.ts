@@ -7,20 +7,29 @@ interface Profile {
   target_cities?: string; notes?: string;
 }
 
-export async function buildSystemPrompt(): Promise<string> {
+export async function buildSystemPrompt(userId: string): Promise<string> {
   const db = getDb();
 
-  const resumeRow = (await db.execute('SELECT raw_text FROM resume WHERE id = 1')).rows[0] as unknown as { raw_text: string } | undefined;
-  const resumeText = resumeRow?.raw_text || 'Resume not yet parsed.';
+  const resumeRow = (await db.execute({
+    sql: 'SELECT raw_text FROM resume WHERE user_id = ?',
+    args: [userId],
+  })).rows[0] as unknown as { raw_text: string } | undefined;
+  const resumeText = resumeRow?.raw_text || 'Resume not yet added.';
 
-  const profileRow = (await db.execute('SELECT name, graduation_date, target_roles, target_cities, notes FROM profile WHERE id = 1')).rows[0] as unknown as Profile | undefined;
-  const name = profileRow?.name || 'Nicholas';
-  const graduationDate = profileRow?.graduation_date || 'May 2027';
-  const targetRoles = profileRow?.target_roles || 'PropTech Analyst, AI Product Manager, Business Technology Analyst, Solutions Engineer, Real Estate Technology Associate';
-  const targetCities = profileRow?.target_cities || 'San Francisco, New York City, Atlanta, Dallas-Fort Worth, Miami';
+  const profileRow = (await db.execute({
+    sql: 'SELECT name, graduation_date, target_roles, target_cities, notes FROM profile WHERE user_id = ?',
+    args: [userId],
+  })).rows[0] as unknown as Profile | undefined;
+  const name = profileRow?.name || 'the user';
+  const graduationDate = profileRow?.graduation_date || '';
+  const targetRoles = profileRow?.target_roles || '';
+  const targetCities = profileRow?.target_cities || '';
   const profileNotes = profileRow?.notes || '';
 
-  const memoriesRows = (await db.execute('SELECT content, category FROM memories ORDER BY category, created_at DESC')).rows as unknown as Memory[];
+  const memoriesRows = (await db.execute({
+    sql: 'SELECT content, category FROM memories WHERE user_id = ? ORDER BY category, created_at DESC',
+    args: [userId],
+  })).rows as unknown as Memory[];
   const memoriesByCategory: Record<string, string[]> = {};
   for (const m of memoriesRows) {
     if (!memoriesByCategory[m.category]) memoriesByCategory[m.category] = [];
@@ -32,7 +41,10 @@ export async function buildSystemPrompt(): Promise<string> {
         .map(([cat, items]) => `[${cat.toUpperCase()}]\n${items.map(i => `- ${i}`).join('\n')}`)
         .join('\n\n');
 
-  const jobRows = (await db.execute('SELECT type, status, company, title FROM jobs')).rows as unknown as Job[];
+  const jobRows = (await db.execute({
+    sql: 'SELECT type, status, company, title FROM jobs WHERE user_id = ?',
+    args: [userId],
+  })).rows as unknown as Job[];
   const jobSummaryMap: Record<string, string[]> = {};
   for (const job of jobRows) {
     if (!jobSummaryMap[job.status]) jobSummaryMap[job.status] = [];
@@ -56,11 +68,7 @@ CURRENT JOBS IN TRACKER:
 ${jobsSummaryText || 'No jobs tracked yet.'}
 
 PREFERENCES & CONTEXT:
-- Target roles: ${targetRoles}
-- Target cities (full-time post-grad): ${targetCities}
-- Internship constraint: Remote or Miami, FL only (still in school)
-- Graduation: ${graduationDate}
-- Today's date: ${today}${profileNotes ? `\n- Additional context: ${profileNotes}` : ''}
+- Today's date: ${today}${targetRoles ? `\n- Target roles: ${targetRoles}` : ''}${targetCities ? `\n- Target cities: ${targetCities}` : ''}${graduationDate ? `\n- Graduation: ${graduationDate}` : ''}${profileNotes ? `\n- Additional context: ${profileNotes}` : ''}
 
-Be specific, personalized, and reference their actual background. Proactively identify opportunities based on their CRE tech + AI automation background. Be concise but thorough. Format responses with markdown when helpful.`;
+Be specific, personalized, and reference their actual background. Be concise but thorough. Format responses with markdown when helpful.`;
 }

@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
+import { getUserId, getApiKey } from '@/lib/user';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
 
 interface ExtractedMemory { content: string; category: string; }
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = getUserId(request);
+    const apiKey = getApiKey(request);
+    const anthropic = new Anthropic({ apiKey: apiKey || process.env.ANTHROPIC_API_KEY || '' });
     const { message, response, session_id } = await request.json();
 
     const completion = await anthropic.messages.create({
@@ -36,8 +40,8 @@ Return ONLY the JSON array.`,
       for (const mem of memories) {
         if (mem.content && mem.category) {
           await db.execute({
-            sql: 'INSERT INTO memories (content, category, source) VALUES (?, ?, ?)',
-            args: [mem.content, mem.category, session_id || 'conversation'],
+            sql: 'INSERT INTO memories (user_id, content, category, source) VALUES (?, ?, ?, ?)',
+            args: [userId, mem.content, mem.category, session_id || 'conversation'],
           });
         }
       }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { apiFetch } from '@/lib/apiFetch';
 import { Star, Trash2, ExternalLink, FileText, ChevronDown, ChevronRight, Plus, LinkIcon, Loader, AlertCircle, ArrowLeft, ImageIcon, Edit2, RotateCcw, X } from 'lucide-react';
 
 interface Job {
@@ -29,7 +30,7 @@ type CoverLetterState = CoverLetterResult | 'loading' | 'error';
 
 interface Connection { id: number; company: string; name: string; relationship: string | null; notes: string | null; status: string; created_at: string; }
 const CONN_STATUS: Record<string, { label: string; color: string; bg: string }> = {
-  not_reached_out: { label: 'Not reached out', color: '#94a3b8', bg: 'rgba(148,163,184,0.1)' },
+  not_reached_out: { label: 'Not reached out', color: 'rgba(100,155,210,0.50)', bg: 'rgba(148,163,184,0.1)' },
   reached_out:     { label: 'Reached out',     color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
   responded:       { label: 'Responded',        color: '#059669', bg: 'rgba(5,150,105,0.08)'  },
   warm:            { label: 'Warm',             color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
@@ -91,19 +92,19 @@ function CompanyBadge({ company, size = 26 }: { company: string; size?: number }
 }
 
 function PostedDisplay({ date }: { date: string | null }) {
-  if (!date) return <span style={{ color: '#cbd5e1' }}>—</span>;
+  if (!date) return <span style={{ color: 'rgba(80,130,185,0.38)' }}>—</span>;
   const d = new Date(date); d.setHours(0,0,0,0);
   const today = new Date(); today.setHours(0,0,0,0);
   const diff = Math.round((today.getTime() - d.getTime()) / 86400000);
-  if (diff === 0) return <span style={{ color: '#64748b', fontSize: '11px' }}>Today</span>;
-  if (diff < 0) return <span style={{ color: '#64748b', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
-  if (diff < 7) return <span style={{ color: '#64748b', fontSize: '11px' }}>{diff}d ago</span>;
-  if (diff < 30) return <span style={{ color: '#94a3b8', fontSize: '11px' }}>{Math.round(diff/7)}w ago</span>;
-  return <span style={{ color: '#94a3b8', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
+  if (diff === 0) return <span style={{ color: 'rgba(150,195,240,0.65)', fontSize: '11px' }}>Today</span>;
+  if (diff < 0) return <span style={{ color: 'rgba(150,195,240,0.65)', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
+  if (diff < 7) return <span style={{ color: 'rgba(150,195,240,0.65)', fontSize: '11px' }}>{diff}d ago</span>;
+  if (diff < 30) return <span style={{ color: 'rgba(125,175,230,0.52)', fontSize: '11px' }}>{Math.round(diff/7)}w ago</span>;
+  return <span style={{ color: 'rgba(125,175,230,0.52)', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
 }
 
 function DeadlineDisplay({ deadline }: { deadline: string | null }) {
-  if (!deadline) return <span style={{ color: '#cbd5e1' }}>—</span>;
+  if (!deadline) return <span style={{ color: 'rgba(80,130,185,0.38)' }}>—</span>;
   const today = new Date(); today.setHours(0,0,0,0);
   const d = new Date(deadline); d.setHours(0,0,0,0);
   const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
@@ -111,8 +112,8 @@ function DeadlineDisplay({ deadline }: { deadline: string | null }) {
   if (diff === 0) return <span style={{ color: '#ef4444', fontSize: '11px', fontWeight: 700 }}>Today!</span>;
   if (diff <= 3) return <span style={{ color: '#ef4444', fontSize: '11px', fontWeight: 600 }}>{diff}d left</span>;
   if (diff <= 7) return <span style={{ color: '#3b82f6', fontSize: '11px' }}>{diff}d left</span>;
-  if (diff <= 30) return <span style={{ color: '#64748b', fontSize: '11px' }}>{diff}d</span>;
-  return <span style={{ color: '#94a3b8', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
+  if (diff <= 30) return <span style={{ color: 'rgba(140,185,235,0.62)', fontSize: '11px' }}>{diff}d</span>;
+  return <span style={{ color: 'rgba(125,175,230,0.52)', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
 }
 
 function StatusBadge({ job, onStatusChange }: { job: Job; onStatusChange: (id: number, status: string) => void }) {
@@ -136,7 +137,7 @@ function StatusBadge({ job, onStatusChange }: { job: Job; onStatusChange: (id: n
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 100,
-          backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px',
+          backgroundColor: 'rgba(125,220,255,0.06)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '14px',
           overflow: 'hidden', minWidth: '120px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
         }}>
           {STATUS_OPTIONS.map(st => {
@@ -145,10 +146,10 @@ function StatusBadge({ job, onStatusChange }: { job: Job; onStatusChange: (id: n
               <div key={st} onClick={e => { e.stopPropagation(); onStatusChange(job.id, st); setOpen(false); }} style={{
                 padding: '8px 14px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
                 color: ss.text, textTransform: 'capitalize',
-                backgroundColor: job.status === st ? '#e2e8f0' : 'transparent',
+                backgroundColor: job.status === st ? 'rgba(125,220,255,0.12)' : 'transparent',
               }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#ffffff')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = job.status === st ? '#e2e8f0' : 'transparent')}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(125,220,255,0.10)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = job.status === st ? 'rgba(125,220,255,0.12)' : 'transparent')}
               >{st}</div>
             );
           })}
@@ -167,8 +168,8 @@ const EMPTY_FORM = {
 type FormData = typeof EMPTY_FORM;
 
 const formInput: React.CSSProperties = {
-  width: '100%', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0',
-  borderRadius: '10px', padding: '8px 10px', color: '#0f172a', fontSize: '13px',
+  width: '100%', background: 'rgba(125,220,255,0.05)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.14)',
+  borderRadius: '10px', padding: '8px 10px', color: 'rgba(232,244,255,0.95)', fontSize: '13px',
   outline: 'none', boxSizing: 'border-box',
 };
 
@@ -178,12 +179,12 @@ function Field({ label, field, form, setForm, type = 'text' }: {
 }) {
   return (
     <div>
-      <label style={{ display: 'block', color: '#94a3b8', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>{label}</label>
+      <label style={{ display: 'block', color: 'rgba(125,175,230,0.52)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>{label}</label>
       <input type={type} value={form[field]}
         onChange={e => setForm(p => ({ ...p, [field]: e.target.value }))}
         style={formInput}
         onFocus={e => (e.target.style.borderColor = '#3b82f6')}
-        onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
+        onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.14)')} />
     </div>
   );
 }
@@ -234,7 +235,7 @@ export default function TrackerPage() {
   const runAnalysis = useCallback((id: number) => {
     analysisCacheRef.current[id] = 'loading';
     setAnalysisResults(prev => ({ ...prev, [id]: 'loading' }));
-    fetch(`/api/jobs/${id}/analyze`, { method: 'POST' })
+    apiFetch(`/api/jobs/${id}/analyze`, { method: 'POST' })
       .then(r => r.json())
       .then(data => {
         const result: AnalysisState = data.error ? 'error' : data;
@@ -242,7 +243,7 @@ export default function TrackerPage() {
         setAnalysisResults(prev => ({ ...prev, [id]: result }));
         if (!data.error && typeof data.total === 'number') {
           const score = Math.round(data.total / 10);
-          fetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_score: score }) });
+          apiFetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_score: score }) });
           setJobs(prev => prev.map(j => j.id === id ? { ...j, match_score: score } : j));
         }
       })
@@ -260,7 +261,7 @@ export default function TrackerPage() {
   const runDetails = useCallback((id: number) => {
     detailsCacheRef.current[id] = 'loading';
     setDetailsResults(prev => ({ ...prev, [id]: 'loading' }));
-    fetch(`/api/jobs/${id}/details`, { method: 'POST' })
+    apiFetch(`/api/jobs/${id}/details`, { method: 'POST' })
       .then(r => r.json())
       .then(data => {
         const result: DetailsState = data.error ? 'error' : data;
@@ -281,7 +282,7 @@ export default function TrackerPage() {
   const runGaps = useCallback((id: number) => {
     gapsCacheRef.current[id] = 'loading';
     setGapsResults(prev => ({ ...prev, [id]: 'loading' }));
-    fetch(`/api/jobs/${id}/gaps`, { method: 'POST' })
+    apiFetch(`/api/jobs/${id}/gaps`, { method: 'POST' })
       .then(r => r.json())
       .then(data => {
         const result: GapsState = data.error ? 'error' : data;
@@ -294,7 +295,7 @@ export default function TrackerPage() {
   const runBullets = useCallback((id: number) => {
     bulletsCacheRef.current[id] = 'loading';
     setBulletsResults(prev => ({ ...prev, [id]: 'loading' }));
-    fetch(`/api/jobs/${id}/bullets`, { method: 'POST' })
+    apiFetch(`/api/jobs/${id}/bullets`, { method: 'POST' })
       .then(r => r.json())
       .then(data => {
         const result: BulletsState = data.error ? 'error' : data;
@@ -307,7 +308,7 @@ export default function TrackerPage() {
   const runCoverLetter = useCallback((id: number, tone: string) => {
     coverLetterCacheRef.current[id] = 'loading';
     setCoverLetterResults(prev => ({ ...prev, [id]: 'loading' }));
-    fetch(`/api/jobs/${id}/cover-letter`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tone }) })
+    apiFetch(`/api/jobs/${id}/cover-letter`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tone }) })
       .then(r => r.json())
       .then(data => {
         const result: CoverLetterState = data.error ? 'error' : data;
@@ -320,7 +321,7 @@ export default function TrackerPage() {
   const fetchConnections = useCallback(async (company: string) => {
     if (!company || connectionsCacheRef.current[company] !== undefined) return;
     connectionsCacheRef.current[company] = [];
-    const data = await fetch(`/api/connections?company=${encodeURIComponent(company)}`).then(r => r.json()).catch(() => []);
+    const data = await apiFetch(`/api/connections?company=${encodeURIComponent(company)}`).then(r => r.json()).catch(() => []);
     connectionsCacheRef.current[company] = data;
     setConnectionsMap(prev => ({ ...prev, [company]: data }));
   }, []);
@@ -328,7 +329,7 @@ export default function TrackerPage() {
   const addConnection = async (company: string) => {
     const f = connAddForm[company];
     if (!f?.name.trim()) return;
-    const data = await fetch('/api/connections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, name: f.name.trim(), relationship: f.relationship.trim() || null, notes: f.notes.trim() || null }) }).then(r => r.json());
+    const data = await apiFetch('/api/connections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, name: f.name.trim(), relationship: f.relationship.trim() || null, notes: f.notes.trim() || null }) }).then(r => r.json());
     const updated = [...(connectionsCacheRef.current[company] || []), data];
     connectionsCacheRef.current[company] = updated;
     setConnectionsMap(prev => ({ ...prev, [company]: updated }));
@@ -337,14 +338,14 @@ export default function TrackerPage() {
 
   const cycleConnStatus = async (company: string, connId: number, current: string) => {
     const next = CONN_CYCLE[(CONN_CYCLE.indexOf(current) + 1) % CONN_CYCLE.length];
-    await fetch(`/api/connections/${connId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
+    await apiFetch(`/api/connections/${connId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
     const updated = (connectionsMap[company] || []).map(c => c.id === connId ? { ...c, status: next } : c);
     connectionsCacheRef.current[company] = updated;
     setConnectionsMap(prev => ({ ...prev, [company]: updated }));
   };
 
   const deleteConnection = async (company: string, connId: number) => {
-    await fetch(`/api/connections/${connId}`, { method: 'DELETE' });
+    await apiFetch(`/api/connections/${connId}`, { method: 'DELETE' });
     const updated = (connectionsCacheRef.current[company] || []).filter(c => c.id !== connId);
     connectionsCacheRef.current[company] = updated;
     setConnectionsMap(prev => ({ ...prev, [company]: updated }));
@@ -382,7 +383,7 @@ export default function TrackerPage() {
     if (!trimmed) return;
     setImportFetchError(''); setImportStep('loading');
     try {
-      const res = await fetch('/api/jobs/import', {
+      const res = await apiFetch('/api/jobs/import', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: trimmed, extraText: importExtraText.trim() || undefined, imageBase64: importImage?.base64, imageMediaType: importImage?.mediaType, extraLink: importExtraLink.trim() || undefined }),
       });
@@ -396,13 +397,13 @@ export default function TrackerPage() {
 
   const handleImportSave = async () => {
     setSaving(true);
-    await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...importForm, match_score: importForm.match_score ? parseInt(importForm.match_score) : null }) });
+    await apiFetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...importForm, match_score: importForm.match_score ? parseInt(importForm.match_score) : null }) });
     setSaving(false); closeImport(); fetchJobs();
   };
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
-    const data = await fetch('/api/jobs').then(r => r.json());
+    const data = await apiFetch('/api/jobs').then(r => r.json());
     setJobs(data);
     setLoading(false);
     setExpandedCompanies(new Set([...new Set(data.map((j: Job) => j.company))] as string[]));
@@ -414,28 +415,28 @@ export default function TrackerPage() {
     setSaving(true);
     const payload = { ...form, match_score: form.match_score ? parseInt(form.match_score) : null };
     if (editingJob) {
-      await fetch(`/api/jobs/${editingJob.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      await apiFetch(`/api/jobs/${editingJob.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     } else {
-      await fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      await apiFetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     }
     setSaving(false); setShowModal(false); fetchJobs();
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this job?')) return;
-    await fetch(`/api/jobs/${id}`, { method: 'DELETE' });
+    await apiFetch(`/api/jobs/${id}`, { method: 'DELETE' });
     setExpandedJobs(prev => { const n = new Set(prev); n.delete(id); return n; });
     fetchJobs();
   };
 
   const handleStatusChange = async (id: number, status: string) => {
-    await fetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+    await apiFetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
     setJobs(prev => prev.map(j => j.id === id ? { ...j, status } : j));
   };
 
   const handleStarToggle = async (id: number, current: number) => {
     const starred = current ? 0 : 1;
-    await fetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ starred }) });
+    await apiFetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ starred }) });
     setJobs(prev => prev.map(j => j.id === id ? { ...j, starred } : j));
   };
 
@@ -514,7 +515,7 @@ export default function TrackerPage() {
   };
 
   const SortIcon = ({ col }: { col: string }) => sortBy !== col ? null : <span style={{ marginLeft: '3px', fontSize: '9px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
-  const colHdr = (col: string): React.CSSProperties => ({ cursor: 'pointer', userSelect: 'none', color: sortBy === col ? '#3b82f6' : '#94a3b8', display: 'flex', alignItems: 'center' });
+  const colHdr = (col: string): React.CSSProperties => ({ cursor: 'pointer', userSelect: 'none', color: sortBy === col ? '#7DF4FC' : 'rgba(100,155,210,0.50)', display: 'flex', alignItems: 'center' });
 
   const GRID = '28px 1fr 90px 95px 46px 90px 90px 72px';
   const GAP = '0 8px';
@@ -522,15 +523,15 @@ export default function TrackerPage() {
   const isStale = (job: Job) => job.status === 'applied' && !!job.status_updated_at && (Date.now() - new Date(job.status_updated_at).getTime()) / 86400000 >= 14;
 
   return (
-    <div style={{ padding: '28px 32px', minHeight: '100vh', backgroundColor: '#f1f5f9', width: '100%' }}>
+    <div style={{ padding: '28px 32px', minHeight: '100vh', background: 'transparent', width: '100%' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
-          <h1 style={{ color: '#0f172a', fontSize: '18px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Job Tracker</h1>
+          <h1 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '18px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Job Tracker</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '5px' }}>
             {[
-              { label: 'tracked', value: stats.total, color: '#64748b', always: true },
+              { label: 'tracked', value: stats.total, color: 'rgba(140,185,235,0.62)', always: true },
               { label: 'applied', value: stats.applied, color: '#93c5fd', always: false },
               { label: 'interviewing', value: stats.interviewing, color: '#fde68a', always: false },
               { label: stats.offers === 1 ? 'offer' : 'offers', value: stats.offers, color: '#86efac', always: false },
@@ -538,7 +539,7 @@ export default function TrackerPage() {
             ].filter(s => s.always || s.value > 0).map(({ label, value, color }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
                 <span style={{ color, fontWeight: 700, fontSize: '13px', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-                <span style={{ color: '#cbd5e1', fontSize: '11px' }}>{label}</span>
+                <span style={{ color: 'rgba(90,140,200,0.44)', fontSize: '11px' }}>{label}</span>
               </div>
             ))}
           </div>
@@ -554,7 +555,7 @@ export default function TrackerPage() {
           </button>
           <button onClick={() => { setEditingJob(null); setForm(EMPTY_FORM); setShowModal(true); }} style={{
             display: 'flex', alignItems: 'center', gap: '5px',
-            backgroundColor: '#ffffff', color: '#94a3b8', border: '1px solid #e2e8f0',
+            backgroundColor: 'rgba(125,220,255,0.06)', color: 'rgba(125,175,230,0.52)', border: '1px solid rgba(125,220,255,0.14)',
             borderRadius: '7px', padding: '8px 12px', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
           }}>
             <Plus size={12} /> Manual
@@ -569,14 +570,14 @@ export default function TrackerPage() {
           <input
             type="text" placeholder="Search..."
             value={searchText} onChange={e => setSearchText(e.target.value)}
-            style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '6px 12px', color: '#0f172a', fontSize: '12px', outline: 'none', width: '160px', flexShrink: 0 }}
+            style={{ backgroundColor: 'rgba(4,12,32,0.70)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '6px 12px', color: 'rgba(232,244,255,0.95)', fontSize: '12px', outline: 'none', width: '160px', flexShrink: 0 }}
           />
           <div style={{ display: 'flex', gap: '4px' }}>
             {['all','saved','applied','interviewing','offer','rejected'].map(s => (
               <button key={s} onClick={() => setStatusFilter(s)} style={{
-                backgroundColor: statusFilter === s ? '#3b82f6' : '#ffffff',
-                color: statusFilter === s ? '#fff' : '#64748b',
-                border: `1px solid ${statusFilter === s ? '#3b82f6' : '#e2e8f0'}`,
+                backgroundColor: statusFilter === s ? 'rgba(125,244,252,0.12)' : 'rgba(125,220,255,0.06)',
+                color: statusFilter === s ? '#7DF4FC' : 'rgba(125,175,230,0.52)',
+                border: `1px solid ${statusFilter === s ? 'rgba(125,244,252,0.28)' : 'rgba(125,220,255,0.14)'}`,
                 borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize', transition: 'all 0.1s',
               }}>{s === 'all' ? 'All' : s}</button>
             ))}
@@ -588,19 +589,19 @@ export default function TrackerPage() {
             const label = v === 'all' ? 'All Types' : TYPE_OPTIONS.find(t => t.value === v)?.label || v;
             return (
               <button key={v} onClick={() => setTypeFilter(v)} style={{
-                backgroundColor: typeFilter === v ? '#7c3aed' : '#ffffff',
-                color: typeFilter === v ? '#fff' : '#64748b',
-                border: `1px solid ${typeFilter === v ? '#7c3aed' : '#e2e8f0'}`,
+                backgroundColor: typeFilter === v ? 'rgba(125,220,255,0.10)' : 'rgba(125,220,255,0.06)',
+                color: typeFilter === v ? '#4A9EF8' : 'rgba(125,175,230,0.52)',
+                border: `1px solid ${typeFilter === v ? 'rgba(125,220,255,0.22)' : 'rgba(125,220,255,0.14)'}`,
                 borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.1s',
               }}>{label}</button>
             );
           })}
-          <div style={{ width: '1px', height: '16px', backgroundColor: '#e2e8f0', margin: '0 4px' }} />
+          <div style={{ width: '1px', height: '16px', backgroundColor: 'rgba(125,220,255,0.14)', margin: '0 4px' }} />
           <button onClick={() => setStarFilter(p => !p)} style={{
             display: 'flex', alignItems: 'center', gap: '4px',
-            backgroundColor: starFilter ? 'rgba(6,182,212,0.08)' : '#ffffff',
-            color: starFilter ? '#3b82f6' : '#64748b',
-            border: `1px solid ${starFilter ? 'rgba(59,130,246,0.3)' : '#e2e8f0'}`,
+            backgroundColor: starFilter ? 'rgba(125,244,252,0.10)' : 'rgba(125,220,255,0.06)',
+            color: starFilter ? '#7DF4FC' : 'rgba(125,175,230,0.52)',
+            border: `1px solid ${starFilter ? 'rgba(125,244,252,0.26)' : 'rgba(125,220,255,0.14)'}`,
             borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.1s',
           }}>
             <Star size={11} fill={starFilter ? '#3b82f6' : 'none'} /> Starred
@@ -608,19 +609,19 @@ export default function TrackerPage() {
         </div>
       </div>
       {(searchText || statusFilter !== 'all' || typeFilter !== 'all' || starFilter) && (
-        <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '10px' }}>
+        <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '11px', marginBottom: '10px' }}>
           {sortedJobs.length} result{sortedJobs.length !== 1 ? 's' : ''}
         </div>
       )}
 
       {/* Table */}
       {loading ? (
-        <div style={{ color: '#cbd5e1', textAlign: 'center', padding: '80px', fontSize: '13px' }}>Loading...</div>
+        <div style={{ color: 'rgba(90,140,200,0.44)', textAlign: 'center', padding: '80px', fontSize: '13px' }}>Loading...</div>
       ) : jobs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px 32px' }}>
           <LinkIcon size={28} color="#ffffff" style={{ marginBottom: '16px' }} />
-          <div style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '6px' }}>No jobs tracked yet</div>
-          <div style={{ color: '#cbd5e1', fontSize: '12px', marginBottom: '24px' }}>Paste a job posting URL to get started</div>
+          <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '14px', marginBottom: '6px' }}>No jobs tracked yet</div>
+          <div style={{ color: 'rgba(90,140,200,0.44)', fontSize: '12px', marginBottom: '24px' }}>Paste a job posting URL to get started</div>
           <button onClick={openImport} style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
             background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', border: 'none',
@@ -630,11 +631,11 @@ export default function TrackerPage() {
           </button>
         </div>
       ) : (
-        <div style={{ backgroundColor: '#f8fafc', border: '1px solid #ffffff', borderRadius: '16px', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: 'rgba(125,220,255,0.04)', border: '1px solid rgba(125,220,255,0.10)', borderRadius: '16px', overflow: 'hidden' }}>
           {/* Column headers */}
           <div style={{
             display: 'grid', gridTemplateColumns: GRID, gap: GAP,
-            padding: '9px 16px', borderBottom: '1px solid #f8fafc',
+            padding: '9px 16px', borderBottom: '1px solid rgba(125,220,255,0.10)',
             fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
           }}>
             <div />
@@ -644,7 +645,7 @@ export default function TrackerPage() {
             <div style={colHdr('match_score')} onClick={() => handleSort('match_score')}>Score <SortIcon col="match_score" /></div>
             <div style={colHdr('deadline')} onClick={() => handleSort('deadline')}>Deadline <SortIcon col="deadline" /></div>
             <div style={colHdr('posting_date')} onClick={() => handleSort('posting_date')}>Posted <SortIcon col="posting_date" /></div>
-            <div style={{ color: '#94a3b8' }}>Actions</div>
+            <div style={{ color: 'rgba(125,175,230,0.52)' }}>Actions</div>
           </div>
 
           {Object.entries(grouped).map(([company, companyJobs], groupIdx) => {
@@ -657,16 +658,15 @@ export default function TrackerPage() {
                 <div onClick={() => setExpandedCompanies(prev => { const n = new Set(prev); n.has(company) ? n.delete(company) : n.add(company); return n; })}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '10px',
-                    padding: '11px 16px', backgroundColor: '#ffffff',
-                    borderTop: groupIdx > 0 ? '1px solid #f8fafc' : undefined,
-                    borderBottom: isExpanded ? '1px solid #f8fafc' : (!isLast ? '1px solid #f8fafc' : undefined),
-                    borderLeft: `3px solid ${badgeBg}`,
+                    padding: '11px 16px', backgroundColor: 'rgba(125,220,255,0.05)',
+                    borderTop: groupIdx > 0 ? '1px solid rgba(125,220,255,0.10)' : undefined,
+                    borderBottom: isExpanded ? '1px solid rgba(125,220,255,0.10)' : (!isLast ? '1px solid rgba(125,220,255,0.10)' : undefined),
                     cursor: 'pointer', userSelect: 'none',
                   }}>
                   {isExpanded ? <ChevronDown size={11} color="#94a3b8" /> : <ChevronRight size={11} color="#94a3b8" />}
                   <CompanyBadge company={company} size={22} />
-                  <span style={{ color: '#334155', fontWeight: 700, fontSize: '13px' }}>{company}</span>
-                  <span style={{ backgroundColor: '#f8fafc', color: '#94a3b8', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: 500 }}>
+                  <span style={{ color: 'rgba(200,225,255,0.88)', fontWeight: 700, fontSize: '13px' }}>{company}</span>
+                  <span style={{ backgroundColor: 'rgba(125,220,255,0.08)', color: 'rgba(125,175,230,0.52)', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: 500 }}>
                     {companyJobs.length} {companyJobs.length === 1 ? 'role' : 'roles'}
                   </span>
                   {companyJobs.some(j => j.starred) && <Star size={11} color="#3b82f6" fill="#3b82f6" />}
@@ -685,22 +685,22 @@ export default function TrackerPage() {
                         style={{
                           display: 'grid', gridTemplateColumns: GRID, gap: GAP, alignItems: 'center',
                           padding: '12px 16px',
-                          borderBottom: (isJobExpanded || !isLastInGroup) ? '1px solid #f1f5f9' : undefined,
+                          borderBottom: (isJobExpanded || !isLastInGroup) ? '1px solid rgba(125,220,255,0.10)' : undefined,
                           cursor: 'pointer', transition: 'background 0.1s',
-                          backgroundColor: isJobExpanded ? '#ffffff' : 'transparent',
+                          backgroundColor: isJobExpanded ? 'rgba(125,220,255,0.06)' : 'transparent',
                         }}
-                        onMouseEnter={e => !isJobExpanded && (e.currentTarget.style.backgroundColor = '#ffffff')}
+                        onMouseEnter={e => !isJobExpanded && (e.currentTarget.style.backgroundColor = 'rgba(125,220,255,0.06)')}
                         onMouseLeave={e => !isJobExpanded && (e.currentTarget.style.backgroundColor = 'transparent')}
                       >
                         {/* Star */}
                         <div onClick={e => { e.stopPropagation(); handleStarToggle(job.id, job.starred); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                          <Star size={13} color={job.starred ? '#3b82f6' : '#cbd5e1'} fill={job.starred ? '#3b82f6' : 'none'}
+                          <Star size={13} color={job.starred ? '#7DF4FC' : 'rgba(70,120,175,0.32)'} fill={job.starred ? '#3b82f6' : 'none'}
                             style={{ transition: 'all 0.15s' }} />
                         </div>
 
                         {/* Title */}
                         <div>
-                          <div style={{ color: '#0f172a', fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ color: 'rgba(220,238,255,0.92)', fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {job.title}
                           </div>
                           {isStale(job) && (
@@ -729,7 +729,7 @@ export default function TrackerPage() {
                             <span style={{ color: job.match_score >= 8 ? '#22c55e' : job.match_score >= 6 ? '#3b82f6' : '#f87171', fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
                               {job.match_score}/10
                             </span>
-                          ) : <span style={{ color: '#cbd5e1' }}>—</span>}
+                          ) : <span style={{ color: 'rgba(80,130,185,0.38)' }}>—</span>}
                         </div>
 
                         {/* Deadline */}
@@ -740,16 +740,16 @@ export default function TrackerPage() {
 
                         {/* Actions */}
                         <div style={{ display: 'flex', gap: '2px', alignItems: 'center', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
-                          <button onClick={() => openEdit(job)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: '5px', borderRadius: '20px', display: 'flex' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#64748b')} onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}>
+                          <button onClick={() => openEdit(job)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(80,130,185,0.38)', padding: '5px', borderRadius: '20px', display: 'flex' }}
+                            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(150,195,240,0.65)')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(80,130,185,0.38)')}>
                             <Edit2 size={11} />
                           </button>
-                          <button onClick={() => window.location.href = `/coach?prefill=cover-letter&company=${encodeURIComponent(job.company)}&title=${encodeURIComponent(job.title)}`} title="Cover letter" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: '5px', borderRadius: '20px', display: 'flex' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#3b82f6')} onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}>
+                          <button onClick={() => window.location.href = `/coach?prefill=cover-letter&company=${encodeURIComponent(job.company)}&title=${encodeURIComponent(job.title)}`} title="Cover letter" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(80,130,185,0.38)', padding: '5px', borderRadius: '20px', display: 'flex' }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#7DF4FC')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(80,130,185,0.38)')}>
                             <FileText size={11} />
                           </button>
-                          <button onClick={() => handleDelete(job.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#cbd5e1', padding: '5px', borderRadius: '20px', display: 'flex' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')} onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}>
+                          <button onClick={() => handleDelete(job.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(80,130,185,0.38)', padding: '5px', borderRadius: '20px', display: 'flex' }}
+                            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(248,100,100,0.9)')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(80,130,185,0.38)')}>
                             <Trash2 size={11} />
                           </button>
                         </div>
@@ -757,9 +757,9 @@ export default function TrackerPage() {
 
                       {/* Expanded panel */}
                       {isJobExpanded && (
-                        <div style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #ffffff', padding: '0 16px 24px' }}>
+                        <div style={{ backgroundColor: 'rgba(4,12,32,0.70)', borderBottom: '1px solid rgba(125,220,255,0.10)', padding: '0 16px 24px' }}>
                           {/* Tabs */}
-                          <div style={{ display: 'flex', gap: '0px', borderBottom: '1px solid #ffffff', marginBottom: '20px', paddingTop: '14px', flexWrap: 'nowrap', overflowX: 'auto' }}>
+                          <div style={{ display: 'flex', gap: '0px', borderBottom: '1px solid rgba(125,220,255,0.10)', marginBottom: '20px', paddingTop: '14px', flexWrap: 'nowrap', overflowX: 'auto' }}>
                             {[
                               { id: 'overview',      label: 'Overview' },
                               { id: 'description',   label: 'Job Details' },
@@ -798,7 +798,7 @@ export default function TrackerPage() {
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px 20px', marginBottom: '14px' }}>
                                 {[
                                   { label: 'Location', value: job.location },
-                                  { label: 'Deadline', value: job.deadline ? <><span style={{ color: '#64748b' }}>{job.deadline}</span> <DeadlineDisplay deadline={job.deadline} /></> : null },
+                                  { label: 'Deadline', value: job.deadline ? <><span style={{ color: 'rgba(140,185,235,0.62)' }}>{job.deadline}</span> <DeadlineDisplay deadline={job.deadline} /></> : null },
                                   { label: 'Salary', value: job.salary_range },
                                   { label: 'Type', value: job.type ? <span style={{ color: TYPE_COLORS[job.type] || '#64748b', fontWeight: 700 }}>{TYPE_OPTIONS.find(t => t.value === job.type)?.label}</span> : null },
                                   { label: 'Source', value: job.source },
@@ -806,16 +806,16 @@ export default function TrackerPage() {
                                 ].map(({ label, value }) => (
                                   value ? (
                                     <div key={label}>
-                                      <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>{label}</div>
-                                      <div style={{ color: '#64748b', fontSize: '12px', lineHeight: 1.4 }}>{value}</div>
+                                      <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>{label}</div>
+                                      <div style={{ color: 'rgba(140,185,235,0.62)', fontSize: '12px', lineHeight: 1.4 }}>{value}</div>
                                     </div>
                                   ) : null
                                 ))}
                               </div>
                               {job.notes && (
-                                <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '12px 14px' }}>
-                                  <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '6px' }}>Notes</div>
-                                  <div style={{ color: '#64748b', fontSize: '12px', lineHeight: 1.6 }}>{job.notes}</div>
+                                <div style={{ backgroundColor: 'rgba(125,220,255,0.06)', borderRadius: '14px', padding: '12px 14px' }}>
+                                  <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '6px' }}>Notes</div>
+                                  <div style={{ color: 'rgba(140,185,235,0.62)', fontSize: '12px', lineHeight: 1.6 }}>{job.notes}</div>
                                 </div>
                               )}
 
@@ -824,21 +824,21 @@ export default function TrackerPage() {
                                 const conns = connectionsMap[job.company] || [];
                                 const form = connAddForm[job.company] || { show: false, name: '', relationship: '', notes: '' };
                                 return (
-                                  <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '12px 14px' }}>
+                                  <div style={{ backgroundColor: 'rgba(125,220,255,0.06)', borderRadius: '14px', padding: '12px 14px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: conns.length > 0 || form.show ? '10px' : 0 }}>
-                                      <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                      <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                         Network
-                                        {conns.length > 0 && <span style={{ backgroundColor: '#f1f5f9', color: '#64748b', borderRadius: '20px', padding: '0 5px', fontSize: '9px', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>{conns.length}</span>}
+                                        {conns.length > 0 && <span style={{ backgroundColor: 'transparent', color: 'rgba(140,185,235,0.62)', borderRadius: '20px', padding: '0 5px', fontSize: '9px', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>{conns.length}</span>}
                                       </div>
-                                      <button onClick={() => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, show: !form.show } }))} style={{ background: 'none', border: 'none', color: form.show ? '#3b82f6' : '#cbd5e1', cursor: 'pointer', fontSize: '11px', fontWeight: 600, padding: '1px 4px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '3px', borderRadius: '4px' }}
+                                      <button onClick={() => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, show: !form.show } }))} style={{ background: 'none', border: 'none', color: form.show ? '#3b82f6' : 'rgba(90,140,200,0.42)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, padding: '1px 4px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '3px', borderRadius: '4px' }}
                                         onMouseEnter={e => { if (!form.show) e.currentTarget.style.color = '#64748b'; }}
-                                        onMouseLeave={e => { if (!form.show) e.currentTarget.style.color = '#cbd5e1'; }}>
+                                        onMouseLeave={e => { if (!form.show) e.currentTarget.style.color = 'rgba(90,140,200,0.42)'; }}>
                                         <Plus size={11} /> Add
                                       </button>
                                     </div>
 
                                     {conns.length === 0 && !form.show && (
-                                      <div style={{ color: '#cbd5e1', fontSize: '11px', fontStyle: 'italic' }}>No connections at {job.company} yet.</div>
+                                      <div style={{ color: 'rgba(90,140,200,0.44)', fontSize: '11px', fontStyle: 'italic' }}>No connections at {job.company} yet.</div>
                                     )}
 
                                     {conns.length > 0 && (
@@ -846,19 +846,19 @@ export default function TrackerPage() {
                                         {conns.map(conn => {
                                           const cs = CONN_STATUS[conn.status] || CONN_STATUS.not_reached_out;
                                           return (
-                                            <div key={conn.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#f8fafc', borderRadius: '8px', padding: '7px 10px' }}>
+                                            <div key={conn.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'rgba(4,12,32,0.70)', borderRadius: '8px', padding: '7px 10px' }}>
                                               <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: cs.color, flexShrink: 0 }} />
                                               <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ color: '#334155', fontSize: '12px', fontWeight: 600 }}>{conn.name}</div>
-                                                {conn.relationship && <div style={{ color: '#94a3b8', fontSize: '10px' }}>{conn.relationship}</div>}
+                                                <div style={{ color: 'rgba(180,215,255,0.80)', fontSize: '12px', fontWeight: 600 }}>{conn.name}</div>
+                                                {conn.relationship && <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px' }}>{conn.relationship}</div>}
                                               </div>
                                               <button onClick={() => cycleConnStatus(job.company, conn.id, conn.status)} style={{ backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '3px 9px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap' }}
                                                 title="Click to update status">
                                                 {cs.label}
                                               </button>
-                                              <button onClick={() => deleteConnection(job.company, conn.id)} style={{ background: 'none', border: 'none', color: '#e2e8f0', cursor: 'pointer', padding: '2px', display: 'flex', flexShrink: 0 }}
-                                                onMouseEnter={e => (e.currentTarget.style.color = '#ef4444')}
-                                                onMouseLeave={e => (e.currentTarget.style.color = '#e2e8f0')}>
+                                              <button onClick={() => deleteConnection(job.company, conn.id)} style={{ background: 'none', border: 'none', color: 'rgba(80,130,185,0.35)', cursor: 'pointer', padding: '2px', display: 'flex', flexShrink: 0 }}
+                                                onMouseEnter={e => (e.currentTarget.style.color = 'rgba(248,100,100,0.9)')}
+                                                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(80,130,185,0.35)')}>
                                                 <Trash2 size={11} />
                                               </button>
                                             </div>
@@ -870,13 +870,13 @@ export default function TrackerPage() {
                                     {form.show && (
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
-                                          <input placeholder="Name *" value={form.name} onChange={e => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, name: e.target.value } }))} onKeyDown={e => { if (e.key === 'Enter') addConnection(job.company); if (e.key === 'Escape') setConnAddForm(prev => ({ ...prev, [job.company]: { show: false, name: '', relationship: '', notes: '' } })); }} autoFocus style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 10px', color: '#0f172a', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }} onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
-                                          <input placeholder="How you know them" value={form.relationship} onChange={e => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, relationship: e.target.value } }))} style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 10px', color: '#0f172a', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }} onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
+                                          <input placeholder="Name *" value={form.name} onChange={e => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, name: e.target.value } }))} onKeyDown={e => { if (e.key === 'Enter') addConnection(job.company); if (e.key === 'Escape') setConnAddForm(prev => ({ ...prev, [job.company]: { show: false, name: '', relationship: '', notes: '' } })); }} autoFocus style={{ backgroundColor: 'rgba(4,12,32,0.70)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '8px', padding: '7px 10px', color: 'rgba(232,244,255,0.95)', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }} onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.14)')} />
+                                          <input placeholder="How you know them" value={form.relationship} onChange={e => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, relationship: e.target.value } }))} style={{ backgroundColor: 'rgba(4,12,32,0.70)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '8px', padding: '7px 10px', color: 'rgba(232,244,255,0.95)', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }} onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.14)')} />
                                         </div>
-                                        <input placeholder="Notes (optional)" value={form.notes} onChange={e => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, notes: e.target.value } }))} style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 10px', color: '#0f172a', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }} onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
+                                        <input placeholder="Notes (optional)" value={form.notes} onChange={e => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, notes: e.target.value } }))} style={{ backgroundColor: 'rgba(4,12,32,0.70)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '8px', padding: '7px 10px', color: 'rgba(232,244,255,0.95)', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }} onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.14)')} />
                                         <div style={{ display: 'flex', gap: '6px' }}>
-                                          <button onClick={() => addConnection(job.company)} disabled={!form.name.trim()} style={{ backgroundColor: form.name.trim() ? '#3b82f6' : '#f1f5f9', color: form.name.trim() ? '#fff' : '#94a3b8', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: form.name.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>Save</button>
-                                          <button onClick={() => setConnAddForm(prev => ({ ...prev, [job.company]: { show: false, name: '', relationship: '', notes: '' } }))} style={{ backgroundColor: 'transparent', color: '#94a3b8', border: 'none', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                                          <button onClick={() => addConnection(job.company)} disabled={!form.name.trim()} style={{ backgroundColor: form.name.trim() ? '#7DF4FC' : 'rgba(125,220,255,0.06)', color: form.name.trim() ? '#fff' : 'rgba(100,155,210,0.50)', border: 'none', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: form.name.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>Save</button>
+                                          <button onClick={() => setConnAddForm(prev => ({ ...prev, [job.company]: { show: false, name: '', relationship: '', notes: '' } }))} style={{ backgroundColor: 'transparent', color: 'rgba(125,175,230,0.52)', border: 'none', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
                                         </div>
                                       </div>
                                     )}
@@ -893,13 +893,13 @@ export default function TrackerPage() {
                             return (
                               <div>
                                 {(!details || details === 'loading') && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '12px', padding: '20px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(125,175,230,0.52)', fontSize: '12px', padding: '20px 0' }}>
                                     <Loader size={14} color="#3b82f6" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                     Generating job breakdown...
                                   </div>
                                 )}
                                 {details === 'error' && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '12px', padding: '12px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(140,185,235,0.62)', fontSize: '12px', padding: '12px 0' }}>
                                     <AlertCircle size={13} color="#ef4444" />
                                     Failed to generate.{' '}
                                     <button onClick={() => refreshDetails(job.id)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
@@ -912,22 +912,22 @@ export default function TrackerPage() {
 
                                       {/* Company + Role row */}
                                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                                        <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '14px 16px' }}>
-                                          <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Company</div>
-                                          <p style={{ color: '#64748b', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.company_overview}</p>
+                                        <div style={{ backgroundColor: 'rgba(125,220,255,0.06)', borderRadius: '14px', padding: '14px 16px' }}>
+                                          <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Company</div>
+                                          <p style={{ color: 'rgba(140,185,235,0.62)', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.company_overview}</p>
                                         </div>
-                                        <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '14px 16px' }}>
-                                          <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>The Role</div>
-                                          <p style={{ color: '#64748b', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.role_summary}</p>
+                                        <div style={{ backgroundColor: 'rgba(125,220,255,0.06)', borderRadius: '14px', padding: '14px 16px' }}>
+                                          <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>The Role</div>
+                                          <p style={{ color: 'rgba(140,185,235,0.62)', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.role_summary}</p>
                                         </div>
                                       </div>
 
                                       {/* Qualifications */}
-                                      <div style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '14px 16px' }}>
-                                        <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>What They&apos;re Looking For</div>
+                                      <div style={{ backgroundColor: 'rgba(125,220,255,0.06)', borderRadius: '14px', padding: '14px 16px' }}>
+                                        <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>What They&apos;re Looking For</div>
                                         <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                           {d.key_qualifications.map((q, i) => (
-                                            <li key={i} style={{ color: '#64748b', fontSize: '12px', lineHeight: 1.5 }}>{q}</li>
+                                            <li key={i} style={{ color: 'rgba(140,185,235,0.62)', fontSize: '12px', lineHeight: 1.5 }}>{q}</li>
                                           ))}
                                         </ul>
                                       </div>
@@ -940,13 +940,13 @@ export default function TrackerPage() {
 
                                       {/* Footer: refresh + raw JD toggle */}
                                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <button onClick={() => refreshDetails(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
-                                          onMouseEnter={e => (e.currentTarget.style.color = '#64748b')} onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}>
+                                        <button onClick={() => refreshDetails(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'rgba(90,140,200,0.42)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
+                                          onMouseEnter={e => (e.currentTarget.style.color = 'rgba(150,195,240,0.65)')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(90,140,200,0.42)')}>
                                           <RotateCcw size={10} /> Regenerate
                                         </button>
                                         {job.description && (
-                                          <button onClick={() => setShowRawJd(p => ({ ...p, [job.id]: !p[job.id] }))} style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
-                                            onMouseEnter={e => (e.currentTarget.style.color = '#64748b')} onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}>
+                                          <button onClick={() => setShowRawJd(p => ({ ...p, [job.id]: !p[job.id] }))} style={{ background: 'none', border: 'none', color: 'rgba(90,140,200,0.42)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
+                                            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(150,195,240,0.65)')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(90,140,200,0.42)')}>
                                             {rawVisible ? 'Hide raw JD' : 'View raw JD'}
                                           </button>
                                         )}
@@ -954,8 +954,8 @@ export default function TrackerPage() {
 
                                       {/* Raw JD */}
                                       {rawVisible && job.description && (
-                                        <div style={{ backgroundColor: '#f8fafc', border: '1px solid #ffffff', borderRadius: '14px', padding: '14px 16px', maxHeight: '280px', overflowY: 'auto' }}>
-                                          <pre style={{ color: '#94a3b8', fontSize: '11px', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
+                                        <div style={{ backgroundColor: 'rgba(4,12,32,0.70)', border: '1px solid rgba(125,220,255,0.10)', borderRadius: '14px', padding: '14px 16px', maxHeight: '280px', overflowY: 'auto' }}>
+                                          <pre style={{ color: 'rgba(125,175,230,0.52)', fontSize: '11px', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
                                             {job.description}
                                           </pre>
                                         </div>
@@ -972,7 +972,7 @@ export default function TrackerPage() {
                           {activeTab === 'score' && (
                             <div>
                               {analysis === 'loading' && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '12px', padding: '20px 0' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(125,175,230,0.52)', fontSize: '12px', padding: '20px 0' }}>
                                   <Loader size={14} color="#3b82f6" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                   Analyzing fit against your profile...
                                 </div>
@@ -986,18 +986,18 @@ export default function TrackerPage() {
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                   }}>
                                     <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(job.match_score * 10), lineHeight: 1 }}>{job.match_score * 10}</span>
-                                    <span style={{ fontSize: '10px', color: '#94a3b8' }}>/100</span>
+                                    <span style={{ fontSize: '10px', color: 'rgba(125,175,230,0.52)' }}>/100</span>
                                   </div>
                                   <div>
-                                    <div style={{ color: '#64748b', fontSize: '13px', marginBottom: '8px' }}>Score from last analysis.</div>
-                                    <button onClick={() => runAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#ffffff', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '10px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                    <div style={{ color: 'rgba(140,185,235,0.62)', fontSize: '13px', marginBottom: '8px' }}>Score from last analysis.</div>
+                                    <button onClick={() => runAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'rgba(125,220,255,0.06)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.3)', borderRadius: '10px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                                       Load full breakdown →
                                     </button>
                                   </div>
                                 </div>
                               )}
                               {analysis === 'error' && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '12px', padding: '12px 0' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(140,185,235,0.62)', fontSize: '12px', padding: '12px 0' }}>
                                   <AlertCircle size={13} color="#ef4444" />
                                   Analysis failed.{' '}
                                   <button onClick={() => refreshAnalysis(job.id)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
@@ -1016,12 +1016,12 @@ export default function TrackerPage() {
                                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                       }}>
                                         <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(r.total), lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{r.total}</span>
-                                        <span style={{ fontSize: '10px', color: '#94a3b8' }}>/100</span>
+                                        <span style={{ fontSize: '10px', color: 'rgba(125,175,230,0.52)' }}>/100</span>
                                       </div>
                                       <div style={{ flex: 1 }}>
-                                        <div style={{ color: '#334155', fontSize: '13px', lineHeight: 1.6 }}>{r.summary}</div>
-                                        <button onClick={() => refreshAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px', background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
-                                          onMouseEnter={e => (e.currentTarget.style.color = '#64748b')} onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}>
+                                        <div style={{ color: 'rgba(180,215,255,0.80)', fontSize: '13px', lineHeight: 1.6 }}>{r.summary}</div>
+                                        <button onClick={() => refreshAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px', background: 'none', border: 'none', color: 'rgba(90,140,200,0.42)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
+                                          onMouseEnter={e => (e.currentTarget.style.color = 'rgba(150,195,240,0.65)')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(90,140,200,0.42)')}>
                                           <RotateCcw size={10} /> Refresh
                                         </button>
                                       </div>
@@ -1031,10 +1031,10 @@ export default function TrackerPage() {
                                       {r.categories.map(cat => (
                                         <div key={cat.name}>
                                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '5px' }}>
-                                            <span style={{ color: '#334155', fontSize: '12px', fontWeight: 600 }}>{cat.name}</span>
+                                            <span style={{ color: 'rgba(180,215,255,0.80)', fontSize: '12px', fontWeight: 600 }}>{cat.name}</span>
                                             <span style={{ color: scoreColor(cat.score), fontSize: '13px', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{cat.score}</span>
                                           </div>
-                                          <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', height: '4px', overflow: 'hidden', marginBottom: '4px' }}>
+                                          <div style={{ backgroundColor: 'rgba(125,220,255,0.06)', borderRadius: '20px', height: '4px', overflow: 'hidden', marginBottom: '4px' }}>
                                             <div style={{
                                               width: `${cat.score}%`, height: '100%', borderRadius: '20px',
                                               backgroundColor: scoreColor(cat.score),
@@ -1042,7 +1042,7 @@ export default function TrackerPage() {
                                               transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1)',
                                             }} />
                                           </div>
-                                          <div style={{ color: '#cbd5e1', fontSize: '11px', lineHeight: 1.5 }}>{cat.rationale}</div>
+                                          <div style={{ color: 'rgba(90,140,200,0.44)', fontSize: '11px', lineHeight: 1.5 }}>{cat.rationale}</div>
                                         </div>
                                       ))}
                                     </div>
@@ -1080,19 +1080,19 @@ export default function TrackerPage() {
                               <div>
                                 {/* Tone selector + generate */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                                  <span style={{ color: '#94a3b8', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>Tone:</span>
+                                  <span style={{ color: 'rgba(125,175,230,0.52)', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>Tone:</span>
                                   {(['professional', 'confident', 'concise'] as const).map(t => (
                                     <button key={t} onClick={() => setCoverLetterTones(p => ({ ...p, [job.id]: t }))} style={{
-                                      backgroundColor: tone === t ? 'rgba(6,182,212,0.1)' : '#ffffff',
+                                      backgroundColor: tone === t ? 'rgba(125,244,252,0.10)' : 'rgba(125,220,255,0.06)',
                                       color: tone === t ? '#3b82f6' : '#64748b',
-                                      border: `1px solid ${tone === t ? 'rgba(59,130,246,0.3)' : '#e2e8f0'}`,
+                                      border: `1px solid ${tone === t ? 'rgba(125,244,252,0.26)' : 'rgba(125,220,255,0.14)'}`,
                                       borderRadius: '20px', padding: '4px 12px', fontSize: '11px', fontWeight: 600,
                                       cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize',
                                     }}>{t}</button>
                                   ))}
                                   <button onClick={() => runCoverLetter(job.id, tone)} disabled={isLoading} style={{
                                     display: 'inline-flex', alignItems: 'center', gap: '5px', marginLeft: 'auto',
-                                    backgroundColor: isLoading ? '#e2e8f0' : '#2563eb', color: isLoading ? '#94a3b8' : '#fff',
+                                    backgroundColor: isLoading ? 'rgba(125,220,255,0.12)' : '#7DF4FC', color: '#fff',
                                     border: 'none', borderRadius: '10px', padding: '6px 16px', fontSize: '12px', fontWeight: 700,
                                     cursor: isLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
                                   }}>
@@ -1101,22 +1101,22 @@ export default function TrackerPage() {
                                 </div>
 
                                 {isError && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '12px', padding: '12px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(140,185,235,0.62)', fontSize: '12px', padding: '12px 0' }}>
                                     <AlertCircle size={13} color="#ef4444" /> Failed.{' '}
                                     <button onClick={() => runCoverLetter(job.id, tone)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
                                   </div>
                                 )}
 
                                 {!cl && !isLoading && (
-                                  <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
-                                    <div style={{ color: '#cbd5e1', fontSize: '12px' }}>Select a tone and click Generate</div>
+                                  <div style={{ backgroundColor: 'rgba(125,220,255,0.06)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
+                                    <div style={{ color: 'rgba(90,140,200,0.42)', fontSize: '12px' }}>Select a tone and click Generate</div>
                                   </div>
                                 )}
 
                                 {result && (
                                   <div>
-                                    <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', marginBottom: '12px', maxHeight: '360px', overflowY: 'auto', animation: 'fadeIn 0.25s ease' }}>
-                                      <pre style={{ color: '#334155', fontSize: '12px', lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
+                                    <div style={{ backgroundColor: 'rgba(125,220,255,0.06)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '14px', padding: '20px', marginBottom: '12px', maxHeight: '360px', overflowY: 'auto', animation: 'fadeIn 0.25s ease' }}>
+                                      <pre style={{ color: 'rgba(180,215,255,0.80)', fontSize: '12px', lineHeight: 1.75, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
                                         {result.letter}
                                       </pre>
                                     </div>
@@ -1128,9 +1128,9 @@ export default function TrackerPage() {
                                       }}
                                       style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                        backgroundColor: copiedJobId === job.id ? '#14532d' : '#ffffff',
+                                        backgroundColor: copiedJobId === job.id ? '#22c55e' : 'rgba(125,220,255,0.06)',
                                         color: copiedJobId === job.id ? '#86efac' : '#64748b',
-                                        border: `1px solid ${copiedJobId === job.id ? '#166534' : '#e2e8f0'}`,
+                                        border: `1px solid ${copiedJobId === job.id ? '#16a34a' : 'rgba(125,220,255,0.14)'}`,
                                         borderRadius: '10px', padding: '6px 14px', fontSize: '12px', fontWeight: 600,
                                         cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
                                       }}>
@@ -1148,13 +1148,13 @@ export default function TrackerPage() {
                             return (
                               <div>
                                 {(!gaps || gaps === 'loading') && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '12px', padding: '20px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(125,175,230,0.52)', fontSize: '12px', padding: '20px 0' }}>
                                     <Loader size={14} color="#3b82f6" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                     Analyzing fit gaps...
                                   </div>
                                 )}
                                 {gaps === 'error' && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '12px', padding: '12px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(140,185,235,0.62)', fontSize: '12px', padding: '12px 0' }}>
                                     <AlertCircle size={13} color="#ef4444" /> Failed.{' '}
                                     <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
                                   </div>
@@ -1172,15 +1172,15 @@ export default function TrackerPage() {
 
                                       {/* Gaps */}
                                       <div>
-                                        <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Gaps to Address</div>
+                                        <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Gaps to Address</div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                           {g.gaps.map((gap, i) => (
-                                            <div key={i} style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '12px 14px', borderLeft: `3px solid ${gap.severity === 'major' ? '#ef4444' : '#3b82f6'}` }}>
+                                            <div key={i} style={{ backgroundColor: 'rgba(125,220,255,0.06)', borderRadius: '14px', padding: '12px 14px', borderLeft: `3px solid ${gap.severity === 'major' ? '#ef4444' : '#3b82f6'}` }}>
                                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
                                                 <span style={{ color: gap.severity === 'major' ? '#ef4444' : '#3b82f6', fontSize: '11px', fontWeight: 700 }}>{gap.skill}</span>
                                                 <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: gap.severity === 'major' ? '#dc2626' : '#2563eb', backgroundColor: gap.severity === 'major' ? 'rgba(220,38,38,0.08)' : 'rgba(37,99,235,0.08)', border: `1px solid ${gap.severity === 'major' ? 'rgba(220,38,38,0.2)' : 'rgba(37,99,235,0.2)'}`, borderRadius: '3px', padding: '1px 5px' }}>{gap.severity}</span>
                                               </div>
-                                              <p style={{ color: '#64748b', fontSize: '11px', margin: 0, lineHeight: 1.55 }}>{gap.how_to_address}</p>
+                                              <p style={{ color: 'rgba(140,185,235,0.62)', fontSize: '11px', margin: 0, lineHeight: 1.55 }}>{gap.how_to_address}</p>
                                             </div>
                                           ))}
                                         </div>
@@ -1196,24 +1196,24 @@ export default function TrackerPage() {
                                         <span style={{ color: g.should_apply ? '#34d399' : '#f87171', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
                                           {g.should_apply ? '✓ Apply' : '✗ Skip'}
                                         </span>
-                                        <span style={{ color: '#64748b', fontSize: '12px', lineHeight: 1.5 }}>{g.apply_reasoning}</span>
+                                        <span style={{ color: 'rgba(140,185,235,0.62)', fontSize: '12px', lineHeight: 1.5 }}>{g.apply_reasoning}</span>
                                       </div>
 
                                       {/* Quick wins */}
                                       <div>
-                                        <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Quick Wins</div>
+                                        <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Quick Wins</div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                           {g.quick_wins.map((w, i) => (
                                             <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                                               <span style={{ color: '#22c55e', fontSize: '11px', flexShrink: 0, marginTop: '2px' }}>→</span>
-                                              <span style={{ color: '#64748b', fontSize: '12px', lineHeight: 1.55 }}>{w}</span>
+                                              <span style={{ color: 'rgba(140,185,235,0.62)', fontSize: '12px', lineHeight: 1.55 }}>{w}</span>
                                             </div>
                                           ))}
                                         </div>
                                       </div>
 
-                                      <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}
-                                        onMouseEnter={e => (e.currentTarget.style.color = '#64748b')} onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}>
+                                      <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'rgba(90,140,200,0.42)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}
+                                        onMouseEnter={e => (e.currentTarget.style.color = 'rgba(150,195,240,0.65)')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(90,140,200,0.42)')}>
                                         <RotateCcw size={10} /> Regenerate
                                       </button>
                                     </div>
@@ -1229,13 +1229,13 @@ export default function TrackerPage() {
                             return (
                               <div>
                                 {(!bl || bl === 'loading') && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#94a3b8', fontSize: '12px', padding: '20px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(125,175,230,0.52)', fontSize: '12px', padding: '20px 0' }}>
                                     <Loader size={14} color="#3b82f6" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                     Tailoring resume bullets...
                                   </div>
                                 )}
                                 {bl === 'error' && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '12px', padding: '12px 0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(140,185,235,0.62)', fontSize: '12px', padding: '12px 0' }}>
                                     <AlertCircle size={13} color="#ef4444" /> Failed.{' '}
                                     <button onClick={() => { delete bulletsCacheRef.current[job.id]; runBullets(job.id); }} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
                                   </div>
@@ -1247,14 +1247,14 @@ export default function TrackerPage() {
 
                                       {/* Lead With */}
                                       <div>
-                                        <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Lead With These</div>
+                                        <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Lead With These</div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                           {b.lead_with.map((item, i) => (
-                                            <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', backgroundColor: '#ffffff', borderRadius: '14px', padding: '10px 13px' }}>
+                                            <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', backgroundColor: 'rgba(125,220,255,0.06)', borderRadius: '14px', padding: '10px 13px' }}>
                                               <span style={{ color: '#3b82f6', fontWeight: 800, fontSize: '12px', flexShrink: 0, marginTop: '1px' }}>{i + 1}</span>
                                               <div>
-                                                <div style={{ color: '#334155', fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>{item.experience}</div>
-                                                <div style={{ color: '#94a3b8', fontSize: '11px', lineHeight: 1.5 }}>{item.why}</div>
+                                                <div style={{ color: 'rgba(180,215,255,0.80)', fontSize: '12px', fontWeight: 600, marginBottom: '2px' }}>{item.experience}</div>
+                                                <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '11px', lineHeight: 1.5 }}>{item.why}</div>
                                               </div>
                                             </div>
                                           ))}
@@ -1263,19 +1263,19 @@ export default function TrackerPage() {
 
                                       {/* Tailored bullets */}
                                       <div>
-                                        <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Tailored Bullets</div>
+                                        <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Tailored Bullets</div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                           {b.tailored_bullets.map((item, i) => (
-                                            <div key={i} style={{ backgroundColor: '#ffffff', borderRadius: '14px', padding: '12px 14px' }}>
+                                            <div key={i} style={{ backgroundColor: 'rgba(125,220,255,0.06)', borderRadius: '14px', padding: '12px 14px' }}>
                                               <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', alignItems: 'flex-start' }}>
-                                                <span style={{ color: '#cbd5e1', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginTop: '2px', lineHeight: 1.6 }}>Before</span>
-                                                <span style={{ color: '#94a3b8', fontSize: '11px', lineHeight: 1.55, textDecoration: 'line-through' }}>{item.original}</span>
+                                                <span style={{ color: 'rgba(90,140,200,0.42)', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginTop: '2px', lineHeight: 1.6 }}>Before</span>
+                                                <span style={{ color: 'rgba(125,175,230,0.52)', fontSize: '11px', lineHeight: 1.55, textDecoration: 'line-through' }}>{item.original}</span>
                                               </div>
                                               <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', alignItems: 'flex-start' }}>
                                                 <span style={{ color: '#22c55e', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginTop: '2px', lineHeight: 1.6 }}>After</span>
-                                                <span style={{ color: '#334155', fontSize: '11px', lineHeight: 1.55, fontWeight: 500 }}>{item.tailored}</span>
+                                                <span style={{ color: 'rgba(180,215,255,0.80)', fontSize: '11px', lineHeight: 1.55, fontWeight: 500 }}>{item.tailored}</span>
                                               </div>
-                                              <div style={{ color: '#cbd5e1', fontSize: '10px', lineHeight: 1.5, borderTop: '1px solid #ffffff', paddingTop: '6px', marginTop: '4px' }}>{item.why}</div>
+                                              <div style={{ color: 'rgba(90,140,200,0.42)', fontSize: '10px', lineHeight: 1.5, borderTop: '1px solid rgba(125,220,255,0.10)', paddingTop: '6px', marginTop: '4px' }}>{item.why}</div>
                                             </div>
                                           ))}
                                         </div>
@@ -1284,21 +1284,21 @@ export default function TrackerPage() {
                                       {/* Keywords + Deprioritize */}
                                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                                         <div>
-                                          <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Add These Keywords</div>
+                                          <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Add These Keywords</div>
                                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                                             {b.keywords_to_add.map((k, i) => (
-                                              <span key={i} style={{ backgroundColor: '#ffffff', color: '#818cf8', border: '1px solid rgba(129,140,248,0.2)', borderRadius: '20px', padding: '3px 8px', fontSize: '11px', fontWeight: 500 }}>{k}</span>
+                                              <span key={i} style={{ backgroundColor: 'rgba(125,220,255,0.06)', color: '#818cf8', border: '1px solid rgba(129,140,248,0.2)', borderRadius: '20px', padding: '3px 8px', fontSize: '11px', fontWeight: 500 }}>{k}</span>
                                             ))}
                                           </div>
                                         </div>
                                         {b.deprioritize.length > 0 && (
                                           <div>
-                                            <div style={{ color: '#94a3b8', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Deprioritize</div>
+                                            <div style={{ color: 'rgba(125,175,230,0.52)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Deprioritize</div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                               {b.deprioritize.map((item, i) => (
                                                 <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
                                                   <span style={{ color: '#ef4444', fontSize: '11px', flexShrink: 0 }}>↓</span>
-                                                  <span style={{ color: '#94a3b8', fontSize: '11px', lineHeight: 1.5 }}>{item}</span>
+                                                  <span style={{ color: 'rgba(125,175,230,0.52)', fontSize: '11px', lineHeight: 1.5 }}>{item}</span>
                                                 </div>
                                               ))}
                                             </div>
@@ -1306,8 +1306,8 @@ export default function TrackerPage() {
                                         )}
                                       </div>
 
-                                      <button onClick={() => { delete bulletsCacheRef.current[job.id]; runBullets(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}
-                                        onMouseEnter={e => (e.currentTarget.style.color = '#64748b')} onMouseLeave={e => (e.currentTarget.style.color = '#cbd5e1')}>
+                                      <button onClick={() => { delete bulletsCacheRef.current[job.id]; runBullets(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'rgba(90,140,200,0.42)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}
+                                        onMouseEnter={e => (e.currentTarget.style.color = 'rgba(150,195,240,0.65)')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(90,140,200,0.42)')}>
                                         <RotateCcw size={10} /> Regenerate
                                       </button>
                                     </div>
@@ -1332,42 +1332,42 @@ export default function TrackerPage() {
       {importStep && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, backdropFilter: 'blur(3px)' }}
           onClick={e => { if (e.target === e.currentTarget) closeImport(); }}>
-          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '28px', width: '560px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}>
+          <div style={{ backgroundColor: 'rgba(125,220,255,0.06)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '16px', padding: '28px', width: '560px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}>
             {importStep === 'input' && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <h2 style={{ color: '#0f172a', fontSize: '15px', fontWeight: 700, margin: 0 }}>Import from URL</h2>
-                  <button onClick={closeImport} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
+                  <h2 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Import from URL</h2>
+                  <button onClick={closeImport} style={{ background: 'none', border: 'none', color: 'rgba(125,175,230,0.52)', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
                 </div>
-                <p style={{ color: '#64748b', fontSize: '12px', margin: '0 0 16px' }}>Paste a job posting link. Add context below if the page doesn&apos;t load or you have extra info.</p>
+                <p style={{ color: 'rgba(140,185,235,0.62)', fontSize: '12px', margin: '0 0 16px' }}>Paste a job posting link. Add context below if the page doesn&apos;t load or you have extra info.</p>
                 <input type="url" value={importUrl} onChange={e => setImportUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') fetchImport(); }}
                   placeholder="https://jobs.company.com/..." autoFocus
-                  style={{ width: '100%', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '11px 14px', color: '#0f172a', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
-                  onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = '#e2e8f0')} />
-                <div style={{ marginTop: '16px', borderTop: '1px solid #f8fafc', paddingTop: '14px' }}>
-                  <div style={{ color: '#cbd5e1', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Extra context <span style={{ color: '#cbd5e1', fontWeight: 400 }}>— optional</span></div>
+                  style={{ width: '100%', backgroundColor: 'transparent', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '14px', padding: '11px 14px', color: 'rgba(232,244,255,0.95)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                  onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.14)')} />
+                <div style={{ marginTop: '16px', borderTop: '1px solid rgba(125,220,255,0.10)', paddingTop: '14px' }}>
+                  <div style={{ color: 'rgba(90,140,200,0.42)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Extra context <span style={{ color: 'rgba(90,140,200,0.42)', fontWeight: 400 }}>— optional</span></div>
                   <textarea value={importExtraText} onChange={e => setImportExtraText(e.target.value)} placeholder="Paste job description, recruiter email, or any extra details..." rows={3}
-                    style={{ width: '100%', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', color: '#64748b', fontSize: '12px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, marginBottom: '8px' }} />
+                    style={{ width: '100%', backgroundColor: 'transparent', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '10px 12px', color: 'rgba(140,185,235,0.62)', fontSize: '12px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, marginBottom: '8px' }} />
                   <input type="url" value={importExtraLink} onChange={e => setImportExtraLink(e.target.value)} placeholder="Additional link (LinkedIn, company page...)"
-                    style={{ width: '100%', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '9px 12px', color: '#64748b', fontSize: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }} />
+                    style={{ width: '100%', backgroundColor: 'transparent', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '9px 12px', color: 'rgba(140,185,235,0.62)', fontSize: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }} />
                   <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{ display: 'none' }} onChange={handleImageUpload} />
                   {!importImage ? (
                     <button onClick={() => imageInputRef.current?.click()}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'transparent', color: '#64748b', border: '1px dashed #e2e8f0', borderRadius: '10px', padding: '8px 14px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'transparent', color: 'rgba(140,185,235,0.62)', border: '1px dashed rgba(125,220,255,0.14)', borderRadius: '10px', padding: '8px 14px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>
                       <ImageIcon size={12} /> Upload screenshot
                     </button>
                   ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'transparent', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '8px 10px' }}>
                       <img src={importImage.previewUrl} alt="screenshot" style={{ width: '44px', height: '44px', objectFit: 'cover', borderRadius: '20px', flexShrink: 0 }} />
-                      <div style={{ flex: 1 }}><div style={{ color: '#334155', fontSize: '12px', fontWeight: 500 }}>Screenshot attached</div><div style={{ color: '#64748b', fontSize: '11px' }}>Claude will read this image</div></div>
-                      <button onClick={removeImage} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
+                      <div style={{ flex: 1 }}><div style={{ color: 'rgba(180,215,255,0.80)', fontSize: '12px', fontWeight: 500 }}>Screenshot attached</div><div style={{ color: 'rgba(140,185,235,0.62)', fontSize: '11px' }}>Claude will read this image</div></div>
+                      <button onClick={removeImage} style={{ background: 'none', border: 'none', color: 'rgba(125,175,230,0.52)', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
                     </div>
                   )}
                 </div>
                 {importFetchError && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f87171', fontSize: '12px', marginTop: '12px' }}><AlertCircle size={13} /> {importFetchError}</div>}
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '18px' }}>
-                  <button onClick={closeImport} style={{ backgroundColor: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={fetchImport} disabled={!importUrl.trim()} style={{ background: !importUrl.trim() ? '#ffffff' : 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: !importUrl.trim() ? '#94a3b8' : '#000', border: 'none', borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700, cursor: !importUrl.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button onClick={closeImport} style={{ backgroundColor: 'rgba(4,12,32,0.70)', color: 'rgba(140,185,235,0.62)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={fetchImport} disabled={!importUrl.trim()} style={{ background: !importUrl.trim() ? 'rgba(125,220,255,0.06)' : 'linear-gradient(135deg, #7DF4FC, #4A9EF8)', color: !importUrl.trim() ? 'rgba(100,155,210,0.50)' : '#fff', border: 'none', borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700, cursor: !importUrl.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <LinkIcon size={13} /> Fetch & Parse
                   </button>
                 </div>
@@ -1376,15 +1376,15 @@ export default function TrackerPage() {
             {importStep === 'loading' && (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
                 <Loader size={28} color="#3b82f6" style={{ animation: 'spin 1s linear infinite', marginBottom: '16px' }} />
-                <div style={{ color: '#64748b', fontSize: '13px' }}>Parsing job details...</div>
-                <div style={{ color: '#cbd5e1', fontSize: '11px', marginTop: '6px' }}>Takes a few seconds</div>
+                <div style={{ color: 'rgba(140,185,235,0.62)', fontSize: '13px' }}>Parsing job details...</div>
+                <div style={{ color: 'rgba(90,140,200,0.44)', fontSize: '11px', marginTop: '6px' }}>Takes a few seconds</div>
               </div>
             )}
             {importStep === 'review' && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <h2 style={{ color: '#0f172a', fontSize: '15px', fontWeight: 700, margin: 0 }}>Review & Add</h2>
-                  <button onClick={closeImport} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
+                  <h2 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Review & Add</h2>
+                  <button onClick={closeImport} style={{ background: 'none', border: 'none', color: 'rgba(125,175,230,0.52)', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
                 </div>
                 {importWarning && (
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', backgroundColor: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: '10px', padding: '10px 12px', marginBottom: '16px' }}>
@@ -1400,35 +1400,35 @@ export default function TrackerPage() {
                   <Field label="Date Posted" field="posting_date" form={importForm} setForm={setImportForm} type="date" />
                   <Field label="Deadline" field="deadline" form={importForm} setForm={setImportForm} type="date" />
                   <div>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
+                    <label style={{ display: 'block', color: 'rgba(125,175,230,0.52)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
                     <select value={importForm.type} onChange={e => setImportForm(p => ({ ...p, type: e.target.value }))} style={{ ...formInput }}>
                       {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', color: '#94a3b8', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Source</label>
+                    <label style={{ display: 'block', color: 'rgba(125,175,230,0.52)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Source</label>
                     <input value={importForm.source} onChange={e => setImportForm(p => ({ ...p, source: e.target.value }))} style={formInput} />
                   </div>
                 </div>
                 <div style={{ marginTop: '12px' }}>
-                  <label style={{ display: 'block', color: '#94a3b8', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>URL</label>
+                  <label style={{ display: 'block', color: 'rgba(125,175,230,0.52)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>URL</label>
                   <input value={importForm.url} onChange={e => setImportForm(p => ({ ...p, url: e.target.value }))} style={formInput} />
                 </div>
                 <div style={{ marginTop: '12px' }}>
-                  <label style={{ display: 'block', color: '#94a3b8', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Notes</label>
+                  <label style={{ display: 'block', color: 'rgba(125,175,230,0.52)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Notes</label>
                   <textarea value={importForm.notes} onChange={e => setImportForm(p => ({ ...p, notes: e.target.value }))} rows={2} style={{ ...formInput, resize: 'vertical', fontFamily: 'inherit' }} />
                 </div>
                 <div style={{ marginTop: '12px' }}>
-                  <label style={{ display: 'block', color: '#94a3b8', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Description</label>
+                  <label style={{ display: 'block', color: 'rgba(125,175,230,0.52)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Description</label>
                   <textarea value={importForm.description} onChange={e => setImportForm(p => ({ ...p, description: e.target.value }))} rows={3} style={{ ...formInput, resize: 'vertical', fontFamily: 'inherit' }} />
                 </div>
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
-                  <button onClick={() => setImportStep('input')} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 14px', fontSize: '13px', cursor: 'pointer' }}>
+                  <button onClick={() => setImportStep('input')} style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: 'rgba(4,12,32,0.70)', color: 'rgba(140,185,235,0.62)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '8px 14px', fontSize: '13px', cursor: 'pointer' }}>
                     <ArrowLeft size={12} /> Back
                   </button>
-                  <button onClick={closeImport} style={{ backgroundColor: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={closeImport} style={{ backgroundColor: 'rgba(4,12,32,0.70)', color: 'rgba(140,185,235,0.62)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
                   <button onClick={handleImportSave} disabled={saving || !importForm.company || !importForm.title} style={{
-                    background: !importForm.company || !importForm.title ? '#ffffff' : 'linear-gradient(135deg,#3b82f6,#1d4ed8)',
+                    background: !importForm.company || !importForm.title ? 'rgba(125,220,255,0.06)' : 'linear-gradient(135deg, #7DF4FC, #4A9EF8)',
                     color: !importForm.company || !importForm.title ? '#94a3b8' : '#000',
                     border: 'none', borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700,
                     cursor: saving || !importForm.company || !importForm.title ? 'not-allowed' : 'pointer',
@@ -1446,10 +1446,10 @@ export default function TrackerPage() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, backdropFilter: 'blur(3px)' }}
           onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
-          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', width: '580px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}>
+          <div style={{ backgroundColor: 'rgba(125,220,255,0.06)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '16px', padding: '24px', width: '580px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ color: '#0f172a', fontSize: '15px', fontWeight: 700, margin: 0 }}>{editingJob ? 'Edit Job' : 'Add Job'}</h2>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
+              <h2 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '15px', fontWeight: 700, margin: 0 }}>{editingJob ? 'Edit Job' : 'Add Job'}</h2>
+              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'rgba(125,175,230,0.52)', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <Field label="Company *" field="company" form={form} setForm={setForm} />
@@ -1461,13 +1461,13 @@ export default function TrackerPage() {
               <Field label="Match Score (1–10)" field="match_score" form={form} setForm={setForm} type="number" />
               <Field label="Source" field="source" form={form} setForm={setForm} />
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
+                <label style={{ display: 'block', color: 'rgba(125,175,230,0.52)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
                 <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} style={formInput}>
                   {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', color: '#94a3b8', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Status</label>
+                <label style={{ display: 'block', color: 'rgba(125,175,230,0.52)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Status</label>
                 <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))} style={formInput}>
                   {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                 </select>
@@ -1475,17 +1475,17 @@ export default function TrackerPage() {
             </div>
             <div style={{ marginTop: '12px' }}><Field label="URL" field="url" form={form} setForm={setForm} /></div>
             <div style={{ marginTop: '12px' }}>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Notes</label>
+              <label style={{ display: 'block', color: 'rgba(125,175,230,0.52)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Notes</label>
               <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} style={{ ...formInput, resize: 'vertical', fontFamily: 'inherit' }} />
             </div>
             <div style={{ marginTop: '12px' }}>
-              <label style={{ display: 'block', color: '#94a3b8', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Description</label>
+              <label style={{ display: 'block', color: 'rgba(125,175,230,0.52)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Description</label>
               <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} style={{ ...formInput, resize: 'vertical', fontFamily: 'inherit' }} />
             </div>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <button onClick={() => setShowModal(false)} style={{ backgroundColor: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => setShowModal(false)} style={{ backgroundColor: 'rgba(4,12,32,0.70)', color: 'rgba(140,185,235,0.62)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
               <button onClick={handleSave} disabled={saving || !form.company || !form.title} style={{
-                background: !form.company || !form.title ? '#ffffff' : 'linear-gradient(135deg,#3b82f6,#1d4ed8)',
+                background: !form.company || !form.title ? 'rgba(125,220,255,0.06)' : 'linear-gradient(135deg, #7DF4FC, #4A9EF8)',
                 color: !form.company || !form.title ? '#94a3b8' : '#000',
                 border: 'none', borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700,
                 cursor: saving || !form.company || !form.title ? 'not-allowed' : 'pointer',
