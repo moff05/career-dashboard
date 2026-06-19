@@ -1,10 +1,10 @@
 # Career Dashboard
 
-A personal AI-powered job search command center built with Next.js, TypeScript, and Claude. Tracks applications, surfaces leads, generates cover letters, runs mock interviews, and advises on application strategy — all from one dashboard.
+An AI-powered job search command center built with Next.js, TypeScript, and Claude. Tracks applications, surfaces leads, generates cover letters, runs mock interviews, and advises on application strategy — all from one dashboard.
 
-> **Note:** This is a single-user personal tool. It has no auth layer — whoever runs it has full access to the data.
+> **Note:** Multi-user, no accounts. A 4-step setup flow (name → background → resume → your own Anthropic API key) creates a local identity stored in your browser; every visitor gets their own scoped data. Your API key is stored client-side only and sent per-request via headers — it's never saved on the server.
 
-**Live:** [career-dashboard-ten.vercel.app](https://career-dashboard-ten.vercel.app)
+**Live:** [career-dashboard-ten.vercel.app](https://career-dashboard-ten.vercel.app) — visit and run through setup to use it with your own data and API key.
 
 ---
 
@@ -48,9 +48,9 @@ A personal AI-powered job search command center built with Next.js, TypeScript, 
 
 | Layer | Choice |
 |---|---|
-| Framework | Next.js 15 App Router |
+| Framework | Next.js 16 App Router |
 | Language | TypeScript |
-| Database | Turso (libsql, cloud SQLite) |
+| Database | SQLite (local file by default, Turso/libsql for cloud deploys) |
 | AI | Anthropic Claude (Sonnet 4.6 + Haiku 4.5) |
 | Deployment | Vercel |
 
@@ -58,25 +58,23 @@ A personal AI-powered job search command center built with Next.js, TypeScript, 
 
 ## Running locally
 
-You will need an [Anthropic API key](https://console.anthropic.com) and a free [Turso](https://turso.tech) database.
+No environment variables are required to get started — your Anthropic API key is entered in the in-app setup flow, not a config file.
 
 ```bash
 git clone https://github.com/moff05/career-dashboard.git
 cd career-dashboard
 npm install
+npm run dev   # http://localhost:3000 — walks you through setup on first visit
+npm run build # production check
 ```
 
-Create `.env.local`:
+By default the app uses a local SQLite file at `data/career.db`. For a cloud-hosted deployment (e.g. Vercel), add a free [Turso](https://turso.tech) database via `.env.local`:
 ```
-ANTHROPIC_API_KEY=sk-ant-...
 TURSO_DATABASE_URL=libsql://...
 TURSO_AUTH_TOKEN=...
 ```
 
-```bash
-npm run dev   # http://localhost:3000
-npm run build # production check
-```
+An optional `ANTHROPIC_API_KEY` in `.env.local` can serve as a server-side fallback for admin/dev use, but normal users never need to set one — see `.env.local.example`.
 
 ---
 
@@ -94,7 +92,7 @@ app/
 └── api/            # All backend routes (jobs, connections, interview, strategy, …)
 
 lib/
-├── db.ts           # Turso singleton + schema
+├── db.ts           # SQLite/Turso client singleton + schema
 ├── ai-context.ts   # Builds system prompt from resume + memories + jobs
 └── resume-parser.ts
 ```
