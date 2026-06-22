@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import Link from 'next/link';
 import { AlertTriangle, Clock, MessageSquare, Zap, Plus, RefreshCw, Bell, ChevronRight } from 'lucide-react';
+import { useUser } from '@/app/hooks/useUser';
 
 interface Job {
   id: number; company: string; title: string; status: string;
@@ -23,10 +24,15 @@ interface Brief {
   honest_assessment: string;
 }
 
-const BRIEF_CACHE_KEY = 'dashboard-brief-v1';
 const BRIEF_TTL_MS = 24 * 60 * 60 * 1000;
-const STRATEGY_CACHE_KEY = 'dashboard-strategy-v1';
 const STRATEGY_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+// Cache keys are scoped per user — otherwise switching accounts on the same
+// browser surfaces the previous user's cached brief/strategy.
+function scopedKey(base: string): string {
+  const userId = typeof window !== 'undefined' ? localStorage.getItem('cid_user_id') || 'anon' : 'anon';
+  return `${base}:${userId}`;
+}
 
 interface StrategyJob { rank: number; job_id: number; company: string; title: string; action: string; urgency: 'high' | 'medium' | 'low'; reasoning: string; }
 interface Strategy { narrative: string; priority_jobs: StrategyJob[]; quick_actions: string[]; }
@@ -70,7 +76,7 @@ const LEVEL_CFG = {
 };
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
-  saved:        { label: 'Saved',     color: 'rgba(125,175,230,0.55)', bg: 'rgba(100,116,139,0.08)' },
+  saved:        { label: 'Saved',     color: 'rgba(170,205,235,0.80)', bg: 'rgba(100,116,139,0.08)' },
   applied:      { label: 'Applied',   color: '#6366f1', bg: 'rgba(99,102,241,0.08)'  },
   interviewing: { label: 'Interview', color: '#0891b2', bg: 'rgba(8,145,178,0.08)'   },
   offer:        { label: 'Offer',     color: '#059669', bg: 'rgba(5,150,105,0.08)'   },
@@ -89,6 +95,8 @@ function companyColor(name: string) {
 }
 
 export default function DashboardPage() {
+  const { displayName } = useUser();
+  const firstName = displayName.split(' ')[0];
   const [jobs, setJobs] = useState<Job[]>([]);
   const [brief, setBrief] = useState<Brief | null>(null);
   const [briefLoading, setBriefLoading] = useState(false);
@@ -105,7 +113,7 @@ export default function DashboardPage() {
   const loadBrief = async (force = false) => {
     if (!force) {
       try {
-        const cached = JSON.parse(localStorage.getItem(BRIEF_CACHE_KEY) || '{}');
+        const cached = JSON.parse(localStorage.getItem(scopedKey('dashboard-brief-v1')) || '{}');
         if (cached.data && Date.now() - cached.ts < BRIEF_TTL_MS) {
           setBrief(cached.data);
           const mins = Math.round((Date.now() - cached.ts) / 60000);
@@ -121,7 +129,7 @@ export default function DashboardPage() {
       if (!data.error) {
         setBrief(data);
         setBriefAge('just now');
-        localStorage.setItem(BRIEF_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+        localStorage.setItem(scopedKey('dashboard-brief-v1'), JSON.stringify({ data, ts: Date.now() }));
       }
     } catch { /* silently fail */ }
     setBriefLoading(false);
@@ -132,7 +140,7 @@ export default function DashboardPage() {
   const loadStrategy = async (force = false) => {
     if (!force) {
       try {
-        const cached = JSON.parse(localStorage.getItem(STRATEGY_CACHE_KEY) || '{}');
+        const cached = JSON.parse(localStorage.getItem(scopedKey('dashboard-strategy-v1')) || '{}');
         if (cached.data && Date.now() - cached.ts < STRATEGY_TTL_MS) {
           setStrategy(cached.data);
           const mins = Math.round((Date.now() - cached.ts) / 60000);
@@ -148,7 +156,7 @@ export default function DashboardPage() {
       if (!data.error) {
         setStrategy(data);
         setStrategyAge('just now');
-        localStorage.setItem(STRATEGY_CACHE_KEY, JSON.stringify({ data, ts: Date.now() }));
+        localStorage.setItem(scopedKey('dashboard-strategy-v1'), JSON.stringify({ data, ts: Date.now() }));
       }
     } catch { /* ignore */ }
     setStrategyLoading(false);
@@ -181,15 +189,15 @@ export default function DashboardPage() {
   const hasJobs = jobs.length > 0;
 
   return (
-    <div style={{ padding: '32px 36px', minHeight: '100vh', background: 'transparent' }}>
+    <div style={{ padding: '40px 44px', minHeight: '100vh', background: 'transparent' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '34px' }}>
         <div>
           <h1 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '22px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>
-            {greeting()}, Nicholas
+            {greeting()}{firstName ? `, ${firstName}` : ''}
           </h1>
-          <p style={{ color: 'rgba(125,175,230,0.50)', fontSize: '12px', margin: '5px 0 0' }}>{today}</p>
+          <p style={{ color: 'rgba(170,205,235,0.80)', fontSize: '12px', margin: '5px 0 0' }}>{today}</p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -214,7 +222,7 @@ export default function DashboardPage() {
             boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
           }}
             onMouseEnter={e => { e.currentTarget.style.color = '#3b82f6'; e.currentTarget.style.borderColor = 'rgba(59,130,246,0.3)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(125,175,230,0.55)'; e.currentTarget.style.borderColor = 'rgba(125,220,255,0.12)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(170,205,235,0.80)'; e.currentTarget.style.borderColor = 'rgba(125,220,255,0.12)'; }}
           >
             <MessageSquare size={12} /> Coach
           </Link>
@@ -222,20 +230,20 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-[10px] mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
         {[
           { label: 'Tracked',       value: stats.total,        color: 'rgba(232,244,255,0.95)', glow: '' },
           { label: 'Applied',       value: stats.applied,      color: '#6366f1', glow: 'rgba(99,102,241,0.1)' },
           { label: 'Interviewing',  value: stats.interviewing, color: '#0891b2', glow: 'rgba(8,145,178,0.1)' },
           { label: 'Offers',        value: stats.offers,       color: '#059669', glow: 'rgba(5,150,105,0.1)' },
-          { label: 'Due this week', value: stats.deadlines,    color: stats.deadlines > 0 ? '#dc2626' : '#94a3b8', glow: 'rgba(220,38,38,0.1)' },
+          { label: 'Due this week', value: stats.deadlines,    color: stats.deadlines > 0 ? '#dc2626' : 'rgba(158,202,242,0.85)', glow: 'rgba(220,38,38,0.1)' },
         ].map(s => (
           <div key={s.label} style={{
-            background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '16px 14px',
+            background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '20px 18px',
             boxShadow: s.value > 0 && s.glow ? `0 0 20px ${s.glow}` : '0 1px 3px rgba(0,0,0,0.06)',
           }}>
-            <div style={{ color: s.value > 0 ? s.color : '#cbd5e1', fontSize: '28px', fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.value}</div>
-            <div style={{ color: s.value > 0 ? '#94a3b8' : '#cbd5e1', fontSize: '10px', marginTop: '6px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</div>
+            <div style={{ color: s.value > 0 ? s.color : 'rgba(135,185,230,0.70)', fontSize: '30px', fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{s.value}</div>
+            <div style={{ color: s.value > 0 ? 'rgba(158,202,242,0.85)' : 'rgba(135,185,230,0.70)', fontSize: '11px', marginTop: '8px', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -258,7 +266,7 @@ export default function DashboardPage() {
                 borderRadius: '8px', padding: '5px 10px',
               }}>
                 <span style={{ color: '#dc2626', fontSize: '11px', fontWeight: 600 }}>{j.company}</span>
-                <span style={{ color: 'rgba(125,175,230,0.50)', fontSize: '11px' }}>due {d === 0 ? 'today' : `in ${d}d`}</span>
+                <span style={{ color: 'rgba(170,205,235,0.80)', fontSize: '11px' }}>due {d === 0 ? 'today' : `in ${d}d`}</span>
               </Link>
             );
           })}
@@ -269,7 +277,7 @@ export default function DashboardPage() {
               borderRadius: '8px', padding: '5px 10px',
             }}>
               <span style={{ color: '#8b5cf6', fontSize: '11px', fontWeight: 600 }}>{j.company}</span>
-              <span style={{ color: 'rgba(125,175,230,0.50)', fontSize: '11px' }}>no response · follow up?</span>
+              <span style={{ color: 'rgba(170,205,235,0.80)', fontSize: '11px' }}>no response · follow up?</span>
             </Link>
           ))}
           {(noResponseJobs.length + thisWeekDeadlines.length > 4) && (
@@ -280,15 +288,15 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
 
         {/* Today's Priorities */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <span style={{ color: 'rgba(125,175,230,0.55)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Priorities</span>
-            <Link href="/tracker" style={{ color: 'rgba(125,175,230,0.50)', fontSize: '11px', textDecoration: 'none' }}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+            <span style={{ color: 'rgba(180,212,240,0.88)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Priorities</span>
+            <Link href="/tracker" style={{ color: 'rgba(170,205,235,0.80)', fontSize: '11px', textDecoration: 'none' }}
               onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#3b82f6')}
-              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#94a3b8')}>
+              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = 'rgba(158,202,242,0.85)')}>
               View all →
             </Link>
           </div>
@@ -298,11 +306,11 @@ export default function DashboardPage() {
               {hasJobs ? (
                 <>
                   <div style={{ color: '#059669', fontSize: '18px', fontWeight: 700, marginBottom: '6px' }}>All clear</div>
-                  <div style={{ color: 'rgba(125,175,230,0.55)', fontSize: '12px' }}>No urgent actions right now.</div>
+                  <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '12px' }}>No urgent actions right now.</div>
                 </>
               ) : (
                 <>
-                  <div style={{ color: 'rgba(125,175,230,0.50)', fontSize: '12px', marginBottom: '12px' }}>Start by importing a job.</div>
+                  <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '12px', marginBottom: '12px' }}>Start by importing a job.</div>
                   <Link href="/tracker" style={{
                     display: 'inline-block',
                     background: 'linear-gradient(135deg, rgba(74,158,248,0.28), rgba(125,244,252,0.18))',
@@ -313,22 +321,22 @@ export default function DashboardPage() {
               )}
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {priorities.slice(0, 5).map((p, i) => {
                 const c = LEVEL_CFG[p.level];
                 return (
                   <Link key={i} href={p.href} style={{
                     display: 'flex', alignItems: 'center', gap: '10px',
                     backgroundColor: c.bg, border: `1px solid ${c.border}`,
-                    borderRadius: '10px', padding: '10px 12px', textDecoration: 'none',
+                    borderRadius: '10px', padding: '12px 14px', textDecoration: 'none',
                     transition: 'opacity 0.15s',
                   }}
                     onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
                     onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
                     <div style={{ flexShrink: 0 }}>{c.icon}</div>
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ color: '#1e293b', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.label}</div>
-                      <div style={{ color: 'rgba(125,175,230,0.55)', fontSize: '11px', marginTop: '1px' }}>{p.sub}</div>
+                      <div style={{ color: 'rgba(232,244,255,0.95)', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.label}</div>
+                      <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '11px', marginTop: '1px' }}>{p.sub}</div>
                     </div>
                     <span style={{ fontSize: '9px', fontWeight: 700, color: c.color, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 7px', borderRadius: '20px', backgroundColor: c.bg, border: `1px solid ${c.border}` }}>{c.tag}</span>
                   </Link>
@@ -340,10 +348,10 @@ export default function DashboardPage() {
 
         {/* Weekly Brief */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: 'rgba(125,175,230,0.55)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Weekly Brief</span>
-              {briefAge && !briefLoading && <span style={{ color: '#cbd5e1', fontSize: '10px' }}>· {briefAge}</span>}
+              <span style={{ color: 'rgba(180,212,240,0.88)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Weekly Brief</span>
+              {briefAge && !briefLoading && <span style={{ color: 'rgba(135,185,230,0.70)', fontSize: '10px' }}>· {briefAge}</span>}
             </div>
             <button onClick={() => loadBrief(true)} disabled={briefLoading} style={{
               display: 'flex', alignItems: 'center', gap: '4px',
@@ -351,7 +359,7 @@ export default function DashboardPage() {
               padding: '2px', fontSize: '10px', cursor: briefLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
             }}
               onMouseEnter={e => !briefLoading && ((e.currentTarget as HTMLButtonElement).style.color = '#3b82f6')}
-              onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = '#94a3b8')}
+              onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = 'rgba(158,202,242,0.85)')}
             >
               <RefreshCw size={11} style={briefLoading ? { animation: 'spin 1s linear infinite' } : {}} />
             </button>
@@ -359,16 +367,16 @@ export default function DashboardPage() {
 
           {briefLoading && !brief && (
             <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
-              <RefreshCw size={14} color="#94a3b8" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px', display: 'block' }} />
-              <div style={{ color: 'rgba(125,175,230,0.50)', fontSize: '12px' }}>Generating your brief…</div>
+              <RefreshCw size={14} color="rgba(158,202,242,0.85)" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px', display: 'block' }} />
+              <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '12px' }}>Generating your brief…</div>
             </div>
           )}
 
           {!brief && !briefLoading && (
             <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
-              <div style={{ color: 'rgba(125,175,230,0.50)', fontSize: '12px', marginBottom: '12px' }}>Your weekly brief wasn&apos;t loaded.</div>
+              <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '12px', marginBottom: '12px' }}>Your weekly brief wasn&apos;t loaded.</div>
               <button onClick={() => loadBrief(true)} style={{
-                background: 'rgba(125,220,255,0.03)', color: 'rgba(125,175,230,0.50)', border: '1px solid rgba(125,220,255,0.09)',
+                background: 'rgba(125,220,255,0.03)', color: 'rgba(170,205,235,0.80)', border: '1px solid rgba(125,220,255,0.09)',
                 borderRadius: '8px', padding: '6px 14px', fontSize: '11px', fontWeight: 500,
                 cursor: 'pointer', fontFamily: 'inherit',
               }}>Generate</button>
@@ -376,26 +384,26 @@ export default function DashboardPage() {
           )}
 
           {brief && (
-            <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '16px', animation: 'fadeIn 0.3s ease', maxHeight: '300px', overflowY: 'auto' }}>
-              <p style={{ color: 'rgba(180,220,255,0.75)', fontSize: '12px', fontWeight: 600, margin: '0 0 12px', lineHeight: 1.6 }}>{brief.headline}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+            <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '20px', animation: 'fadeIn 0.3s ease', maxHeight: '320px', overflowY: 'auto' }}>
+              <p style={{ color: 'rgba(200,230,255,0.92)', fontSize: '13px', fontWeight: 600, margin: '0 0 16px', lineHeight: 1.7 }}>{brief.headline}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
                 {brief.priority_actions?.slice(0, 3).map((a, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                     <span style={{
                       fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '20px', flexShrink: 0,
-                      marginTop: '1px', textTransform: 'uppercase', letterSpacing: '0.05em',
+                      marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.05em',
                       background: a.urgency === 'today' ? 'rgba(248,100,100,0.12)' : a.urgency === 'this-week' ? 'rgba(74,158,248,0.12)' : 'rgba(125,220,255,0.06)',
-                      color: a.urgency === 'today' ? '#dc2626' : a.urgency === 'this-week' ? '#3b82f6' : '#64748b',
+                      color: a.urgency === 'today' ? '#dc2626' : a.urgency === 'this-week' ? '#3b82f6' : 'rgba(158,202,242,0.85)',
                       border: `1px solid ${a.urgency === 'today' ? 'rgba(239,68,68,0.2)' : a.urgency === 'this-week' ? 'rgba(59,130,246,0.2)' : 'rgba(125,220,255,0.10)'}`,
                     }}>{a.urgency}</span>
-                    <div style={{ color: '#475569', fontSize: '12px', lineHeight: 1.5 }}>{a.action}</div>
+                    <div style={{ color: 'rgba(210,234,255,0.92)', fontSize: '13px', lineHeight: 1.65 }}>{a.action}</div>
                   </div>
                 ))}
               </div>
               {brief.this_week_focus && (
-                <div style={{ borderTop: '1px solid rgba(125,220,255,0.08)', marginTop: '12px', paddingTop: '12px' }}>
-                  <div style={{ color: 'rgba(125,175,230,0.50)', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '5px' }}>This Week</div>
-                  <p style={{ color: 'rgba(125,175,230,0.55)', fontSize: '11px', margin: 0, lineHeight: 1.65 }}>{brief.this_week_focus}</p>
+                <div style={{ borderTop: '1px solid rgba(125,220,255,0.08)', marginTop: '16px', paddingTop: '14px' }}>
+                  <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '7px' }}>This Week</div>
+                  <p style={{ color: 'rgba(190,220,250,0.85)', fontSize: '12px', margin: 0, lineHeight: 1.7 }}>{brief.this_week_focus}</p>
                 </div>
               )}
             </div>
@@ -404,21 +412,21 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Jobs + Strategy */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
         {/* Recent Jobs */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <span style={{ color: 'rgba(125,175,230,0.55)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Recent Jobs</span>
-            <Link href="/tracker" style={{ color: 'rgba(125,175,230,0.50)', fontSize: '11px', textDecoration: 'none' }}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+            <span style={{ color: 'rgba(180,212,240,0.88)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Recent Jobs</span>
+            <Link href="/tracker" style={{ color: 'rgba(170,205,235,0.80)', fontSize: '11px', textDecoration: 'none' }}
               onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#3b82f6')}
-              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#94a3b8')}>
+              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = 'rgba(158,202,242,0.85)')}>
               View all →
             </Link>
           </div>
           {recentJobs.length === 0 ? (
             <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '24px 20px', textAlign: 'center' }}>
-              <div style={{ color: 'rgba(125,175,230,0.50)', fontSize: '12px' }}>No jobs tracked yet — import one to get started.</div>
+              <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '12px' }}>No jobs tracked yet — import one to get started.</div>
             </div>
           ) : (
             <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', overflow: 'hidden' }}>
@@ -432,15 +440,15 @@ export default function DashboardPage() {
                       {job.company.slice(0, 2).toUpperCase()}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: '#1e293b', fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company}</div>
-                      <div style={{ color: 'rgba(125,175,230,0.55)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
+                      <div style={{ color: 'rgba(232,244,255,0.95)', fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company}</div>
+                      <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
                     </div>
                     {job.match_score != null && <div style={{ fontSize: '12px', fontWeight: 700, color: scoreColor(job.match_score), flexShrink: 0 }}>{job.match_score}/10</div>}
                     <span style={{ fontSize: '10px', fontWeight: 600, padding: '3px 9px', borderRadius: '20px', flexShrink: 0, backgroundColor: sc.bg, color: sc.color }}>{sc.label}</span>
                     {job.deadline && (() => {
                       const days = deadlineDays(job.deadline);
                       if (days < 0 || days > 14) return null;
-                      return <span style={{ fontSize: '10px', color: days <= 3 ? '#dc2626' : '#64748b', flexShrink: 0, minWidth: '38px', textAlign: 'right' }}>{days === 0 ? 'Today' : `${days}d`}</span>;
+                      return <span style={{ fontSize: '10px', color: days <= 3 ? '#dc2626' : 'rgba(158,202,242,0.85)', flexShrink: 0, minWidth: '38px', textAlign: 'right' }}>{days === 0 ? 'Today' : `${days}d`}</span>;
                     })()}
                   </Link>
                 );
@@ -451,21 +459,21 @@ export default function DashboardPage() {
 
         {/* Application Strategy */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: 'rgba(125,175,230,0.55)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Strategy</span>
-              {strategyAge && !strategyLoading && <span style={{ color: '#cbd5e1', fontSize: '10px' }}>· {strategyAge}</span>}
+              <span style={{ color: 'rgba(180,212,240,0.88)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Strategy</span>
+              {strategyAge && !strategyLoading && <span style={{ color: 'rgba(135,185,230,0.70)', fontSize: '10px' }}>· {strategyAge}</span>}
             </div>
             <button onClick={() => loadStrategy(true)} disabled={strategyLoading} style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'transparent', color: 'rgba(100,155,210,0.50)', border: 'none', padding: '2px', fontSize: '10px', cursor: strategyLoading ? 'wait' : 'pointer', fontFamily: 'inherit' }}
               onMouseEnter={e => !strategyLoading && ((e.currentTarget as HTMLButtonElement).style.color = '#3b82f6')}
-              onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = '#94a3b8')}>
+              onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = 'rgba(158,202,242,0.85)')}>
               <RefreshCw size={11} style={strategyLoading ? { animation: 'spin 1s linear infinite' } : {}} />
             </button>
           </div>
 
           {!strategy && !strategyLoading && (
             <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
-              <div style={{ color: 'rgba(125,175,230,0.50)', fontSize: '12px', marginBottom: '12px' }}>AI-ranked application priority based on deadlines, fit scores, and your goals.</div>
+              <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '12px', marginBottom: '12px' }}>AI-ranked application priority based on deadlines, fit scores, and your goals.</div>
               <button onClick={() => loadStrategy(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, rgba(74,158,248,0.28), rgba(125,244,252,0.18))', color: '#7DF4FC', border: '1px solid rgba(125,244,252,0.30)', borderRadius: '8px', padding: '7px 16px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 <Zap size={11} /> Generate Strategy
               </button>
@@ -474,36 +482,36 @@ export default function DashboardPage() {
 
           {strategyLoading && !strategy && (
             <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
-              <RefreshCw size={14} color="#94a3b8" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px', display: 'block' }} />
-              <div style={{ color: 'rgba(125,175,230,0.50)', fontSize: '12px' }}>Generating your strategy…</div>
+              <RefreshCw size={14} color="rgba(158,202,242,0.85)" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px', display: 'block' }} />
+              <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '12px' }}>Generating your strategy…</div>
             </div>
           )}
 
           {strategy && (
             <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', overflow: 'hidden', animation: 'fadeIn 0.3s ease' }}>
               {/* Narrative */}
-              <div style={{ padding: '14px 16px', borderBottom: '1px solid rgba(125,220,255,0.08)', background: 'rgba(74,158,248,0.06)' }}>
-                <p style={{ color: '#475569', fontSize: '12px', lineHeight: 1.6, margin: 0 }}>{strategy.narrative}</p>
+              <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(125,220,255,0.08)', background: 'rgba(74,158,248,0.06)' }}>
+                <p style={{ color: 'rgba(210,234,255,0.92)', fontSize: '13px', lineHeight: 1.7, margin: 0 }}>{strategy.narrative}</p>
               </div>
 
               {/* Priority jobs */}
               {strategy.priority_jobs.map((job, i) => {
-                const urgencyColor = job.urgency === 'high' ? '#dc2626' : job.urgency === 'medium' ? '#3b82f6' : '#94a3b8';
+                const urgencyColor = job.urgency === 'high' ? '#dc2626' : job.urgency === 'medium' ? '#3b82f6' : 'rgba(158,202,242,0.85)';
                 const urgencyBg = job.urgency === 'high' ? 'rgba(220,38,38,0.07)' : job.urgency === 'medium' ? 'rgba(59,130,246,0.07)' : 'rgba(148,163,184,0.07)';
                 return (
                   <Link key={i} href="/tracker" style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 16px', textDecoration: 'none', borderBottom: i < strategy.priority_jobs.length - 1 ? '1px solid rgba(125,220,255,0.08)' : 'none', backgroundColor: 'transparent', transition: 'background 0.1s' }}
                     onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(125,220,255,0.06)')}
                     onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-                    <span style={{ color: '#cbd5e1', fontSize: '11px', fontWeight: 700, flexShrink: 0, width: '16px', textAlign: 'right', marginTop: '2px' }}>{job.rank}</span>
+                    <span style={{ color: 'rgba(135,185,230,0.70)', fontSize: '11px', fontWeight: 700, flexShrink: 0, width: '16px', textAlign: 'right', marginTop: '2px' }}>{job.rank}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                        <span style={{ color: '#1e293b', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company}</span>
+                        <span style={{ color: 'rgba(232,244,255,0.95)', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company}</span>
                         <span style={{ fontSize: '9px', fontWeight: 700, color: urgencyColor, backgroundColor: urgencyBg, padding: '1px 6px', borderRadius: '20px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{job.action}</span>
                       </div>
-                      <div style={{ color: 'rgba(125,175,230,0.55)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
-                      <div style={{ color: 'rgba(125,175,230,0.50)', fontSize: '10px', marginTop: '2px', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.reasoning}</div>
+                      <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
+                      <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '10px', marginTop: '2px', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.reasoning}</div>
                     </div>
-                    <ChevronRight size={12} color="#cbd5e1" style={{ flexShrink: 0, marginTop: '4px' }} />
+                    <ChevronRight size={12} color="rgba(135,185,230,0.70)" style={{ flexShrink: 0, marginTop: '4px' }} />
                   </Link>
                 );
               })}
@@ -511,11 +519,11 @@ export default function DashboardPage() {
               {/* Quick actions */}
               {strategy.quick_actions?.length > 0 && (
                 <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(125,220,255,0.08)', background: 'rgba(125,220,255,0.04)' }}>
-                  <div style={{ color: 'rgba(125,175,230,0.50)', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '7px' }}>This Week</div>
+                  <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '7px' }}>This Week</div>
                   {strategy.quick_actions.map((a, i) => (
                     <div key={i} style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
                       <span style={{ color: '#3b82f6', fontSize: '10px', flexShrink: 0 }}>→</span>
-                      <span style={{ color: 'rgba(125,175,230,0.55)', fontSize: '11px', lineHeight: 1.4 }}>{a}</span>
+                      <span style={{ color: 'rgba(170,205,235,0.80)', fontSize: '11px', lineHeight: 1.4 }}>{a}</span>
                     </div>
                   ))}
                 </div>

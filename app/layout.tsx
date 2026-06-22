@@ -3,7 +3,7 @@
 import './globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Compass, MessageSquare, CalendarDays, User, BarChart2, Brain } from 'lucide-react';
+import { LayoutDashboard, Briefcase, Compass, MessageSquare, User, Brain } from 'lucide-react';
 import { ClientRoot } from './ClientRoot';
 import { useUser } from './hooks/useUser';
 
@@ -12,8 +12,6 @@ const navItems = [
   { href: '/tracker',   label: 'Jobs',      icon: Briefcase },
   { href: '/discover',  label: 'Discover',  icon: Compass },
   { href: '/coach',     label: 'Coach',     icon: MessageSquare },
-  { href: '/analytics', label: 'Analytics', icon: BarChart2 },
-  { href: '/timeline',  label: 'Timeline',  icon: CalendarDays },
   { href: '/profile',   label: 'Profile',   icon: User },
   { href: '/memory',    label: 'Memory',    icon: Brain },
 ];
@@ -41,18 +39,20 @@ function CompanionOrb() {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { userId } = useUser();
+  const { displayName } = useUser();
 
-  // Derive initials from stored name (set after setup)
-  const initials = (() => {
-    if (typeof window === 'undefined') return 'CD';
-    const name = localStorage.getItem('cid_display_name') || '';
-    return name ? name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() : 'CD';
-  })();
+  // displayName is '' until after mount (see useUser) — falls back to 'CD' on
+  // both server and the first client render so hydration always matches.
+  const initials = displayName
+    ? displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+    : 'CD';
 
   const mobileNavItems = navItems.filter(n =>
     ['/', '/tracker', '/discover', '/coach', '/profile'].includes(n.href)
   );
+
+  // Onboarding screens are full-bleed — no point showing app nav before setup is done.
+  const isOnboarding = pathname === '/welcome' || pathname === '/setup';
 
   return (
     <html lang="en">
@@ -73,6 +73,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ClientRoot>
+        {isOnboarding ? children : (
+        <>
         <div style={{ display: 'flex', minHeight: '100vh' }}>
 
           {/* ── Sidebar ─────────────────────────────────────────── */}
@@ -98,12 +100,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     color: 'rgba(232, 244, 255, 0.95)',
                     fontWeight: 700, fontSize: '13px',
                     lineHeight: 1.2, letterSpacing: '-0.01em',
-                  }}>{typeof window !== 'undefined' ? (localStorage.getItem('cid_display_name') || 'You') : 'You'}</div>
+                  }}>{displayName || 'You'}</div>
                   <div style={{
-                    color: 'rgba(125, 175, 230, 0.55)',
-                    marginTop: '2px', letterSpacing: '0.03em',
-                    fontFamily: 'monospace', fontSize: '9px',
-                  }}>{userId ? userId.slice(0, 8) + '…' : '—'}</div>
+                    color: 'rgba(170,205,235,0.70)',
+                    marginTop: '2px', letterSpacing: '0.04em',
+                    fontSize: '10px', fontWeight: 500,
+                  }}>Local profile</div>
                 </div>
               </div>
             </div>
@@ -164,6 +166,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             );
           })}
         </nav>
+        </>
+        )}
         </ClientRoot>
       </body>
     </html>
