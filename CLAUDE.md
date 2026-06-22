@@ -1,292 +1,230 @@
 # Career Dashboard — CLAUDE.md
 
-Personal career tracking dashboard for Nicholas Moffett. Built with Next.js 16 (App Router), TypeScript, Tailwind CSS, better-sqlite3, and the Anthropic SDK.
+Multi-user, self-hostable AI-powered job search command center. Next.js 16 (App Router), TypeScript, Tailwind CSS, Turso (libsql) for storage, Anthropic SDK for AI. No accounts or passwords — each visitor gets a client-generated UUID identity and brings their own Anthropic API key (BYOK). Live at `career-dashboard-ten.vercel.app`, repo `github.com/moff05/career-dashboard`.
 
-## Who this is for
+Originally built as a single-user tool for Nicholas Moffett (University of Miami junior, CRE/AI intern, active job seeker) — his is still the reference persona for feature priorities and tone, but as of the multi-user launch (June 2026) the app no longer hardcodes his data. Anyone using the live instance or a self-hosted copy gets their own isolated profile, jobs, leads, memories, and chat history.
 
-**Nicholas Moffett**
-- Email: nicmoffett5@gmail.com | Phone: (470) 421-5955
-- LinkedIn: www.linkedin.com/in/nicholas-moffett
-- University of Miami Herbert Business School — BS Business Administration in Business Technology
-- Minors: Mathematics, Computer Science | GPA: 3.71/4.00 | Graduating May 2027
-- Honors: President's Scholar, Provost's Honor Roll (3x), Dean's List (4x), National Hispanic Recognition Scholar
+## Multi-user model
 
-**Career situation:**
-- College junior, 1 year left
-- Currently interning at Goldenrod Companies (CRE tech/investment, Omaha NE) — AI workflow automation
-- Co-founder of N&S Digital LLC (StackingPlanner.com SaaS, CRE automation tools)
-- Previously: Eduply (AI Prompt Engineer), SK Commercial Realty (intern)
-- Looking for: fall 2026 internships, spring 2027 internships, full-time starting May 2027
-
-**Target cities (post-grad full-time):** San Francisco, New York City, Atlanta, Dallas-Fort Worth, Miami
-**International (open, lower priority):** Sydney, London, Dubai
-
-**Internship location constraint:** Must be Remote or Miami, FL — he's still in school at University of Miami.
-
-**Skills:** Claude, Excel, Python, Java, n8n, ChatBotKit, Zapier, PowerPoint
-**Certs:** Microsoft Office Specialist Excel; Intermediate Python (DataCamp); AWS Cloud Foundations
-
-**Career interests:** PropTech / CRE technology, AI automation tools, SaaS, business technology. Does NOT have strong CS fundamentals — profile is operator/builder, not traditional SWE. Realistic target roles: PropTech Analyst, AI Product Manager, Business Technology Analyst, Solutions Engineer, Real Estate Technology Associate.
-
-**Companies he's interested in:** Anthropic, OpenAI, Google, Meta, CBRE, JLL, Cushman & Wakefield, Genesys, ServiceNow, Booz Allen Hamilton, Amazon, Microsoft, Y Combinator, NVIDIA, Palantir, Zapier, n8n, LinkedIn, MLB, NHL, NBA, Fortress Investment Group.
-
-## Core workflow
-
-The primary use case is: **find a job posting → paste the URL → it gets parsed and added to the tracker**. Nicholas does not manually enter job data unless the URL import fails. No data is seeded into the jobs table — every entry must come from a real link or manual entry.
+- First visit with no `cid_user_id`/`cid_api_key` in `localStorage` → `ClientRoot` (`app/ClientRoot.tsx`) redirects to `/setup`.
+- `/setup` (`app/setup/page.tsx`) is a 4-step onboarding flow: **identity** (name/email/linkedin) → **background** (school, grad date, target roles/cities, free-text notes) → **resume** (pasted plain text) → **API key** (validated as starting with `sk-ant-`).
+- On finish: client generates a UUID (`crypto.randomUUID()`), saves `cid_user_id` / `cid_api_key` / `cid_display_name` to `localStorage`, then `PUT`s the profile (and resume, if provided) to the API with those values as headers.
+- Every later request goes through `lib/apiFetch.ts`, which auto-injects `x-user-id` and `x-api-key` headers from `localStorage`.
+- Server-side, `lib/user.ts` reads `x-user-id` (defaults to `'anonymous'` if absent) and `x-api-key` (falls back to `process.env.ANTHROPIC_API_KEY` if unset — an admin/dev convenience, not meant for the public flow) from every request. All 25 API routes scope their queries by `user_id`.
+- API keys are never persisted server-side — they travel per-request only and live in the user's browser.
 
 ## How to run
 
 ```bash
 cd career-dashboard
-npm run dev        # starts on localhost:3000
-npm run build      # production build check
+npm install
+npm run dev     # http://localhost:3000
+npm run build   # production build check
 ```
 
-Requires `.env.local` with:
+`.env.local` is optional for local dev — see `.env.local.example`:
 ```
-ANTHROPIC_API_KEY=sk-ant-...
+# ANTHROPIC_API_KEY=sk-ant-...     (admin/dev fallback only; real users supply their own key via /setup)
+# TURSO_DATABASE_URL=libsql://...  (omit to fall back to local file:./data/career.db)
+# TURSO_AUTH_TOKEN=...
 ```
+
+## Database
+
+`lib/db.ts` → `getDb()` returns a singleton `@libsql/client`, pointed at `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` in production or a local SQLite file (`file:./data/career.db`) when those env vars are absent.
+
+Schema lives in `scripts/migrate-multi-user.ts` — `npm run migrate` creates all 8 tables (if missing) and adds `user_id` columns + indexes (safe to re-run). The legacy single-user migrations (`migrate.ts`, `migrate-v2.ts`, `migrate-v3.ts`) have been deleted — this is the only migration script now.
+
+**Tables (all scoped by `user_id` unless noted):**
+- `profile` — name, email, phone, linkedin, university, degree, graduation_date, gpa, honors, minors, target_roles, target_cities, notes, resume_text. Unique per `user_id`.
+- `jobs` — company, title, type, status, match_score, posting_date, deadline, url, description, salary_range, location, source, notes, starred, status_updated_at.
+- `chat_messages` — role, content, session_id (UUID per browser session).
+- `memories` — AI-extracted facts. Categories: preference, goal, insight, company, role, location, skill, other.
+- `timeline_events` — milestone, deadline, goal, application.
+- `resume` — name, raw_text, parsed_at, is_default. Multiple resumes per `user_id` are allowed; a partial unique index (`idx_resume_one_default`) enforces at most one `is_default = 1` row per user. AI features always read whichever resume is currently default.
+- `connections` — company, name, relationship, notes, status (`not_reached_out` → `reached_out` → `responded` → `warm`).
+- `leads` — company, title, url, location, type, fit_score, fit_reasoning, tags, source_query, dismissed. Written by the Job Hunt Agent.
+
+There is no hardcoded seed data anymore — a fresh `user_id` starts with empty tables until they complete `/setup` and start using the app.
 
 ## Architecture
 
 ```
-career-dashboard/
-├── app/
-│   ├── layout.tsx              # Sidebar nav (Jobs, Discover, Coach, Analyze, Timeline, Profile, Memory)
-│   ├── page.tsx                # Redirects to /tracker
-│   ├── tracker/page.tsx        # Job tracker — URL import primary, company groups, detail panel
-│   ├── discover/page.tsx       # AI lead discovery — grid layout, location badges, auto-refresh
-│   ├── coach/page.tsx          # Streaming chat with memory extraction + quick actions
-│   ├── analyze/page.tsx        # JD Fit Analyzer + Weekly Brief (two tabs)
-│   ├── timeline/page.tsx       # Vertical timeline — manual events + job deadlines from tracker
-│   ├── profile/page.tsx        # Editable profile + AI strength summary
-│   ├── memory/page.tsx         # Memory CRUD panel
-│   └── api/
-│       ├── analyze/jd/route.ts         # POST: JD fit analysis (Haiku, returns JSON score/gaps/positioning)
-│       ├── brief/route.ts              # GET: weekly career brief (Haiku, returns JSON)
-│       ├── chat/route.ts               # Streaming Claude chat
-│       ├── chat/history/route.ts       # Load chat history by session
-│       ├── chat/memories/route.ts      # Auto-extract memories (Haiku)
-│       ├── discover/route.ts           # AI job search (web_search beta)
-│       ├── discover/suggestions/route.ts  # Auto leads (Haiku, ~9s)
-│       ├── jobs/route.ts               # GET all jobs, POST new job
-│       ├── jobs/[id]/route.ts          # PUT full update, PATCH partial update, DELETE
-│       ├── jobs/import/route.ts        # POST: fetch URL, strip HTML, Claude extracts job data
-│       ├── memories/route.ts           # GET all, POST new memory
-│       ├── memories/[id]/route.ts      # PUT, DELETE memory
-│       ├── profile/route.ts            # GET, PUT profile
-│       ├── profile/summary/route.ts    # POST: AI candidate summary
-│       ├── timeline/route.ts           # GET all, POST event
-│       └── timeline/[id]/route.ts      # PUT, DELETE event
-├── lib/
-│   ├── db.ts                   # SQLite singleton, table creation, seed data (no fake jobs)
-│   ├── ai-context.ts           # Builds system prompt (resume + memories + jobs)
-│   └── resume-parser.ts        # PDF parse on first run, fallback to hardcoded text
-├── data/
-│   └── career.db               # SQLite database (auto-created)
-└── .env.local                  # ANTHROPIC_API_KEY (not committed)
+app/
+├── layout.tsx          # Sidebar nav (Home, Jobs, Discover, Coach, Analytics, Timeline, Profile, Memory) + mobile bottom nav
+├── ClientRoot.tsx       # Redirects to /setup if cid_user_id/cid_api_key missing from localStorage
+├── globals.css          # Design tokens (see Design system below)
+├── page.tsx             # Home dashboard — stats, weekly brief, strategy advisor, deadlines
+├── setup/page.tsx       # 4-step onboarding
+├── tracker/page.tsx     # Job tracker — URL import, company groups, detail panel
+├── discover/page.tsx    # Lead feed, company research, Hunt Agent trigger
+├── coach/page.tsx       # Streaming chat + mock interview mode
+├── analytics/page.tsx   # Pipeline stats
+├── timeline/page.tsx    # Vertical timeline — manual events + job deadlines from tracker
+├── profile/page.tsx     # Editable profile + AI strength summary
+├── memory/page.tsx      # Memory CRUD panel
+├── hooks/useUser.ts      # Reads cid_user_id / display name from localStorage
+└── api/
+    ├── analytics/route.ts
+    ├── brief/route.ts                   # Weekly brief, consumed by Home
+    ├── export/route.ts, import/route.ts # Full data export/restore (no accounts — this is the only recovery path)
+    ├── chat/route.ts, chat/history/route.ts, chat/memories/route.ts
+    ├── connections/route.ts, connections/[id]/route.ts
+    ├── discover/route.ts                # Manual company/role search (web_search beta)
+    ├── discover/suggestions/route.ts    # Auto leads feed (Haiku)
+    ├── discover/hunt/route.ts           # Job Hunt Agent (multi-turn Sonnet + web_search)
+    ├── discover/leads/route.ts, discover/leads/[id]/route.ts
+    ├── interview/route.ts               # Mock interview mode
+    ├── jobs/route.ts, jobs/[id]/route.ts, jobs/import/route.ts
+    ├── jobs/[id]/analyze/route.ts       # 5-category fit scorecard
+    ├── jobs/[id]/bullets/route.ts       # Resume bullet tailoring
+    ├── jobs/[id]/cover-letter/route.ts
+    ├── jobs/[id]/details/route.ts       # AI-enriched job details tab
+    ├── jobs/[id]/gaps/route.ts          # Fit gaps + positioning
+    ├── memories/route.ts, memories/[id]/route.ts
+    ├── profile/route.ts, profile/resume/route.ts, profile/summary/route.ts
+    ├── resumes/route.ts, resumes/[id]/route.ts  # Multi-resume CRUD — list/create/rename/set-default/delete
+    ├── strategy/route.ts                # Application strategy advisor, consumed by Home
+    └── timeline/route.ts, timeline/[id]/route.ts
+
+lib/
+├── db.ts              # Turso/libsql singleton
+├── user.ts            # getUserId / getApiKey from request headers
+├── apiFetch.ts         # Client fetch wrapper — injects x-user-id / x-api-key
+├── ai-context.ts       # buildSystemPrompt(userId) — resume + profile + memories + jobs, scoped per user
+└── resume-parser.ts    # getResumeText(userId) — reads the resume table, no hardcoded fallback
+
+scripts/
+└── migrate-multi-user.ts   # current schema — `npm run migrate`
 ```
 
-## Database schema
+## Core workflow
 
-**`profile`** — Single row (id=1). Nicholas's info hardcoded on seed.
-**`jobs`** — Job applications. Fields: company, title, type, status, match_score, posting_date, deadline, url, description, salary_range, location, source, notes. Starts empty — no fake seed data.
-**`chat_messages`** — Persistent chat history grouped by session_id (UUID per browser session).
-**`memories`** — AI-extracted memory items. Categories: preference, goal, insight, company, role, location, skill, other.
-**`timeline_events`** — Career milestones/deadlines. Types: milestone, deadline, goal, application. Seeded with key dates (recruiting seasons, graduation).
-**`resume`** — Parsed resume text (id=1). Checked on startup; if empty, PDF is parsed and stored.
+The primary use case is unchanged: **find a job posting → paste the URL → it gets parsed and added to the tracker**. No data is seeded — every job entry comes from a real link, pasted context, or manual entry.
 
 ## AI context (system prompt)
 
-Every AI call receives:
-- Full resume text
-- All memories grouped by category
-- Job tracker summary (all jobs by status)
-- Target cities and graduation date
+`buildSystemPrompt(userId)` in `lib/ai-context.ts` builds every AI call's system prompt from, all scoped to that `user_id`:
+- Resume text (or `'Resume not yet added.'` if none saved)
+- Profile fields: name, graduation date, target roles, target cities, notes
+- Memories grouped by category
+- Job tracker summary, grouped by status
 - Today's date (dynamic)
 
-Built by `lib/ai-context.ts` → `buildSystemPrompt()`.
+An unconfigured user (hasn't completed `/setup`) gets a generic prompt with placeholders — there's no hardcoded personal data anywhere in this path anymore.
 
 ## Memory system
 
-After each chat response, `/api/chat/memories` is called with the user message + AI response. A lightweight Haiku call extracts any new facts about Nicholas and saves them to the memories table. The coach page shows a toast notification when a memory is saved.
+After each coach chat response, `/api/chat/memories` is called with the user message + AI response. A lightweight Haiku call extracts new facts about that user and saves them to their `memories` rows. The coach page shows a toast when a memory is saved.
 
 ## Company badges
 
-Companies display vibrant hash-based initials badges — no network calls, no Clearbit dependency. Color is deterministic per company name using a 12-color palette. `CompanyBadge` component is defined locally in both `tracker/page.tsx` and `discover/page.tsx`.
+Companies display vibrant hash-based initials badges — no network calls, no Clearbit dependency. Color is deterministic per company name using a 12-color palette. `CompanyBadge` is defined locally in both `tracker/page.tsx` and `discover/page.tsx`.
 
 ## Job Tracker features
 
-- **URL import (primary)** — "Import from URL" button opens a two-step modal: fetch → review/edit → save. Combines up to 4 context sources before extracting structured fields. Fields not found in any source are left blank — no data is invented.
-- **Multi-source context** — Step 1 of the import modal accepts: (1) primary URL, (2) paste area for recruiter messages/copied JD/email text, (3) optional second URL (LinkedIn post, company page, etc.), (4) screenshot upload — Claude reads the image with vision and extracts text. All sources are concatenated and sent together to Haiku for a single extraction pass. If the URL fails (LinkedIn auth wall, JS-rendered page), the other sources fill the gap.
-- **Source detection** — URL hostname mapped to source label (LinkedIn, Greenhouse, Lever, Workday, Handshake, etc.)
-- **Company groups** — jobs grouped by company, collapsible, with aggregate match score. New imports auto-group under existing companies when company name matches.
-- **Inline status change** — click status badge to open dropdown; uses PATCH for partial update
-- **Detail slide panel** — click any job row to open a right slide-over with all fields: location, deadline countdown, source, salary, application URL, notes, description, plus Edit and Cover Letter buttons
-- **Search + filter** — text search on company/title; status filter chips
-- **Column sorting** — 3-click cycle (asc → desc → reset) on any column header
-- **Smart deadline countdown** — Expired / Today! / Xd left / Xd / month day
-- **Cover letter shortcut** — FileText button prefills Coach page: `/coach?prefill=cover-letter&company=...&title=...`
-- **Empty state** — tracker starts empty; no fake data; prompts user to import from URL
-
-## Analyze page features (two tabs)
-
-### JD Fit Analyzer
-- Paste any job description → "Analyze Fit"
-- Returns structured JSON: fit_score (1-10), verdict (Strong Match / Good Fit / Stretch / Not a Match), what_you_have, what_you_lack, how_to_position, should_apply, role_type, top_keywords
-- Model: Haiku (~10-15 seconds)
-- API: `POST /api/analyze/jd` — requires `{ jd: string }` in body
-
-### Weekly Brief
-- One click → generates a personalized weekly career snapshot
-- Returns structured JSON: headline, priority_actions (with urgency: today/this-week/soon), recommended_roles (with example companies), this_week_focus, honest_assessment
-- Fully personalized — reads resume, job tracker, and saved memories via `buildSystemPrompt()`
-- Model: Haiku (~15 seconds)
-- API: `GET /api/brief`
+- **URL import (primary)** — "Import from URL" opens a two-step modal: fetch → review/edit → save. Combines up to 4 context sources before extracting structured fields. Fields not found anywhere are left blank — no data is invented.
+- **Multi-source context** — accepts (1) primary URL, (2) pasted recruiter message/JD/email text, (3) optional second URL, (4) screenshot upload (Claude vision extracts text). All sources are concatenated and sent together to Haiku for one extraction pass.
+- **Source detection** — URL hostname mapped to a source label (LinkedIn, Greenhouse, Lever, Workday, Handshake, etc.)
+- **Company groups** — jobs grouped by company, collapsible, with aggregate match score.
+- **Inline status change** — click status badge → dropdown → `PATCH` partial update.
+- **Detail slide panel** — location, deadline countdown, source, salary, URL, notes, description, plus AI Score / Gaps / Bullets / Cover Letter / Connections tabs.
+- **Search + filter, column sorting, smart deadline countdown** — unchanged.
+- **Cover letter shortcut** — prefills Coach page via `/coach?prefill=cover-letter&company=...&title=...`.
+- **Empty state** — tracker starts empty; prompts the user to import from a URL.
 
 ## Discover page features
 
-- **Your Leads** — AI-generated leads loaded on mount (~9s via Haiku), cached in sessionStorage for 10 min, auto-refresh in background
-- **"Updated X min ago"** — freshness timestamp shown under "Your Leads" heading
-- **Location badges** — internships get "Student-friendly" (green) if Remote/Miami, "On-site only" (red+dimmed) if elsewhere
-- **Source transparency** — banner explains leads are AI-generated; companies are real, verify open roles
-- **Search** — manual search uses web search beta for live postings; falls back to knowledge if beta unavailable
-- **Internship location enforcement** — both suggestions and search prompts constrain internships to Remote or Miami, FL
+- **Job Hunt Agent (primary)** — "Hunt for Jobs" button triggers `POST /api/discover/hunt`: builds search queries dynamically from the user's own profile (target roles × target cities, no hardcoded role/location assumptions), runs a multi-turn Sonnet + `web_search` tool loop, then cross-references every lead's URL against the actual `web_search_tool_result` blocks returned by the API — a URL that didn't literally appear in a real search result is dropped. No fallback to a no-search completion if the tool call fails (would risk hallucinated URLs); the call just fails honestly instead. Deduplicates against the user's tracker, persists survivors to the `leads` table. Leads render as a persistent card grid (survive refresh), can be dismissed or saved to tracker.
+- **Idea Feed — Unverified (secondary, demoted)** — AI-guessed leads loaded on mount (Haiku, no web search), cached client-side. Explicitly labeled unverified since these have no real posting URL; positioned below Hunt Agent on purpose.
+- **Company research** — search any company or role type → overview, culture signals, open role types, personalized fit reasoning.
+- **Location badges** — internships get "Student-friendly" (green) if Remote/student-friendly per profile constraints, "On-site only" (red) otherwise.
+
+## Coach features
+
+- Streaming chat with persistent memory extraction.
+- **Mock interview mode** — pick behavioral, product, technical, case, or fit; answer 5 questions; get per-answer feedback + final assessment (`POST /api/interview`).
+- Quick-action prefills and cover letter shortcut from the tracker.
+
+## Home dashboard
+
+- Pipeline stats, upcoming deadlines, follow-up nudges.
+- **Weekly Brief** (`GET /api/brief`) — personalized snapshot: headline, priority actions, recommended roles, this-week focus, honest assessment. Haiku, ~15s, client-cached.
+- **Application strategy advisor** (`GET /api/strategy`) — ranked list of which jobs to prioritize and why, based on fit score, deadline, and stage.
 
 ## Timeline features
 
-- Vertical chronological timeline of career milestones, deadlines, and goals
-- **Tracker sync** — job deadlines from the jobs table are pulled on load and merged into the timeline as "application" type events, sorted by date. These are read-only (no toggle/delete) and labeled "from tracker"
-- Manual events can be added, toggled done, and deleted
-- Progress bar shows % through the date range and done/total count
+- Vertical chronological timeline of milestones, deadlines, and goals.
+- **Tracker sync** — job deadlines are pulled on load and merged in as read-only "application" events labeled "from tracker."
+- Manual events can be added, toggled done, and deleted.
+
+## Networking / connections
+
+- Save contacts per company, track outreach status (`not_reached_out` → `reached_out` → `responded` → `warm`).
+- Company-keyed — contacts at a company show up across every job tracked at that company.
+- `app/api/connections/route.ts`, `connections/[id]/route.ts`.
 
 ## API notes
 
-- `PUT /api/jobs/[id]` — full update, requires all fields
-- `PATCH /api/jobs/[id]` — partial update (e.g., status only); used by inline status dropdown
-- `DELETE /api/jobs/[id]` — hard delete
-- `POST /api/jobs/import` — `{ url, extraText?, imageBase64?, imageMediaType?, extraLink? }` → combines all provided context, extracts with Haiku, returns `{ company, title, location, type, deadline, salary_range, description, url, source, warning? }`. Image must be one of `image/jpeg | image/png | image/gif | image/webp`.
-- `POST /api/jobs/[id]/analyze` — no body required → reads job from DB + full system prompt, returns `{ categories: [{name, score, rationale}], total, summary }`. 5 categories scored 0–100: Industry Fit, Skills Match, Role Alignment, Location Match, Growth Potential.
+- `PUT /api/jobs/[id]` — full update, requires all fields. `PATCH` — partial update (e.g. status only).
+- `POST /api/jobs/import` — `{ url, extraText?, imageBase64?, imageMediaType?, extraLink? }` → Haiku extraction, returns `{ company, title, location, type, deadline, salary_range, description, url, source, warning? }`.
+- `POST /api/jobs/[id]/analyze` — 5-category fit scorecard (0–100 each): Industry Fit, Skills Match, Role Alignment, Location Match, Growth Potential. Color coding: 80+ green, 60–79 amber, <60 red.
+- `POST /api/jobs/[id]/gaps`, `POST /api/jobs/[id]/bullets`, `POST /api/jobs/[id]/cover-letter`, `GET /api/jobs/[id]/details` — per-job AI panels, all read from `buildSystemPrompt(userId)` + the job record.
+- `POST /api/discover/hunt` — the Hunt Agent loop (see Discover page features above).
+- `GET /api/export` — full data dump for the current user across all 8 tables. `POST /api/import` — restores from that dump into the current user (upserts profile, appends everything else including resumes). Used by Profile's Backup & Restore card; the only recovery path since there are no accounts.
+- `GET /api/resumes` — list the user's resumes (default first). `POST /api/resumes` — create one (`{name, raw_text}`); the first resume for a user is auto-marked default. `PUT /api/resumes/[id]` — update `name`/`raw_text`, or pass `{set_default: true}` to make it the one AI features read (clears the previous default first to respect the partial unique index). `DELETE /api/resumes/[id]` — deletes it; if it was the default, the oldest remaining resume is auto-promoted.
 
-## Design system
+## Design system (icy glass)
 
-- Background: `#1a1a1a`
-- Sidebar: `#181818`
-- Card surfaces: `#1e1e1e` / `#222`
-- Borders: `#242424` / `#2a2a2a`
-- Primary text: `#e8e8e8` / `#d0d0d0`
-- Muted text: `#555` / `#666`
-- Accent: `#d97706` (amber — matches Claude brand)
-- Active sidebar: 2px left amber border + `#222` bg
-- Status colors: saved=gray, applied=blue, interviewing=amber, offer=green, rejected=red
-- Company badge palette: 12 vibrant colors, hash-derived per company name
+Tokens defined in `app/globals.css`:
+- Background: `--void #07152B` / `--void-2 #0B1D38`, layered radial-gradient glow + faint grid overlay
+- Glass surfaces: `--glass rgba(125,220,255,0.055)` and `--glass-hi` with `backdrop-filter: blur(...)`
+- Accent: `--ice #7DF4FC` (icy cyan), `--blue #4A9EF8` (electric blue) — replaces the old amber (`#d97706`) accent entirely
+- Text: `--text rgba(232,244,255,0.95)` down through `--text-4` for the dimmest tier
+- Status colors: dedicated `--s-saved` / `--s-applied` / `--s-interview` / `--s-offer` / `--s-rejected` tokens
+- Font: Inter (Google Fonts) — replaces the old system-font fallback
+- Sidebar avatar/brand mark: gradient square (`#4A9EF8` → `#7DF4FC`) with user initials, derived from `cid_display_name`
 
-## AI model
+There is no dark-navy/amber single-user theme left in the codebase — the full UI (8 pages + setup) runs on this glass palette.
+
+## AI model usage
 
 - Chat + coach: `claude-sonnet-4-6`, streaming via `anthropic.messages.stream()`
-- Discovery search: `claude-sonnet-4-6` with `betas: ['web-search-2025-03-05']` and `web_search_20250305` tool; fallback to knowledge-only on error
-- Suggestions (auto-leads): `claude-haiku-4-5-20251001`, non-streaming, ~9s response
-- Memory extraction: `claude-haiku-4-5-20251001`, non-streaming, lightweight prompt
+- Discovery search + Hunt Agent: `claude-sonnet-4-6` with `betas: ['web-search-2025-03-05']` and the `web_search_20250305` tool; fallback to knowledge-only on error
+- Suggestions (auto-leads), memory extraction, JD fit analysis, weekly brief, URL import parsing: `claude-haiku-4-5-20251001`, non-streaming
 - Profile summary: `claude-sonnet-4-6`, returns JSON `{strengths, gaps, readiness_score, summary}`
-- JD fit analysis: `claude-haiku-4-5-20251001`, non-streaming, ~10-15s
-- Weekly brief: `claude-haiku-4-5-20251001`, non-streaming, ~15s
-- URL import parsing: `claude-haiku-4-5-20251001`, non-streaming, ~5-10s
 
-## Rate limit note
-
-`claude-sonnet-4-6` has a 30,000 input tokens/minute org limit. All on-load background calls (suggestions, import parsing, JD analysis, brief) use Haiku which has a separate limit and is significantly faster. Only use Sonnet for user-initiated chat and manual search.
-
-## Updating personal info
-
-All Nicholas's info is hardcoded in `lib/db.ts` `seedData()`. The seed only runs when the DB is empty (fresh install). To re-seed: delete `data/career.db` and restart.
-
-To update profile without deleting DB: use the Profile page UI (editable fields) or run SQL directly on `data/career.db`.
-
-**Important:** Deleting `data/career.db` resets ALL data including jobs and memories. There is no separate reset for just the jobs table.
-
-## Resume PDF
-
-Located at: `../NicholasMoffettResume(5:15).pdf` (one level above `career-dashboard/`).
-On first API call, `lib/resume-parser.ts` checks the `resume` table. If empty, parses the PDF and stores the text. If PDF parsing fails, uses the hardcoded fallback text in `lib/db.ts`.
+Each call uses the requesting user's own API key (from `x-api-key`, via `lib/user.ts`), not a shared server key — so the old shared-key rate-limit ceiling no longer applies to public users. The `ANTHROPIC_API_KEY` env var is only a fallback for local/admin use without going through `/setup`.
 
 ## Priority roadmap
 
 ### Done
 1. URL import → parse → add to tracker (core workflow)
 2. Multi-source import context (paste text, screenshot vision, extra link)
-3. Empty tracker (no fake data)
-4. Company grouping / collapsible rows
-5. Job detail slide panel
-6. Match analysis scorecard (5 categories × 100, auto-fires on panel open, cached per session)
-7. Timeline shows job deadlines from tracker
-8. JD Fit Analyzer
-9. Weekly Brief
-10. Vercel deploy (Turso cloud DB, GitHub-linked)
-11. AI score auto-saves to DB after analysis (shows in table)
-12. Import uses Jina.ai reader for JS-rendered pages (Greenhouse, Lever, Workday, etc.)
-13. Import extracts full job description + posting_date
-14. "Posted" column in tracker table (sortable), replacing Location column
+3. Company grouping / collapsible rows, job detail slide panel
+4. Match analysis scorecard, fit gaps, resume bullet tailoring, cover letter generator (per-job AI tabs)
+5. Weekly Brief + application strategy advisor on Home
+6. Company research + Job Hunt Agent (agentic web search, deduplicated, persisted leads, grounded URLs only) on Discover
+7. Mock interview mode on Coach
+8. Networking / connections tracking
+9. Vercel deploy (Turso cloud DB, GitHub-linked)
+10. **Multi-user public launch** — icy glass redesign, `/setup` onboarding, UUID identity, BYOK, all API routes scoped by `user_id`
+11. **De-personalization pass** — removed hardcoded "Nicholas"/CRE-PropTech framing from every shared AI prompt (`discover`, `discover/hunt`, `discover/suggestions`, `interview`, `brief`, `analyze/jd`) plus two routes that silently ignored the real `userId` and used `'anonymous'`. AI prompt now instructs no emojis app-wide.
+12. **Data export/backup** — `/api/export` + `/api/import`, surfaced on Profile. The only account-recovery path since there are no logins.
+13. **Welcome/landing page** (`/welcome`) before `/setup` — explains the product to a cold visitor; onboarding screens (`/welcome`, `/setup`) now render full-bleed without the app sidebar.
+14. **Multi-resume support** — `resume` table now allows many rows per user (`name` + `is_default`), managed via `/api/resumes` + `/api/resumes/[id]` and a resume-switcher UI on Profile. AI features always read whichever resume is the user's current default.
+15. Discover restructured so Hunt Agent (real, grounded links) leads; the AI-guessed feed is relabeled "Idea Feed — Unverified" and demoted.
+16. Resume auto-populate extended to infer `target_roles` from resume content (the one field that's reasonable to infer rather than extract verbatim).
 
-### Tier 0 — Critical fixes (do first)
-0. **Profile → AI context disconnect** — `lib/ai-context.ts` hardcodes target cities and preferences instead of reading from the `profile` table. `target_roles` and `target_cities` in the DB are never used by `buildSystemPrompt()`. Fix: read profile row in `buildSystemPrompt()` and inject `target_roles`, `target_cities`, graduation_date, and internship location constraint into the system prompt dynamically.
+### Cut
+- `/api/analyze/jd` — deleted (was dead code, no UI consumer).
+- Analytics and Timeline pages — removed (low utility for new users with few/no jobs tracked; see audit memory for reasoning).
+- Legacy single-user migration scripts (`migrate.ts`, `migrate-v2.ts`, `migrate-v3.ts`) — deleted; `migrate-multi-user.ts` is the only migration now.
 
-### Tier 1 — Foundation (next to build)
-1. **UI/UX polish pass** — More breathing room in the table and expanded panel, better typography hierarchy, smoother interactions throughout
-2. **AI-enriched Job Details tab** — When a job is saved, auto-generate: company overview, role summary, key qualifications, and what to highlight given Nicholas's background. Replaces the "No description saved" dead state. *(DONE)*
-3. **Home Dashboard** — Replace `/` redirect with a real landing page: pipeline stats, today's action items, upcoming deadlines, follow-up nudges, quick links. The daily-open hook. *(DONE)*
-
-### Tier 2 — Application quality
-4. **Full cover letter generator** — Dedicated flow inside each job's detail panel. Pull JD + resume, pick tone, generate formatted output, copy. One click per job.
-5. **Fit gaps + positioning advice** — Expand AI Score beyond a number: show exactly what's missing for this role and how to position CRE/AI automation background against the gaps.
-6. **Resume bullet tailoring** — Given a saved job, suggest which resume bullets to lead with or rephrase for that specific application.
-
-### Tier 3 — Discovery
-7. **Discover as research tool** — Search company name or role type → all current openings, company profile (culture, mission, size, recent news), quick fit verdict. *(DONE)*
-8. **Job Hunt Agent (on-demand, smarter)** — Triggered by a "Hunt for Jobs" button on Discover. Multi-step agentic loop: builds 4–6 targeted search queries from Nicholas's profile (role types × locations × constraints) → runs each via `web_search` tool_use (Sonnet, multi-turn) → scores fit per result → deduplicates against existing tracker jobs → saves survivors to a `leads` table in SQLite → renders as persistent card grid on Discover. Key differences from current "For You": multi-turn tool use (not one-shot Haiku), persisted to DB (survive refresh), deduplicated against tracker, sorted by fit score. Leads can be dismissed or saved to tracker with one click.
-   - Schema: `leads` table (company, title, url, location, fit_score, source_query, created_at, dismissed)
-   - API: `POST /api/discover/hunt` — the agentic loop
-   - UI: "Hunt for Jobs" button on Discover, leads grid reads from `leads` table
-9. **Search preferences on Profile/Discover** — User should be able to edit their target locations, role types, and internship constraints from the UI (not just hardcoded). These flow into the Hunt agent's search queries and all AI calls via `buildSystemPrompt()`.
-
-### Tier 4 — Stats & motivation
-9. **Analytics page** — Applications sent by week, response rate, avg fit score, pipeline by status, time-in-stage. Gamified progress view.
-10. **Daily digest on Home** — Morning action items: deadlines this week, jobs with no response in 14+ days, new matching leads. Scannable in 30 seconds.
-
-### Tier 5 — Coach upgrades
-11. **Mock interview mode** — Role-specific question banks (Palantir DS-style, PM product sense, etc.). Answer → AI feedback loop.
-12. **Application strategy advisor** — "Here are your saved jobs — here's the order to apply and why," based on fit score, deadline, and preferences.
-
-### Tier 6 — Platform
-13. **Chrome extension** — Save any job from any tab with one click. Biggest workflow win for LinkedIn/Handshake browsing.
-14. **Mobile-responsive layout** — Clean on phone for checking the tracker on the go.
-15. **Weekly email digest** — Sunday summary: pipeline snapshot, what to do this week, new leads worth considering.
-
-### User context (informed these priorities)
-- Biggest pain: UI feels rough
-- Sources jobs from: all channels (LinkedIn, Handshake, company pages, Discover)
-- When opening a saved job wants: fit score + gaps, company research, full JD, cover letter
-- Discover mental model: research tool (search-driven, not just passive feed)
-- Coach role: all three (interview prep, application writing, strategy)
-- Daily hook: digest + stats (numbers are motivating)
-- Core anxieties: not standing out, applying to wrong/unrealistic roles
-
-## Job Detail Analysis (planned)
-
-When the detail panel opens for any saved job, auto-generate a 5-category scorecard against Nicholas's resume and preferences. Trigger on panel open, Haiku (~5s), cached in component state per session (reopening a panel doesn't re-call).
-
-**5 categories, each scored 0–100:**
-1. **Industry Fit** — how well the company/role aligns with CRE, proptech, AI automation
-2. **Skills Match** — overlap between JD requirements and his stack (Python, n8n, Zapier, APIs, Excel, Claude)
-3. **Role Alignment** — internship vs full-time vs his current search stage; timing fit
-4. **Location Match** — Remote/Miami for internships; SF/NYC/ATL/DFW/Miami for full-time
-5. **Growth Potential** — learning value, network quality, and career trajectory fit
-
-**Total score** = weighted average displayed prominently at top of scorecard.
-
-**Color coding:** 80+ green, 60–79 amber, <60 red.
-
-**Fallback:** if job has no description, base analysis on title + company name only (lower confidence, noted in UI).
-
-**API:** `POST /api/jobs/[id]/analyze` — reads the job record + `buildSystemPrompt()`, returns `{ categories: [{name, score, rationale}], total }`.
-
-**UI placement:** inside the detail slide panel, below Status + Match badge row. Lazy-loaded — shows "Analyzing..." spinner on first open, then renders the scorecard.
+### Not yet done
+- Chrome extension for one-click save from any tab.
+- Mobile-responsive pass beyond the existing bottom nav (spot-check tracker/detail panel on small screens) — in progress.
+- Weekly email digest (Sunday summary via Resend or similar) — needs a cron/scheduling decision (Vercel Cron is paid-tier, or use an external trigger).
+- BYOK onboarding friction — getting an Anthropic API key is real friction for non-technical users; consider a hand-holding flow or a capped trial key pool.
+- In-app usage/cost meter so BYOK users can see what they've spent without checking the Anthropic console.
+- The legacy orphaned `profile` row (`id=1`, `user_id` still `NULL` — predates the multi-user migration) is dead/unreachable but hasn't been deleted. The equivalent legacy `resume` row was migrated to `user_id='anonymous'` as part of the multi-resume migration.
