@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
-import { Star, Trash2, ExternalLink, FileText, ChevronDown, ChevronRight, Plus, LinkIcon, Loader, AlertCircle, ArrowLeft, ImageIcon, Edit2, RotateCcw, X } from 'lucide-react';
+import { Star, Trash2, ExternalLink, FileText, ChevronDown, ChevronRight, Plus, LinkIcon, Loader, AlertCircle, ArrowLeft, ImageIcon, Edit2, RotateCcw, X, Check } from 'lucide-react';
 
 interface Job {
   id: number; company: string; title: string; type: string; status: string;
@@ -25,7 +25,7 @@ type GapsState = GapsResult | 'loading' | 'error';
 interface BulletsResult { lead_with: { experience: string; why: string }[]; tailored_bullets: { original: string; tailored: string; why: string }[]; keywords_to_add: string[]; deprioritize: string[]; }
 type BulletsState = BulletsResult | 'loading' | 'error';
 
-interface CoverLetterResult { letter: string; tone: string; }
+interface CoverLetterResult { letter: string; tone: string; keywords?: string[]; }
 type CoverLetterState = CoverLetterResult | 'loading' | 'error';
 
 interface Connection { id: number; company: string; name: string; relationship: string | null; notes: string | null; status: string; created_at: string; }
@@ -50,7 +50,7 @@ function getCompanyColor(name: string): [string, string] {
 }
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; border: string }> = {
-  saved:        { bg: 'rgba(122,143,168,0.1)', text: '#64748b', border: 'rgba(122,143,168,0.2)' },
+  saved:        { bg: 'rgba(122,143,168,0.1)', text: 'rgba(158,202,242,0.85)', border: 'rgba(122,143,168,0.2)' },
   applied:      { bg: 'rgba(129,140,248,0.1)', text: '#818cf8', border: 'rgba(129,140,248,0.25)' },
   interviewing: { bg: 'rgba(6,182,212,0.1)',   text: '#06b6d4', border: 'rgba(6,182,212,0.25)' },
   offer:        { bg: 'rgba(52,211,153,0.1)',   text: '#34d399', border: 'rgba(52,211,153,0.25)' },
@@ -226,6 +226,7 @@ export default function TrackerPage() {
   const coverLetterCacheRef = useRef<Record<number, CoverLetterState>>({});
   const [coverLetterResults, setCoverLetterResults] = useState<Record<number, CoverLetterState>>({});
   const [coverLetterTones, setCoverLetterTones] = useState<Record<number, string>>({});
+  const [coverLetterAngles, setCoverLetterAngles] = useState<Record<number, string>>({});
   const [copiedJobId, setCopiedJobId] = useState<number | null>(null);
 
   const connectionsCacheRef = useRef<Record<string, Connection[]>>({});
@@ -305,10 +306,10 @@ export default function TrackerPage() {
       .catch(() => { bulletsCacheRef.current[id] = 'error'; setBulletsResults(prev => ({ ...prev, [id]: 'error' })); });
   }, []);
 
-  const runCoverLetter = useCallback((id: number, tone: string) => {
+  const runCoverLetter = useCallback((id: number, tone: string, angle: string) => {
     coverLetterCacheRef.current[id] = 'loading';
     setCoverLetterResults(prev => ({ ...prev, [id]: 'loading' }));
-    apiFetch(`/api/jobs/${id}/cover-letter`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tone }) })
+    apiFetch(`/api/jobs/${id}/cover-letter`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tone, angle }) })
       .then(r => r.json())
       .then(data => {
         const result: CoverLetterState = data.error ? 'error' : data;
@@ -523,10 +524,10 @@ export default function TrackerPage() {
   const isStale = (job: Job) => job.status === 'applied' && !!job.status_updated_at && (Date.now() - new Date(job.status_updated_at).getTime()) / 86400000 >= 14;
 
   return (
-    <div style={{ padding: '28px 32px', minHeight: '100vh', background: 'transparent', width: '100%' }}>
+    <div className="px-4 py-5 sm:px-8 sm:py-7" style={{ minHeight: '100vh', background: 'transparent', width: '100%' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '18px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>Job Tracker</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '5px' }}>
@@ -584,7 +585,7 @@ export default function TrackerPage() {
           </div>
         </div>
         {/* Row 2: type + starred */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
           {['all', ...TYPE_OPTIONS.map(t => t.value)].map(v => {
             const label = v === 'all' ? 'All Types' : TYPE_OPTIONS.find(t => t.value === v)?.label || v;
             return (
@@ -631,10 +632,10 @@ export default function TrackerPage() {
           </button>
         </div>
       ) : (
-        <div style={{ backgroundColor: 'rgba(125,220,255,0.04)', border: '1px solid rgba(125,220,255,0.10)', borderRadius: '16px', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: 'rgba(125,220,255,0.04)', border: '1px solid rgba(125,220,255,0.10)', borderRadius: '16px', overflowX: 'auto', overflowY: 'hidden' }}>
           {/* Column headers */}
           <div style={{
-            display: 'grid', gridTemplateColumns: GRID, gap: GAP,
+            display: 'grid', gridTemplateColumns: GRID, gap: GAP, minWidth: '720px',
             padding: '9px 16px', borderBottom: '1px solid rgba(125,220,255,0.10)',
             fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
           }}>
@@ -657,13 +658,13 @@ export default function TrackerPage() {
                 {/* Company header */}
                 <div onClick={() => setExpandedCompanies(prev => { const n = new Set(prev); n.has(company) ? n.delete(company) : n.add(company); return n; })}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '10px',
+                    display: 'flex', alignItems: 'center', gap: '10px', minWidth: '720px',
                     padding: '11px 16px', backgroundColor: 'rgba(125,220,255,0.05)',
                     borderTop: groupIdx > 0 ? '1px solid rgba(125,220,255,0.10)' : undefined,
                     borderBottom: isExpanded ? '1px solid rgba(125,220,255,0.10)' : (!isLast ? '1px solid rgba(125,220,255,0.10)' : undefined),
                     cursor: 'pointer', userSelect: 'none',
                   }}>
-                  {isExpanded ? <ChevronDown size={11} color="#94a3b8" /> : <ChevronRight size={11} color="#94a3b8" />}
+                  {isExpanded ? <ChevronDown size={11} color="rgba(158,202,242,0.85)" /> : <ChevronRight size={11} color="rgba(158,202,242,0.85)" />}
                   <CompanyBadge company={company} size={22} />
                   <span style={{ color: 'rgba(200,225,255,0.88)', fontWeight: 700, fontSize: '13px' }}>{company}</span>
                   <span style={{ backgroundColor: 'rgba(125,220,255,0.08)', color: 'rgba(125,175,230,0.52)', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: 500 }}>
@@ -683,7 +684,7 @@ export default function TrackerPage() {
                       <div
                         onClick={() => toggleJob(job.id)}
                         style={{
-                          display: 'grid', gridTemplateColumns: GRID, gap: GAP, alignItems: 'center',
+                          display: 'grid', gridTemplateColumns: GRID, gap: GAP, alignItems: 'center', minWidth: '720px',
                           padding: '12px 16px',
                           borderBottom: (isJobExpanded || !isLastInGroup) ? '1px solid rgba(125,220,255,0.10)' : undefined,
                           cursor: 'pointer', transition: 'background 0.1s',
@@ -713,7 +714,7 @@ export default function TrackerPage() {
 
                         {/* Type */}
                         <div>
-                          <span style={{ color: TYPE_COLORS[job.type] || '#94a3b8', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em' }}>
+                          <span style={{ color: TYPE_COLORS[job.type] || 'rgba(158,202,242,0.85)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em' }}>
                             {TYPE_OPTIONS.find(t => t.value === job.type)?.label || job.type}
                           </span>
                         </div>
@@ -763,21 +764,21 @@ export default function TrackerPage() {
                             {[
                               { id: 'overview',      label: 'Overview' },
                               { id: 'description',   label: 'Job Details' },
-                              { id: 'score',         label: '✦ AI Score' },
+                              { id: 'score',         label: 'AI Score' },
                               { id: 'cover-letter',  label: 'Cover Letter' },
                               { id: 'gaps',          label: 'Fit Gaps' },
                               { id: 'bullets',       label: 'Bullets' },
                             ].map(tab => (
                               <button key={tab.id} onClick={() => setTab(job.id, tab.id)} style={{
                                 backgroundColor: 'transparent',
-                                color: activeTab === tab.id ? '#3b82f6' : '#94a3b8',
+                                color: activeTab === tab.id ? '#3b82f6' : 'rgba(158,202,242,0.85)',
                                 border: 'none', borderBottom: activeTab === tab.id ? '2px solid #3b82f6' : '2px solid transparent',
                                 padding: '6px 14px', fontSize: '11px', fontWeight: activeTab === tab.id ? 700 : 400,
                                 cursor: 'pointer', fontFamily: 'inherit', marginBottom: '-1px', transition: 'color 0.1s',
                                 whiteSpace: 'nowrap',
                               }}
-                                onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.color = '#64748b'; }}
-                                onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.color = '#94a3b8'; }}
+                                onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.color = 'rgba(158,202,242,0.85)'; }}
+                                onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.color = 'rgba(158,202,242,0.85)'; }}
                               >{tab.label}</button>
                             ))}
                           </div>
@@ -800,7 +801,7 @@ export default function TrackerPage() {
                                   { label: 'Location', value: job.location },
                                   { label: 'Deadline', value: job.deadline ? <><span style={{ color: 'rgba(140,185,235,0.62)' }}>{job.deadline}</span> <DeadlineDisplay deadline={job.deadline} /></> : null },
                                   { label: 'Salary', value: job.salary_range },
-                                  { label: 'Type', value: job.type ? <span style={{ color: TYPE_COLORS[job.type] || '#64748b', fontWeight: 700 }}>{TYPE_OPTIONS.find(t => t.value === job.type)?.label}</span> : null },
+                                  { label: 'Type', value: job.type ? <span style={{ color: TYPE_COLORS[job.type] || 'rgba(158,202,242,0.85)', fontWeight: 700 }}>{TYPE_OPTIONS.find(t => t.value === job.type)?.label}</span> : null },
                                   { label: 'Source', value: job.source },
                                   { label: 'Posted', value: job.posting_date },
                                 ].map(({ label, value }) => (
@@ -831,7 +832,7 @@ export default function TrackerPage() {
                                         {conns.length > 0 && <span style={{ backgroundColor: 'transparent', color: 'rgba(140,185,235,0.62)', borderRadius: '20px', padding: '0 5px', fontSize: '9px', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>{conns.length}</span>}
                                       </div>
                                       <button onClick={() => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, show: !form.show } }))} style={{ background: 'none', border: 'none', color: form.show ? '#3b82f6' : 'rgba(90,140,200,0.42)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, padding: '1px 4px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '3px', borderRadius: '4px' }}
-                                        onMouseEnter={e => { if (!form.show) e.currentTarget.style.color = '#64748b'; }}
+                                        onMouseEnter={e => { if (!form.show) e.currentTarget.style.color = 'rgba(158,202,242,0.85)'; }}
                                         onMouseLeave={e => { if (!form.show) e.currentTarget.style.color = 'rgba(90,140,200,0.42)'; }}>
                                         <Plus size={11} /> Add
                                       </button>
@@ -934,7 +935,7 @@ export default function TrackerPage() {
 
                                       {/* Your Angle — highlighted */}
                                       <div style={{ backgroundColor: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.18)', borderRadius: '14px', padding: '14px 16px' }}>
-                                        <div style={{ color: '#2563eb', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>✦ Your Angle</div>
+                                        <div style={{ color: '#2563eb', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Your Angle</div>
                                         <p style={{ color: '#2563eb', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.what_to_highlight}</p>
                                       </div>
 
@@ -1076,21 +1077,38 @@ export default function TrackerPage() {
                             const isLoading = cl === 'loading';
                             const isError = cl === 'error';
                             const result = cl && cl !== 'loading' && cl !== 'error' ? cl as CoverLetterResult : null;
+                            const angle = coverLetterAngles[job.id] || '';
                             return (
                               <div>
+                                {/* Optional angle input */}
+                                <div style={{ marginBottom: '12px' }}>
+                                  <textarea
+                                    value={angle}
+                                    onChange={e => setCoverLetterAngles(p => ({ ...p, [job.id]: e.target.value.slice(0, 300) }))}
+                                    placeholder="Optional — why this role specifically? (e.g. a connection to the company's mission, a specific project that excites you)"
+                                    rows={2}
+                                    style={{
+                                      width: '100%', resize: 'vertical', backgroundColor: 'rgba(125,220,255,0.025)',
+                                      border: '1px solid rgba(125,220,255,0.13)', borderRadius: '12px', padding: '10px 12px',
+                                      color: 'rgba(200,230,255,0.88)', fontSize: '12px', fontFamily: 'inherit', lineHeight: 1.5,
+                                    }}
+                                  />
+                                  <div style={{ textAlign: 'right', color: 'rgba(125,175,230,0.42)', fontSize: '10px', marginTop: '3px' }}>{angle.length}/300</div>
+                                </div>
+
                                 {/* Tone selector + generate */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
                                   <span style={{ color: 'rgba(125,175,230,0.52)', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>Tone:</span>
                                   {(['professional', 'confident', 'concise'] as const).map(t => (
                                     <button key={t} onClick={() => setCoverLetterTones(p => ({ ...p, [job.id]: t }))} style={{
                                       backgroundColor: tone === t ? 'rgba(125,244,252,0.10)' : 'rgba(125,220,255,0.06)',
-                                      color: tone === t ? '#3b82f6' : '#64748b',
+                                      color: tone === t ? '#3b82f6' : 'rgba(158,202,242,0.85)',
                                       border: `1px solid ${tone === t ? 'rgba(125,244,252,0.26)' : 'rgba(125,220,255,0.14)'}`,
                                       borderRadius: '20px', padding: '4px 12px', fontSize: '11px', fontWeight: 600,
                                       cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize',
                                     }}>{t}</button>
                                   ))}
-                                  <button onClick={() => runCoverLetter(job.id, tone)} disabled={isLoading} style={{
+                                  <button onClick={() => runCoverLetter(job.id, tone, angle)} disabled={isLoading} style={{
                                     display: 'inline-flex', alignItems: 'center', gap: '5px', marginLeft: 'auto',
                                     backgroundColor: isLoading ? 'rgba(125,220,255,0.12)' : '#7DF4FC', color: '#fff',
                                     border: 'none', borderRadius: '10px', padding: '6px 16px', fontSize: '12px', fontWeight: 700,
@@ -1103,7 +1121,7 @@ export default function TrackerPage() {
                                 {isError && (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'rgba(140,185,235,0.62)', fontSize: '12px', padding: '12px 0' }}>
                                     <AlertCircle size={13} color="#ef4444" /> Failed.{' '}
-                                    <button onClick={() => runCoverLetter(job.id, tone)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
+                                    <button onClick={() => runCoverLetter(job.id, tone, angle)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
                                   </div>
                                 )}
 
@@ -1120,6 +1138,18 @@ export default function TrackerPage() {
                                         {result.letter}
                                       </pre>
                                     </div>
+                                    {result.keywords && result.keywords.length > 0 && (
+                                      <div style={{ marginBottom: '12px' }}>
+                                        <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(125,175,230,0.52)', marginBottom: '6px' }}>
+                                          ATS keywords mirrored in this letter
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                          {result.keywords.map((kw, i) => (
+                                            <span key={i} style={{ background: 'transparent', color: 'rgba(158,202,242,0.72)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '3px', padding: '2px 7px', fontSize: '10px' }}>{kw}</span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
                                     <button
                                       onClick={() => {
                                         navigator.clipboard.writeText(result.letter);
@@ -1129,12 +1159,12 @@ export default function TrackerPage() {
                                       style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '5px',
                                         backgroundColor: copiedJobId === job.id ? '#22c55e' : 'rgba(125,220,255,0.06)',
-                                        color: copiedJobId === job.id ? '#86efac' : '#64748b',
+                                        color: copiedJobId === job.id ? '#86efac' : 'rgba(158,202,242,0.85)',
                                         border: `1px solid ${copiedJobId === job.id ? '#16a34a' : 'rgba(125,220,255,0.14)'}`,
                                         borderRadius: '10px', padding: '6px 14px', fontSize: '12px', fontWeight: 600,
                                         cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
                                       }}>
-                                      {copiedJobId === job.id ? '✓ Copied!' : 'Copy to Clipboard'}
+                                      {copiedJobId === job.id ? <><Check size={12} /> Copied!</> : 'Copy to Clipboard'}
                                     </button>
                                   </div>
                                 )}
@@ -1193,8 +1223,8 @@ export default function TrackerPage() {
                                         border: `1px solid ${g.should_apply ? 'rgba(52,211,153,0.25)' : 'rgba(248,113,113,0.25)'}`,
                                         borderRadius: '14px', padding: '12px 16px',
                                       }}>
-                                        <span style={{ color: g.should_apply ? '#34d399' : '#f87171', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
-                                          {g.should_apply ? '✓ Apply' : '✗ Skip'}
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: g.should_apply ? '#34d399' : '#f87171', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
+                                          {g.should_apply ? <><Check size={13} /> Apply</> : <><X size={13} /> Skip</>}
                                         </span>
                                         <span style={{ color: 'rgba(140,185,235,0.62)', fontSize: '12px', lineHeight: 1.5 }}>{g.apply_reasoning}</span>
                                       </div>
@@ -1429,7 +1459,7 @@ export default function TrackerPage() {
                   <button onClick={closeImport} style={{ backgroundColor: 'rgba(4,12,32,0.70)', color: 'rgba(140,185,235,0.62)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
                   <button onClick={handleImportSave} disabled={saving || !importForm.company || !importForm.title} style={{
                     background: !importForm.company || !importForm.title ? 'rgba(125,220,255,0.06)' : 'linear-gradient(135deg, #7DF4FC, #4A9EF8)',
-                    color: !importForm.company || !importForm.title ? '#94a3b8' : '#000',
+                    color: !importForm.company || !importForm.title ? 'rgba(158,202,242,0.85)' : '#000',
                     border: 'none', borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700,
                     cursor: saving || !importForm.company || !importForm.title ? 'not-allowed' : 'pointer',
                   }}>
@@ -1486,7 +1516,7 @@ export default function TrackerPage() {
               <button onClick={() => setShowModal(false)} style={{ backgroundColor: 'rgba(4,12,32,0.70)', color: 'rgba(140,185,235,0.62)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
               <button onClick={handleSave} disabled={saving || !form.company || !form.title} style={{
                 background: !form.company || !form.title ? 'rgba(125,220,255,0.06)' : 'linear-gradient(135deg, #7DF4FC, #4A9EF8)',
-                color: !form.company || !form.title ? '#94a3b8' : '#000',
+                color: !form.company || !form.title ? 'rgba(158,202,242,0.85)' : '#000',
                 border: 'none', borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700,
                 cursor: saving || !form.company || !form.title ? 'not-allowed' : 'pointer',
               }}>
