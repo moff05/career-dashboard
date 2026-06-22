@@ -8,7 +8,7 @@ interface Memory {
   id: number; content: string; category: string; source: string; created_at: string;
 }
 
-const CATEGORIES = ['preference', 'goal', 'insight', 'company', 'role', 'location', 'skill', 'other'];
+const CATEGORIES = ['preference', 'goal', 'insight', 'company', 'role', 'location', 'skill', 'story_bank', 'other'];
 
 const CAT_COLORS: Record<string, { bg: string; color: string; border: string }> = {
   preference: { bg: 'rgba(99,102,241,0.07)',  color: '#6366f1', border: 'rgba(99,102,241,0.2)'  },
@@ -18,6 +18,7 @@ const CAT_COLORS: Record<string, { bg: string; color: string; border: string }> 
   role:       { bg: 'rgba(139,92,246,0.07)',  color: '#8b5cf6', border: 'rgba(139,92,246,0.2)'  },
   location:   { bg: 'rgba(20,184,166,0.07)',  color: '#14b8a6', border: 'rgba(20,184,166,0.2)'  },
   skill:      { bg: 'rgba(236,72,153,0.07)',  color: '#ec4899', border: 'rgba(236,72,153,0.2)'  },
+  story_bank: { bg: 'rgba(124,58,237,0.07)',  color: '#7c3aed', border: 'rgba(124,58,237,0.2)'  },
   other:      { bg: 'rgba(100,116,139,0.07)', color: 'rgba(158,202,242,0.72)', border: 'rgba(100,116,139,0.2)' },
 };
 
@@ -86,7 +87,7 @@ export default function MemoryPage() {
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
             background: addForm.show ? 'rgba(125,220,255,0.06)' : 'linear-gradient(135deg, #6366f1, #4f46e5)',
-            color: addForm.show ? '#64748b' : '#fff',
+            color: addForm.show ? 'rgba(158,202,242,0.85)' : '#fff',
             border: addForm.show ? '1px solid rgba(125,220,255,0.13)' : 'none',
             borderRadius: '10px', padding: '8px 16px', fontSize: '12px', fontWeight: 700,
             cursor: 'pointer',
@@ -136,7 +137,7 @@ export default function MemoryPage() {
               disabled={!addForm.content.trim() || saving}
               style={{
                 background: addForm.content.trim() ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(125,220,255,0.06)',
-                color: addForm.content.trim() ? '#fff' : '#94a3b8',
+                color: addForm.content.trim() ? '#fff' : 'rgba(158,202,242,0.85)',
                 border: 'none', borderRadius: '8px', padding: '7px 18px',
                 fontSize: '12px', fontWeight: 700, cursor: addForm.content.trim() ? 'pointer' : 'not-allowed',
                 fontFamily: 'inherit',
@@ -156,7 +157,7 @@ export default function MemoryPage() {
           onClick={() => setFilter('all')}
           style={{
             background: filter === 'all' ? 'rgba(125,220,255,0.14)' : 'rgba(125,220,255,0.04)',
-            color: filter === 'all' ? '#fff' : '#64748b',
+            color: filter === 'all' ? '#fff' : 'rgba(158,202,242,0.85)',
             border: `1px solid ${filter === 'all' ? 'rgba(232,244,255,0.95)' : 'rgba(125,220,255,0.13)'}`,
             borderRadius: '20px', padding: '4px 12px', fontSize: '11px', fontWeight: 600,
             cursor: 'pointer', fontFamily: 'inherit',
@@ -170,7 +171,7 @@ export default function MemoryPage() {
               onClick={() => setFilter(c)}
               style={{
                 background: filter === c ? cc.bg : 'rgba(125,220,255,0.04)',
-                color: filter === c ? cc.color : '#64748b',
+                color: filter === c ? cc.color : 'rgba(158,202,242,0.85)',
                 border: `1px solid ${filter === c ? cc.border : 'rgba(125,220,255,0.13)'}`,
                 borderRadius: '20px', padding: '4px 12px', fontSize: '11px', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize',

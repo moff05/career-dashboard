@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Send, Loader, Mic, ChevronRight } from 'lucide-react';
+import { Send, Loader, Mic, ChevronRight, Bookmark } from 'lucide-react';
 
 interface Message {
   id?: number;
@@ -62,8 +62,21 @@ export default function CoachPage() {
   const [intStreaming, setIntStreaming] = useState(false);
   const [intQNumber, setIntQNumber] = useState(0); // 1–5
   const [intFinalSummary, setIntFinalSummary] = useState('');
+  const [savedStoryIds, setSavedStoryIds] = useState<Set<number>>(new Set());
   const intAnswerRef = useRef<HTMLTextAreaElement>(null);
   const intBottomRef = useRef<HTMLDivElement>(null);
+
+  const saveAsStory = useCallback(async (ex: InterviewExchange, index: number) => {
+    const content = `Q: ${ex.question}\nA: ${ex.answer}\nFeedback: ${ex.response}`;
+    try {
+      await apiFetch('/api/memories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, category: 'story_bank', source: 'interview' }),
+      });
+      setSavedStoryIds(prev => new Set([...prev, index]));
+    } catch { /* leave unsaved, button stays clickable to retry */ }
+  }, []);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(() => { scrollToBottom(); }, [messages]);
@@ -76,10 +89,10 @@ export default function CoachPage() {
       const data = await res.json();
       setMessages(data?.length > 0 ? data : [{
         role: 'assistant',
-        content: "Hi Nicholas! I'm your AI career coach. I have your full resume, saved memories, and job tracker context. What's on your mind?",
+        content: "Hi! I'm your AI career coach. I have your full resume, saved memories, and job tracker context. What's on your mind?",
       }]);
     } catch {
-      setMessages([{ role: 'assistant', content: "Hi Nicholas! I'm your AI career coach. I have your full resume, saved memories, and job tracker context. What's on your mind?" }]);
+      setMessages([{ role: 'assistant', content: "Hi! I'm your AI career coach. I have your full resume, saved memories, and job tracker context. What's on your mind?" }]);
     }
     setHistoryLoaded(true);
   }, [sessionId]);
@@ -106,7 +119,7 @@ export default function CoachPage() {
     if (params.get('prefill') === 'cover-letter') {
       const company = params.get('company') || '';
       const title = params.get('title') || '';
-      setInput(`Please write a tailored cover letter for me for this role:\n\nCompany: ${company}\nRole: ${title}\n\nMake it specific to my background in CRE tech and AI automation.`);
+      setInput(`Please write a tailored cover letter for me for this role:\n\nCompany: ${company}\nRole: ${title}\n\nMake it specific to my actual background and experience.`);
       window.history.replaceState({}, '', '/coach');
       setTimeout(() => {
         if (textareaRef.current) {
@@ -302,7 +315,7 @@ export default function CoachPage() {
               <button key={m} onClick={() => m === 'interview' ? switchToInterview() : setMode('chat')} style={{
                 display: 'flex', alignItems: 'center', gap: '5px',
                 backgroundColor: mode === m ? (m === 'interview' ? 'rgba(139,92,246,0.1)' : 'rgba(59,130,246,0.1)') : 'rgba(125,220,255,0.04)',
-                color: mode === m ? (m === 'interview' ? '#7c3aed' : '#3b82f6') : '#64748b',
+                color: mode === m ? (m === 'interview' ? '#7c3aed' : '#3b82f6') : 'rgba(158,202,242,0.85)',
                 border: `1px solid ${mode === m ? (m === 'interview' ? 'rgba(139,92,246,0.3)' : 'rgba(59,130,246,0.3)') : 'rgba(125,220,255,0.13)'}`,
                 borderRadius: '20px', padding: '5px 14px', fontSize: '11px', fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
@@ -330,7 +343,7 @@ export default function CoachPage() {
                 cursor: 'pointer', transition: 'all 0.15s', whiteSpace: 'nowrap', fontFamily: 'inherit',
               }}
                 onMouseEnter={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(59,130,246,0.35)'; b.style.color = '#3b82f6'; b.style.backgroundColor = 'rgba(59,130,246,0.05)'; }}
-                onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(125,220,255,0.13)'; b.style.color = '#64748b'; b.style.backgroundColor = 'rgba(125,220,255,0.06)'; }}
+                onMouseLeave={e => { const b = e.currentTarget; b.style.borderColor = 'rgba(125,220,255,0.13)'; b.style.color = 'rgba(158,202,242,0.85)'; b.style.backgroundColor = 'rgba(125,220,255,0.06)'; }}
               >{label}</button>
             ))}
           </div>
@@ -372,7 +385,7 @@ export default function CoachPage() {
             {loading && messages[messages.length - 1]?.content === '' && (
               <div style={{ display: 'flex', gap: '10px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
                 <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 800, flexShrink: 0, boxShadow: '0 2px 8px rgba(59,130,246,0.25)' }}>AI</div>
-                <Loader size={15} color="#94a3b8" style={{ marginTop: '7px', animation: 'spin 1s linear infinite' }} />
+                <Loader size={15} color="rgba(158,202,242,0.85)" style={{ marginTop: '7px', animation: 'spin 1s linear infinite' }} />
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -382,7 +395,7 @@ export default function CoachPage() {
             <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
               <textarea ref={textareaRef} value={input} onChange={handleTextareaChange} onKeyDown={handleKeyDown} placeholder="Ask your career coach anything…" rows={1} style={{ flex: 1, background: 'rgba(125,220,255,0.025)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '12px', padding: '12px 16px', color: 'rgba(232,244,255,0.95)', fontSize: '14px', outline: 'none', resize: 'none', lineHeight: '1.5', minHeight: '44px', maxHeight: '160px', overflow: 'auto', fontFamily: 'inherit', transition: 'border-color 0.15s' }} onFocus={e => (e.target.style.borderColor = 'rgba(59,130,246,0.4)')} onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.13)')} />
               <button onClick={() => handleSend()} disabled={loading || !input.trim()} style={{ width: '44px', height: '44px', borderRadius: '12px', background: loading || !input.trim() ? 'rgba(125,220,255,0.06)' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)', border: loading || !input.trim() ? '1px solid rgba(125,220,255,0.13)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: loading || !input.trim() ? 'not-allowed' : 'pointer', flexShrink: 0, boxShadow: loading || !input.trim() ? 'none' : '0 4px 12px rgba(59,130,246,0.3)' }}>
-                <Send size={16} color={loading || !input.trim() ? '#94a3b8' : '#fff'} />
+                <Send size={16} color={loading || !input.trim() ? 'rgba(158,202,242,0.85)' : '#fff'} />
               </button>
             </div>
             <p style={{ color: 'rgba(125,175,230,0.35)', fontSize: '10px', margin: '7px 0 0', textAlign: 'center' }}>Enter to send · Shift+Enter for new line</p>
@@ -408,7 +421,7 @@ export default function CoachPage() {
                     {(['saved', 'custom'] as const).map(opt => (
                       <button key={opt} onClick={() => setIntSetup(p => ({ ...p, useCustom: opt === 'custom' }))} style={{
                         backgroundColor: (intSetup.useCustom ? opt === 'custom' : opt === 'saved') ? 'rgba(59,130,246,0.08)' : 'rgba(125,220,255,0.04)',
-                        color: (intSetup.useCustom ? opt === 'custom' : opt === 'saved') ? '#3b82f6' : '#64748b',
+                        color: (intSetup.useCustom ? opt === 'custom' : opt === 'saved') ? '#3b82f6' : 'rgba(158,202,242,0.85)',
                         border: `1px solid ${(intSetup.useCustom ? opt === 'custom' : opt === 'saved') ? 'rgba(59,130,246,0.3)' : 'rgba(125,220,255,0.13)'}`,
                         borderRadius: '20px', padding: '5px 14px', fontSize: '11px', fontWeight: 600,
                         cursor: 'pointer', fontFamily: 'inherit',
@@ -494,6 +507,17 @@ export default function CoachPage() {
                             p: ({ children }) => <p style={{ margin: '0 0 8px', color: 'rgba(200,228,255,0.85)' }}>{children}</p>,
                             strong: ({ children }) => <strong style={{ color: 'rgba(232,244,255,0.95)', fontWeight: 600 }}>{children}</strong>,
                           }}>{ex.response}</ReactMarkdown>
+                          <button
+                            onClick={() => saveAsStory(ex, i)}
+                            disabled={savedStoryIds.has(i)}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '5px', marginTop: '4px',
+                              background: 'none', border: 'none', padding: 0, fontFamily: 'inherit',
+                              fontSize: '12px', fontWeight: 600, cursor: savedStoryIds.has(i) ? 'default' : 'pointer',
+                              color: savedStoryIds.has(i) ? '#86efac' : '#7c3aed',
+                            }}>
+                            <Bookmark size={11} /> {savedStoryIds.has(i) ? 'Saved as story' : 'Save as reusable story'}
+                          </button>
                         </div>
                       </div>
                     )}
@@ -506,14 +530,14 @@ export default function CoachPage() {
                     <div style={{ background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '14px', padding: '14px 16px', borderLeft: '3px solid #7c3aed', marginBottom: '14px' }}>
                       <div style={{ color: '#7c3aed', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '6px' }}>Question {intQNumber}</div>
                       <p style={{ color: 'rgba(232,244,255,0.95)', fontSize: '13px', lineHeight: 1.65, margin: 0 }}>
-                        {intStreaming && !intCurrentQ ? <Loader size={14} color="#94a3b8" style={{ animation: 'spin 1s linear infinite' }} /> : intCurrentQ}
+                        {intStreaming && !intCurrentQ ? <Loader size={14} color="rgba(158,202,242,0.85)" style={{ animation: 'spin 1s linear infinite' }} /> : intCurrentQ}
                       </p>
                     </div>
                     {!intStreaming && (
                       <div>
                         <textarea ref={intAnswerRef} value={intAnswer} onChange={e => setIntAnswer(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) submitAnswer(); }} placeholder="Type your answer… (⌘+Enter to submit)" rows={4} style={{ width: '100%', background: 'rgba(125,220,255,0.025)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '12px', padding: '12px 16px', color: 'rgba(232,244,255,0.95)', fontSize: '13px', outline: 'none', resize: 'vertical', lineHeight: '1.6', fontFamily: 'inherit', boxSizing: 'border-box', transition: 'border-color 0.15s' }} onFocus={e => (e.target.style.borderColor = 'rgba(124,58,237,0.4)')} onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.13)')} />
                         <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                          <button onClick={submitAnswer} disabled={!intAnswer.trim()} style={{ flex: 1, background: intAnswer.trim() ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : 'rgba(125,220,255,0.06)', color: intAnswer.trim() ? '#fff' : '#94a3b8', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 700, cursor: intAnswer.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', boxShadow: intAnswer.trim() ? '0 4px 12px rgba(124,58,237,0.25)' : 'none' }}>
+                          <button onClick={submitAnswer} disabled={!intAnswer.trim()} style={{ flex: 1, background: intAnswer.trim() ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : 'rgba(125,220,255,0.06)', color: intAnswer.trim() ? '#fff' : 'rgba(158,202,242,0.85)', border: 'none', borderRadius: '10px', padding: '10px', fontSize: '13px', fontWeight: 700, cursor: intAnswer.trim() ? 'pointer' : 'not-allowed', fontFamily: 'inherit', boxShadow: intAnswer.trim() ? '0 4px 12px rgba(124,58,237,0.25)' : 'none' }}>
                             Submit Answer {intQNumber < 5 ? `→ Q${intQNumber + 1}` : '· Finish'}
                           </button>
                           <button onClick={resetInterview} style={{ background: 'rgba(125,220,255,0.025)', color: 'rgba(135,185,230,0.65)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '10px', padding: '10px 16px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>End</button>
