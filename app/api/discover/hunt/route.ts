@@ -4,6 +4,7 @@ import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, getApiKey } from '@/lib/user';
 import { getDb } from '@/lib/db';
 import { checkLiveness } from '@/lib/liveness';
+import { resolveCompanyAts, ensureAtsCacheTable } from '@/lib/ats';
 
 export const maxDuration = 120;
 
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
     if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
     const anthropic = new Anthropic({ apiKey });
     const db = await ensureLeadsTable();
+    await ensureAtsCacheTable();
 
     const profileRow = (await db.execute(
       { sql: 'SELECT target_roles, target_cities, notes FROM profile WHERE user_id = ?', args: [userId] }
@@ -151,18 +153,46 @@ Additional rules:
       return hasRealUrl && !existingSet.has(key) && lead.company && lead.title;
     });
 
-    // Web-search grounding proves a URL was a real search result, not that the
-    // posting is still live today. Check each candidate's URL and drop anything
-    // confirmed dead before it ever reaches the leads table — leads that time out
-    // or get blocked by anti-bot walls are kept as 'unverified', not penalized.
-    const livenessResults = await Promise.allSettled(
-      candidateLeads.map((lead: HuntLead) => checkLiveness(lead.url as string))
+    // Ask the company's own ATS (Greenhouse/Lever/Ashby) whether the posting is
+    // actually still open, when we can identify which one they use. A URL-derived
+    // match that the ATS says is gone gets dropped outright (high confidence);
+    // anything we couldn't resolve falls through to the liveness check below
+    // exactly as before.
+    const atsResults = await Promise.allSettled(
+      candidateLeads.map((lead: HuntLead) => resolveCompanyAts(lead.company || '', lead.title || '', lead.url))
     );
-    const newLeads = candidateLeads
-      .map((lead: HuntLead, i: number) => ({
-        lead,
-        liveness: livenessResults[i].status === 'fulfilled' ? livenessResults[i].value : 'unverified',
-      }))
+    const afterAts: { lead: HuntLead; atsVerified: boolean }[] = [];
+    candidateLeads.forEach((lead: HuntLead, i: number) => {
+      const settled = atsResults[i];
+      const resolution = settled.status === 'fulfilled' ? settled.value : { outcome: 'unresolved' as const };
+      if (resolution.outcome === 'dead') return;
+      if (resolution.outcome === 'confirmed') {
+        afterAts.push({
+          lead: { ...lead, url: resolution.job.url, title: resolution.job.title, location: resolution.job.location || lead.location },
+          atsVerified: true,
+        });
+        return;
+      }
+      afterAts.push({ lead, atsVerified: false });
+    });
+
+    // Web-search grounding proves a URL was a real search result, not that the
+    // posting is still live today. Check each remaining candidate's URL and drop
+    // anything confirmed dead before it ever reaches the leads table — leads that
+    // time out or get blocked by anti-bot walls are kept as 'unverified', not
+    // penalized. Leads already confirmed via ATS skip this — no need to
+    // double-check something the company's own system just verified.
+    const toLivenessCheck = afterAts.filter(({ atsVerified }) => !atsVerified);
+    const livenessResults = await Promise.allSettled(
+      toLivenessCheck.map(({ lead }) => checkLiveness(lead.url as string))
+    );
+    let livenessIdx = 0;
+    const newLeads = afterAts
+      .map(({ lead, atsVerified }) => {
+        if (atsVerified) return { lead, liveness: 'ats_verified' as const };
+        const settled = livenessResults[livenessIdx++];
+        return { lead, liveness: settled.status === 'fulfilled' ? settled.value : 'unverified' };
+      })
       .filter(({ liveness }) => liveness !== 'dead');
 
     const checkedAt = new Date().toISOString();

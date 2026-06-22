@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
-import { Search, Plus, X, Loader, AlertCircle, ExternalLink, Target, Check } from 'lucide-react';
+import { Search, Plus, X, Loader, AlertCircle, ExternalLink, Target, Check, ShieldCheck } from 'lucide-react';
 
 interface HuntedLead {
   id: number;
   company: string; title: string; url: string | null; location: string;
   type: string; fit_score: number; fit_reasoning: string; tags: string[];
-  source_query: string; created_at: string; liveness_status: 'live' | 'unverified';
+  source_query: string; created_at: string; liveness_status: 'live' | 'unverified' | 'ats_verified';
 }
 
 interface ResearchRole { title: string; location: string; type: string; }
@@ -338,6 +338,11 @@ export default function DiscoverPage() {
                           backgroundColor: friendly ? 'rgba(5,150,105,0.07)' : 'rgba(220,38,38,0.07)',
                           color: friendly ? '#059669' : '#dc2626',
                         }}>{friendly ? 'Student-friendly' : 'On-site only'}</span>
+                      )}
+                      {lead.liveness_status === 'ats_verified' && (
+                        <span title="Confirmed open on the company's own job board" style={{ display: 'inline-flex' }}>
+                          <ShieldCheck size={12} color="#059669" strokeWidth={2.5} />
+                        </span>
                       )}
                       {lead.liveness_status === 'live' && (
                         <span title="Live posting confirmed" style={{ display: 'inline-flex' }}>

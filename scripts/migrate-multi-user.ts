@@ -147,6 +147,16 @@ async function migrate() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP, dismissed INTEGER DEFAULT 0,
       liveness_status TEXT NOT NULL DEFAULT 'unverified', liveness_checked_at TEXT
     );
+
+    -- Not user-scoped on purpose: which ATS a company uses is a fact about the
+    -- company, not the viewer. Created idempotently at runtime by lib/ats.ts too;
+    -- kept here for documentation/consistency with the rest of this schema.
+    CREATE TABLE IF NOT EXISTS company_ats_cache (
+      company_key TEXT PRIMARY KEY,
+      provider TEXT,
+      slug TEXT,
+      resolved_at TEXT NOT NULL
+    );
   `);
 
   // Add user_id to pre-existing tables that might not have it
