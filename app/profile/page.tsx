@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
-import { Edit2, ExternalLink, RefreshCw, Loader } from 'lucide-react';
+import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
+import { Edit2, ExternalLink, RefreshCw, Loader, FileText, Check, Download, Upload, Plus } from 'lucide-react';
 
 interface Profile {
   id?: number; name?: string; email?: string; phone?: string; linkedin?: string;
@@ -11,6 +12,7 @@ interface Profile {
 }
 
 interface Summary { strengths: string[]; gaps: string[]; readiness_score: number; summary: string; }
+interface Resume { id: number; name: string; raw_text: string | null; parsed_at: string | null; is_default: number; }
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile>({});
@@ -20,9 +22,166 @@ export default function ProfilePage() {
   const [loadingSummary, setLoadingSummary] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [resumes, setResumes] = useState<Resume[]>([]);
+  const [activeResumeId, setActiveResumeId] = useState<number | null>(null);
+  const [resumeEditing, setResumeEditing] = useState(false);
+  const [resumeDraft, setResumeDraft] = useState('');
+  const [nameDraft, setNameDraft] = useState('');
+  const [resumeSaving, setResumeSaving] = useState(false);
+  const [resumeParsing, setResumeParsing] = useState(false);
+  const [resumeFileName, setResumeFileName] = useState('');
+  const [resumeError, setResumeError] = useState('');
+  const [pendingProfileFields, setPendingProfileFields] = useState<ParsedProfile | null>(null);
+  const [prefilledFields, setPrefilledFields] = useState<string[]>([]);
+
+  const activeResume = resumes.find(r => r.id === activeResumeId) || null;
+
+  async function loadResumes(selectId?: number) {
+    const data = await apiFetch('/api/resumes').then(r => r.json()) as Resume[];
+    setResumes(data);
+    const fallback = data.find(r => r.is_default) || data[0];
+    setActiveResumeId(selectId ?? fallback?.id ?? null);
+  }
+
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [backupMsg, setBackupMsg] = useState('');
+  const [backupErr, setBackupErr] = useState('');
+
   useEffect(() => {
     apiFetch('/api/profile').then(r => r.json()).then(data => setProfile(data));
+    loadResumes();
   }, []);
+
+  async function handleExport() {
+    setExporting(true);
+    setBackupErr('');
+    try {
+      const res = await apiFetch('/api/export');
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `career-dashboard-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setBackupMsg('Downloaded.');
+    } catch {
+      setBackupErr('Export failed. Try again.');
+    }
+    setExporting(false);
+  }
+
+  async function handleImportFile(file: File | undefined) {
+    if (!file) return;
+    setImporting(true);
+    setBackupErr('');
+    setBackupMsg('');
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const res = await apiFetch('/api/import', { method: 'POST', body: JSON.stringify(parsed) });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Import failed');
+      setBackupMsg(`Restored ${data.imported} record${data.imported === 1 ? '' : 's'}.`);
+      const profileRes = await apiFetch('/api/profile').then(r => r.json());
+      setProfile(profileRes);
+      await loadResumes();
+    } catch (err) {
+      setBackupErr(err instanceof Error ? err.message : 'That file could not be read.');
+    }
+    setImporting(false);
+  }
+
+  function startResumeEdit() {
+    if (!activeResume) return;
+    setResumeDraft(activeResume.raw_text || '');
+    setNameDraft(activeResume.name);
+    setResumeError('');
+    setResumeEditing(true);
+    setPendingProfileFields(null);
+    setPrefilledFields([]);
+  }
+
+  async function addResume() {
+    const created = await apiFetch('/api/resumes', {
+      method: 'POST', body: JSON.stringify({ name: `Resume ${resumes.length + 1}`, raw_text: '' }),
+    }).then(r => r.json()) as Resume;
+    setResumes(prev => [...prev, created]);
+    setActiveResumeId(created.id);
+    setResumeDraft('');
+    setNameDraft(created.name);
+    setResumeError('');
+    setPendingProfileFields(null);
+    setPrefilledFields([]);
+    setResumeEditing(true);
+  }
+
+  async function deleteResume(id: number) {
+    await apiFetch(`/api/resumes/${id}`, { method: 'DELETE' });
+    await loadResumes();
+    setResumeEditing(false);
+  }
+
+  async function setDefaultResume(id: number) {
+    await apiFetch(`/api/resumes/${id}`, { method: 'PUT', body: JSON.stringify({ set_default: true }) });
+    await loadResumes(id);
+  }
+
+  async function saveResume() {
+    if (!activeResume) return;
+    setResumeSaving(true);
+    const updated = await apiFetch(`/api/resumes/${activeResume.id}`, {
+      method: 'PUT', body: JSON.stringify({ name: nameDraft.trim() || activeResume.name, raw_text: resumeDraft }),
+    }).then(r => r.json()) as Resume;
+    setResumes(prev => prev.map(r => r.id === updated.id ? updated : r));
+
+    // Fill in any profile fields the resume parse found that are still empty —
+    // existing values are left alone; edit them on the left if they're wrong.
+    if (pendingProfileFields) {
+      const merged = { ...profile } as Record<string, string | undefined>;
+      let changed = false;
+      for (const [key, value] of Object.entries(pendingProfileFields)) {
+        if (value?.trim() && !merged[key]?.trim()) { merged[key] = value.trim(); changed = true; }
+      }
+      if (changed) {
+        const res = await apiFetch('/api/profile', { method: 'PUT', body: JSON.stringify(merged) });
+        setProfile(await res.json());
+      }
+    }
+
+    setResumeEditing(false);
+    setResumeSaving(false);
+    setPendingProfileFields(null);
+    setPrefilledFields([]);
+  }
+
+  async function handleResumeFile(file: File | undefined) {
+    if (!file) return;
+    setResumeError('');
+    setResumeParsing(true);
+    setResumeFileName(file.name);
+    try {
+      const { text, profile: parsed } = await extractResumeText(file);
+      setResumeDraft(text);
+      if (parsed) {
+        const labels: Record<keyof ParsedProfile, string> = {
+          name: 'Name', email: 'Email', phone: 'Phone', linkedin: 'LinkedIn',
+          university: 'University', degree: 'Degree', graduation_date: 'Graduation',
+          gpa: 'GPA', honors: 'Honors', minors: 'Minors', target_roles: 'Target roles',
+        };
+        const filled = Object.entries(parsed)
+          .filter(([key, value]) => value?.trim() && !profile[key as keyof ParsedProfile]?.trim())
+          .map(([key]) => labels[key as keyof ParsedProfile]);
+        setPendingProfileFields(parsed);
+        setPrefilledFields(filled);
+      }
+    } catch (err) {
+      setResumeError(err instanceof Error ? err.message : 'Could not read that file.');
+    }
+    setResumeParsing(false);
+  }
 
   const startEdit = (field: string, value: string) => { setEditField(field); setEditValue(value || ''); };
 
@@ -118,6 +277,144 @@ export default function ProfilePage() {
               {section.fields.map(f => <EditableField key={f.field} field={f.field} label={f.label} value={(profile as Record<string, string | undefined>)[f.field]} multiline={f.multiline} />)}
             </div>
           ))}
+
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h3 style={{ color: 'rgba(158,202,242,0.72)', fontSize: '10px', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Resumes</h3>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button onClick={addResume} title="Add a new resume" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(125,175,230,0.35)', padding: '0 2px', display: 'flex' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#3b82f6')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'rgba(125,175,230,0.35)')}>
+                  <Plus size={13} />
+                </button>
+                {!resumeEditing && activeResume && (
+                  <button onClick={startResumeEdit} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(125,175,230,0.35)', padding: '0 2px', display: 'flex' }}
+                    onMouseEnter={e => (e.currentTarget.style.color = '#3b82f6')}
+                    onMouseLeave={e => (e.currentTarget.style.color = 'rgba(125,175,230,0.35)')}>
+                    <Edit2 size={12} />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {resumes.length > 0 && (
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                {resumes.map(r => (
+                  <button key={r.id} onClick={() => { setActiveResumeId(r.id); setResumeEditing(false); }} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '4px',
+                    background: r.id === activeResumeId ? 'rgba(59,130,246,0.12)' : 'rgba(125,220,255,0.025)',
+                    color: r.id === activeResumeId ? '#3b82f6' : 'rgba(158,202,242,0.72)',
+                    border: `1px solid ${r.id === activeResumeId ? 'rgba(59,130,246,0.3)' : 'rgba(125,220,255,0.13)'}`,
+                    borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                    {!!r.is_default && <Check size={10} />}
+                    {r.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {activeResume && resumeEditing ? (
+              <div>
+                <input value={nameDraft} onChange={e => setNameDraft(e.target.value)}
+                  placeholder="Resume name" style={{ ...inputStyle, marginBottom: '8px', fontWeight: 600 }} />
+                <input id="profile-resume-file" type="file"
+                  accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,image/*"
+                  style={{ display: 'none' }} onChange={e => handleResumeFile(e.target.files?.[0])} />
+                <label htmlFor="profile-resume-file" style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  border: '1px dashed rgba(125,220,255,0.30)', borderRadius: '8px',
+                  padding: '10px', marginBottom: '10px', cursor: resumeParsing ? 'wait' : 'pointer',
+                  color: resumeParsing ? 'rgba(158,202,242,0.50)' : 'rgba(125,244,252,0.85)', fontSize: '12px', fontWeight: 600,
+                  overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
+                }}>
+                  {resumeParsing ? `Reading ${resumeFileName}…` : <><FileText size={13} /> Upload resume/CV (PDF, Word, or photo) to replace</>}
+                </label>
+                {prefilledFields.length > 0 && (
+                  <div style={{
+                    background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.22)',
+                    borderRadius: '8px', padding: '8px 11px', marginBottom: '10px',
+                    color: 'rgba(167,243,208,0.90)', fontSize: '11px', lineHeight: 1.5,
+                    display: 'flex', alignItems: 'flex-start', gap: '6px',
+                  }}>
+                    <Check size={12} style={{ flexShrink: 0, marginTop: '1px' }} />
+                    <span>Will fill in on save: {prefilledFields.join(', ')}</span>
+                  </div>
+                )}
+                {resumeError && <div style={{ color: 'rgba(252,150,150,0.90)', fontSize: '11px', marginBottom: '8px' }}>{resumeError}</div>}
+                <textarea value={resumeDraft} onChange={e => setResumeDraft(e.target.value)} rows={10} autoFocus
+                  style={{ ...inputStyle, resize: 'vertical', fontSize: '12px', lineHeight: 1.6 }} />
+                <div style={{ display: 'flex', gap: '8px', marginTop: '7px', flexWrap: 'wrap' }}>
+                  <button onClick={saveResume} disabled={resumeSaving} style={{
+                    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', border: 'none',
+                    borderRadius: '8px', padding: '5px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                  }}>{resumeSaving ? 'Saving…' : 'Save'}</button>
+                  <button onClick={() => { setResumeEditing(false); setResumeError(''); setPendingProfileFields(null); setPrefilledFields([]); }} style={{
+                    background: 'rgba(125,220,255,0.025)', color: 'rgba(158,202,242,0.72)', border: '1px solid rgba(125,220,255,0.13)',
+                    borderRadius: '8px', padding: '5px 12px', fontSize: '12px', cursor: 'pointer',
+                  }}>Cancel</button>
+                  {resumes.length > 1 && (
+                    <button onClick={() => deleteResume(activeResume.id)} style={{
+                      background: 'none', color: 'rgba(252,150,150,0.70)', border: 'none',
+                      padding: '5px 8px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', marginLeft: 'auto',
+                    }}>Delete this resume</button>
+                  )}
+                </div>
+              </div>
+            ) : activeResume ? (
+              <div>
+                {!activeResume.is_default && (
+                  <button onClick={() => setDefaultResume(activeResume.id)} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '5px', marginBottom: '10px',
+                    background: 'rgba(125,220,255,0.025)', color: 'rgba(158,202,242,0.72)', border: '1px solid rgba(125,220,255,0.13)',
+                    borderRadius: '8px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit',
+                  }}><Check size={11} /> Use this as my default resume</button>
+                )}
+                <div style={{
+                  color: 'rgba(210,234,255,0.90)', fontSize: '12px', lineHeight: '1.65', whiteSpace: 'pre-wrap',
+                  maxHeight: '260px', overflowY: 'auto', paddingRight: '4px',
+                }}>
+                  {activeResume.raw_text
+                    ? activeResume.raw_text
+                    : <span style={{ color: 'rgba(135,185,230,0.55)', fontStyle: 'italic' }}>Not set — click the edit icon to add one.</span>}
+                </div>
+              </div>
+            ) : (
+              <p style={{ color: 'rgba(135,185,230,0.55)', fontSize: '12px', fontStyle: 'italic', margin: 0 }}>No resumes yet — click + to add one.</p>
+            )}
+          </div>
+
+          <div style={cardStyle}>
+            <h3 style={{ color: 'rgba(158,202,242,0.72)', fontSize: '10px', fontWeight: 700, margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Backup &amp; Restore</h3>
+            <p style={{ color: 'rgba(135,185,230,0.65)', fontSize: '11px', margin: '0 0 14px', lineHeight: 1.5 }}>
+              There are no accounts here — your data lives only in this browser. If you clear your browser data or switch devices, it&apos;s gone unless you&apos;ve backed it up.
+            </p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button onClick={handleExport} disabled={exporting} style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                background: 'rgba(125,220,255,0.025)', color: 'rgba(158,202,242,0.85)', border: '1px solid rgba(125,220,255,0.13)',
+                borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: 600,
+                cursor: exporting ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+              }}>
+                {exporting ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={12} />}
+                Export my data
+              </button>
+              <input id="import-backup-file" type="file" accept="application/json"
+                style={{ display: 'none' }} onChange={e => handleImportFile(e.target.files?.[0])} />
+              <label htmlFor="import-backup-file" style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                background: 'rgba(125,220,255,0.025)', color: 'rgba(158,202,242,0.85)', border: '1px solid rgba(125,220,255,0.13)',
+                borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: 600,
+                cursor: importing ? 'wait' : 'pointer', fontFamily: 'inherit',
+              }}>
+                {importing ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={12} />}
+                Restore from backup
+              </label>
+            </div>
+            {backupMsg && <div style={{ color: 'rgba(167,243,208,0.90)', fontSize: '11px', marginTop: '10px' }}>{backupMsg}</div>}
+            {backupErr && <div style={{ color: 'rgba(252,150,150,0.90)', fontSize: '11px', marginTop: '10px' }}>{backupErr}</div>}
+          </div>
         </div>
 
         <div style={cardStyle}>

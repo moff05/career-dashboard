@@ -35,6 +35,41 @@ async function addColumn(table: string, column: string, def: string) {
   }
 }
 
+// The old schema declared `user_id TEXT UNIQUE` inline on resume — a column
+// constraint SQLite can't drop via ALTER TABLE. Detect it and recreate the
+// table (preserving existing rows as each user's default) so multiple named
+// resumes per user become possible. No-ops if already migrated.
+async function migrateResumeTable() {
+  // Positive check: does the table already have the multi-resume columns?
+  // Checking for the ABSENCE of a unique constraint is fragile — it can show
+  // up as an inline column constraint or a separate index, full or partial —
+  // so instead just check for the column that only exists post-migration.
+  const cols = await db.execute(`PRAGMA table_info(resume)`);
+  const hasNameColumn = (cols.rows as unknown as { name: string }[]).some(c => c.name === 'name');
+
+  if (hasNameColumn) {
+    console.log('  · resume table already supports multiple resumes per user');
+    return;
+  }
+
+  console.log('  Recreating resume table to allow multiple resumes per user…');
+  await db.executeMultiple(`
+    DROP INDEX IF EXISTS idx_resume_user;
+    ALTER TABLE resume RENAME TO resume_old_single;
+    CREATE TABLE resume (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL DEFAULT 'anonymous',
+      name TEXT NOT NULL DEFAULT 'My Resume',
+      raw_text TEXT, parsed_at TEXT,
+      is_default INTEGER NOT NULL DEFAULT 1
+    );
+    INSERT INTO resume (user_id, name, raw_text, parsed_at, is_default)
+      SELECT COALESCE(user_id, 'anonymous'), 'My Resume', raw_text, parsed_at, 1 FROM resume_old_single;
+    DROP TABLE resume_old_single;
+  `);
+  console.log('  ✓ resume table recreated — existing resumes preserved as each user\'s default');
+}
+
 async function migrate() {
   console.log('Multi-user migration starting…');
   console.log('DB:', process.env.TURSO_DATABASE_URL || 'file:./data/career.db');
@@ -88,8 +123,10 @@ async function migrate() {
 
     CREATE TABLE IF NOT EXISTS resume (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT UNIQUE NOT NULL DEFAULT 'anonymous',
-      raw_text TEXT, parsed_at TEXT
+      user_id TEXT NOT NULL DEFAULT 'anonymous',
+      name TEXT NOT NULL DEFAULT 'My Resume',
+      raw_text TEXT, parsed_at TEXT,
+      is_default INTEGER NOT NULL DEFAULT 1
     );
 
     CREATE TABLE IF NOT EXISTS connections (
@@ -107,7 +144,8 @@ async function migrate() {
       company TEXT NOT NULL, title TEXT NOT NULL, url TEXT,
       location TEXT, type TEXT, fit_score REAL DEFAULT 0,
       fit_reasoning TEXT, tags TEXT DEFAULT '[]', source_query TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP, dismissed INTEGER DEFAULT 0
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP, dismissed INTEGER DEFAULT 0,
+      liveness_status TEXT NOT NULL DEFAULT 'unverified', liveness_checked_at TEXT
     );
   `);
 
@@ -120,6 +158,8 @@ async function migrate() {
   await addColumn('resume', 'user_id', "TEXT");
   await addColumn('connections', 'user_id', "TEXT NOT NULL DEFAULT 'anonymous'");
   await addColumn('leads', 'user_id', "TEXT NOT NULL DEFAULT 'anonymous'");
+  await addColumn('leads', 'liveness_status', "TEXT NOT NULL DEFAULT 'unverified'");
+  await addColumn('leads', 'liveness_checked_at', 'TEXT');
 
   // Add resume_text to profile if not present
   await addColumn('profile', 'resume_text', 'TEXT');
@@ -127,6 +167,8 @@ async function migrate() {
   // Add starred/status_updated_at to jobs if not present
   await addColumn('jobs', 'starred', 'INTEGER NOT NULL DEFAULT 0');
   await addColumn('jobs', 'status_updated_at', 'TEXT');
+
+  await migrateResumeTable();
 
   // Create indexes for performance
   const indexes = [
@@ -136,7 +178,9 @@ async function migrate() {
     'CREATE INDEX IF NOT EXISTS idx_timeline_user ON timeline_events(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_leads_user ON leads(user_id)',
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_profile_user ON profile(user_id)',
-    'CREATE UNIQUE INDEX IF NOT EXISTS idx_resume_user ON resume(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_resume_user ON resume(user_id)',
+    // At most one default resume per user — enforced at the DB level.
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_resume_one_default ON resume(user_id) WHERE is_default = 1',
   ];
 
   for (const idx of indexes) {

@@ -7,21 +7,21 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "migrate": "npx tsx scripts/migrate.ts",
-    "migrate-v2": "npx tsx scripts/migrate-v2.ts",
-    "migrate-v3": "npx tsx scripts/migrate-v3.ts"
+    "migrate": "npx tsx scripts/migrate-multi-user.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
     "@libsql/client": "^0.17.3",
     "date-fns": "^4.3.0",
     "lucide-react": "^1.16.0",
+    "mammoth": "^1.12.0",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "resend": "^6.12.3"
+    "resend": "^6.12.3",
+    "unpdf": "^1.6.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
