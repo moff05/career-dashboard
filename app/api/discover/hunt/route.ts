@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, getApiKey } from '@/lib/user';
 import { getDb } from '@/lib/db';
+import { checkLiveness } from '@/lib/liveness';
 
 export const maxDuration = 120;
 
@@ -17,12 +18,14 @@ interface DBLead {
   id: number; company: string; title: string; url: string | null; location: string;
   type: string; fit_score: number; fit_reasoning: string; tags: string;
   source_query: string; created_at: string; dismissed: number;
+  liveness_status: string;
 }
 
 async function ensureLeadsTable() {
   const db = getDb();
   await db.execute(`CREATE TABLE IF NOT EXISTS leads (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL DEFAULT 'anonymous',
     company TEXT NOT NULL,
     title TEXT NOT NULL,
     url TEXT,
@@ -33,7 +36,9 @@ async function ensureLeadsTable() {
     tags TEXT DEFAULT '[]',
     source_query TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    dismissed INTEGER DEFAULT 0
+    dismissed INTEGER DEFAULT 0,
+    liveness_status TEXT NOT NULL DEFAULT 'unverified',
+    liveness_checked_at TEXT
   )`);
   return db;
 }
@@ -51,14 +56,12 @@ export async function POST(request: NextRequest) {
     const db = await ensureLeadsTable();
 
     const profileRow = (await db.execute(
-      { sql: 'SELECT target_roles, target_cities FROM profile WHERE user_id = ?', args: [userId] }
-    )).rows[0] as unknown as { target_roles?: string; target_cities?: string } | undefined;
+      { sql: 'SELECT target_roles, target_cities, notes FROM profile WHERE user_id = ?', args: [userId] }
+    )).rows[0] as unknown as { target_roles?: string; target_cities?: string; notes?: string } | undefined;
 
-    const targetRoles = profileRow?.target_roles
-      || 'PropTech Analyst, AI Product Manager, Business Technology Analyst, Solutions Engineer';
-    const targetCities = profileRow?.target_cities
-      || 'San Francisco, New York City, Atlanta, Dallas-Fort Worth, Miami';
-    const topCities = targetCities.split(',').slice(0, 3).map(c => c.trim()).join(', ');
+    const targetRoles = profileRow?.target_roles?.trim() || '';
+    const targetCities = profileRow?.target_cities?.trim() || '';
+    const notes = profileRow?.notes?.trim() || '';
 
     const existingJobs = (await db.execute({ sql: 'SELECT company, title FROM jobs WHERE user_id = ?', args: [userId] })).rows as unknown as { company: string; title: string }[];
     const existingSet = new Set(
@@ -67,17 +70,13 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = await buildSystemPrompt(userId);
 
-    const huntPrompt = `You are a job search agent. Your ONLY job is to find real, currently open job postings with direct links Nicholas can click to apply.
+    const huntPrompt = `You are a job search agent. Your ONLY job is to find real, currently open job postings with direct links the candidate (described in the system prompt) can click to apply.
 
-Run these 6 web searches to find actual job listings:
-1. "fall 2026 internship proptech analyst remote" site:linkedin.com OR site:greenhouse.io OR site:lever.co
-2. "fall 2026 intern AI product operations SaaS remote OR miami" site:linkedin.com OR site:handshake.com
-3. "business technology analyst intern 2026 remote" site:greenhouse.io OR site:lever.co OR site:workday.com
-4. "solutions engineer intern fall 2026 remote OR miami" site:linkedin.com OR site:greenhouse.io
-5. "proptech analyst new grad 2026 entry level ${topCities}" site:linkedin.com OR site:greenhouse.io
-6. "CRE technology analyst entry level full time 2026 ${topCities}" site:linkedin.com OR site:lever.co
+Target roles: ${targetRoles || 'infer from the resume/profile in the system prompt'}
+Target locations: ${targetCities || 'not specified — default to Remote, plus any location mentioned in their notes/resume'}
+${notes ? `Additional constraints from their profile notes: ${notes}` : ''}
 
-Nicholas is looking for: ${targetRoles}
+Run 5-6 targeted web searches to find actual open job listings matching the target roles and locations above. Use site: filters for major job boards (site:linkedin.com, site:greenhouse.io, site:lever.co, site:workday.com, site:handshake.com) and vary the searches across the different target roles and locations — don't run the same query 6 times. Example query shape: "<role> intern fall 2026 remote OR <city>" site:linkedin.com OR site:greenhouse.io
 
 ABSOLUTE REQUIREMENTS — violating these means the lead is worthless:
 1. Every single lead MUST have a "url" field containing the actual URL of that job posting page from your search results
@@ -96,47 +95,48 @@ Return ONLY valid JSON, nothing else:
       "location": "City, ST or Remote",
       "type": "fall-2026-internship | spring-2027-internship | summer-internship | full-time",
       "fit_score": 8,
-      "fit_reasoning": "1-2 sentences why this fits Nicholas — reference his Goldenrod CRE internship, StackingPlanner SaaS, n8n/Zapier automation, Python, AI tools background specifically",
-      "tags": ["PropTech", "AI", "Python"],
-      "source_query": "which of the 6 searches above found this"
+      "fit_reasoning": "1-2 sentences why this fits the candidate — reference specifics from their actual resume/background in the system prompt",
+      "tags": ["2-3 relevant skill or domain tags"],
+      "source_query": "which search found this"
     }
   ]
 }
 
 Additional rules:
-- Internships: ONLY Remote or Miami, FL (Nicholas is at University of Miami, cannot relocate)
-- Full-time: ONLY San Francisco, New York, Atlanta, Dallas, or Miami
+- Respect the target locations above; if none given, prefer Remote and otherwise stay open
 - Minimum fit_score 5 to include
 - Maximum 15 leads, sorted by fit_score descending
 - No duplicate companies/titles
 - REPEAT: if there is no direct job posting URL, omit the lead entirely`;
 
-    let text = '';
+    // No fallback to a plain (non-web-search) completion here on purpose — without
+    // real search results, the model has nothing to ground a URL in but training
+    // data, and would be guessing at a plausible-looking link that may not exist.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await (anthropic.beta.messages as any).create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4000,
+      betas: ['web-search-2025-03-05'],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      tools: [{ type: 'web_search_20250305' as any, name: 'web_search' }],
+      system: systemPrompt,
+      messages: [{ role: 'user', content: huntPrompt }],
+    });
 
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = await (anthropic.beta.messages as any).create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4000,
-        betas: ['web-search-2025-03-05'],
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        tools: [{ type: 'web_search_20250305' as any, name: 'web_search' }],
-        system: systemPrompt,
-        messages: [{ role: 'user', content: huntPrompt }],
-      });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      text = (response.content as any[])
-        .filter((b: { type: string }) => b.type === 'text')
-        .map((b: { text: string }) => b.text)
-        .join('');
-    } catch {
-      const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 3000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: huntPrompt }],
-      });
-      text = response.content[0].type === 'text' ? response.content[0].text : '{}';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const blocks = response.content as any[];
+    const text = blocks.filter(b => b.type === 'text').map(b => b.text).join('');
+
+    // Ground every lead's URL in what web_search actually returned — the model's
+    // final JSON answer isn't guaranteed to copy tool results verbatim, so a URL
+    // that doesn't appear in any real search result is treated as unverified.
+    const realUrls = new Set<string>();
+    for (const block of blocks) {
+      if (block.type === 'web_search_tool_result' && Array.isArray(block.content)) {
+        for (const result of block.content) {
+          if (typeof result?.url === 'string') realUrls.add(result.url);
+        }
+      }
     }
 
     const match = text.match(/\{[\s\S]*\}/);
@@ -145,18 +145,35 @@ Additional rules:
     let parsed: { leads?: HuntLead[] };
     try { parsed = JSON.parse(match[0]); } catch { return NextResponse.json({ leads: [] }); }
 
-    const newLeads = (parsed.leads || []).filter((lead: HuntLead) => {
-      const hasUrl = typeof lead.url === 'string' && lead.url.startsWith('http') && lead.url.includes('.');
+    const candidateLeads = (parsed.leads || []).filter((lead: HuntLead) => {
+      const hasRealUrl = typeof lead.url === 'string' && realUrls.has(lead.url);
       const key = `${lead.company?.toLowerCase()}::${lead.title?.toLowerCase()}`;
-      return hasUrl && !existingSet.has(key) && lead.company && lead.title;
+      return hasRealUrl && !existingSet.has(key) && lead.company && lead.title;
     });
 
-    await db.execute('DELETE FROM leads WHERE dismissed = 0');
+    // Web-search grounding proves a URL was a real search result, not that the
+    // posting is still live today. Check each candidate's URL and drop anything
+    // confirmed dead before it ever reaches the leads table — leads that time out
+    // or get blocked by anti-bot walls are kept as 'unverified', not penalized.
+    const livenessResults = await Promise.allSettled(
+      candidateLeads.map((lead: HuntLead) => checkLiveness(lead.url as string))
+    );
+    const newLeads = candidateLeads
+      .map((lead: HuntLead, i: number) => ({
+        lead,
+        liveness: livenessResults[i].status === 'fulfilled' ? livenessResults[i].value : 'unverified',
+      }))
+      .filter(({ liveness }) => liveness !== 'dead');
 
-    for (const lead of newLeads) {
+    const checkedAt = new Date().toISOString();
+
+    await db.execute({ sql: 'DELETE FROM leads WHERE dismissed = 0 AND user_id = ?', args: [userId] });
+
+    for (const { lead, liveness } of newLeads) {
       await db.execute({
-        sql: `INSERT INTO leads (company, title, url, location, type, fit_score, fit_reasoning, tags, source_query) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        sql: `INSERT INTO leads (user_id, company, title, url, location, type, fit_score, fit_reasoning, tags, source_query, liveness_status, liveness_checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
+          userId,
           lead.company || '',
           lead.title || '',
           lead.url || null,
@@ -166,13 +183,16 @@ Additional rules:
           lead.fit_reasoning || '',
           JSON.stringify(Array.isArray(lead.tags) ? lead.tags : []),
           lead.source_query || '',
+          liveness,
+          checkedAt,
         ],
       });
     }
 
-    const rows = (await db.execute(
-      'SELECT * FROM leads WHERE dismissed = 0 ORDER BY fit_score DESC'
-    )).rows as unknown as DBLead[];
+    const rows = (await db.execute({
+      sql: 'SELECT * FROM leads WHERE dismissed = 0 AND user_id = ? ORDER BY fit_score DESC',
+      args: [userId],
+    })).rows as unknown as DBLead[];
 
     return NextResponse.json({
       leads: rows.map(r => ({ ...r, tags: parseTags(r.tags) })),

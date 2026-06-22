@@ -2,19 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
-import { Search, RefreshCw, Plus, X, Loader, AlertCircle, ExternalLink, Target } from 'lucide-react';
-
-interface Lead {
-  id: number;
-  company: string; title: string; type: string; location: string;
-  fit_score: number; why: string; tags: string[];
-}
+import { Search, Plus, X, Loader, AlertCircle, ExternalLink, Target, Check } from 'lucide-react';
 
 interface HuntedLead {
   id: number;
   company: string; title: string; url: string | null; location: string;
   type: string; fit_score: number; fit_reasoning: string; tags: string[];
-  source_query: string; created_at: string;
+  source_query: string; created_at: string; liveness_status: 'live' | 'unverified';
 }
 
 interface ResearchRole { title: string; location: string; type: string; }
@@ -24,11 +18,8 @@ interface ResearchResult {
   culture_signals: string[];
   roles: ResearchRole[];
   fit_score: number; fit_verdict: string; fit_reasoning: string;
-  nicholas_angle: string; caveat: string;
+  your_angle: string; caveat: string;
 }
-
-const CACHE_KEY = 'discover-leads-v2';
-const TTL = 10 * 60 * 1000;
 
 const TYPE_LABELS: Record<string, string> = {
   'fall-2026-internship': 'Fall 2026', 'spring-2027-internship': 'Spring 2027',
@@ -77,44 +68,10 @@ export default function DiscoverPage() {
   const [result, setResult] = useState<ResearchResult | null>(null);
   const [searchErr, setSearchErr] = useState('');
 
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [leadsLoading, setLeadsLoading] = useState(false);
-  const [leadsAge, setLeadsAge] = useState('');
-  const [dismissed, setDismissed] = useState<Set<number>>(new Set());
-  const [saved, setSaved] = useState<Set<number>>(new Set());
-  const [connectedCompanies, setConnectedCompanies] = useState<Set<string>>(new Set());
-
   const [hunted, setHunted] = useState<HuntedLead[]>([]);
   const [hunting, setHunting] = useState(false);
   const [huntErr, setHuntErr] = useState('');
   const [savedHunted, setSavedHunted] = useState<Set<number>>(new Set());
-
-  const loadLeads = useCallback(async (force = false) => {
-    if (!force) {
-      try {
-        const c = JSON.parse(sessionStorage.getItem(CACHE_KEY) || '{}');
-        if (c.data && Date.now() - c.ts < TTL) {
-          setLeads(c.data.map((l: Omit<Lead,'id'>, i: number) => ({ ...l, id: i })));
-          setLeadsAge(ageStr(c.ts));
-          return;
-        }
-      } catch { /* ignore */ }
-    }
-    setLeadsLoading(true);
-    setDismissed(new Set());
-    setSaved(new Set());
-    try {
-      const res = await apiFetch('/api/discover/suggestions');
-      const data = await res.json();
-      if (data.leads) {
-        const withIds = data.leads.map((l: Omit<Lead,'id'>, i: number) => ({ ...l, id: i }));
-        setLeads(withIds);
-        setLeadsAge('just now');
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data: data.leads, ts: Date.now() }));
-      }
-    } catch { /* silently fail */ }
-    setLeadsLoading(false);
-  }, []);
 
   const loadHunted = useCallback(async () => {
     try {
@@ -123,16 +80,7 @@ export default function DiscoverPage() {
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { loadLeads(); loadHunted(); }, [loadLeads, loadHunted]);
-
-  useEffect(() => {
-    apiFetch('/api/connections')
-      .then(r => r.json())
-      .then((data: { company: string }[]) => {
-        if (Array.isArray(data)) setConnectedCompanies(new Set(data.map(c => c.company)));
-      })
-      .catch(() => {});
-  }, []);
+  useEffect(() => { loadHunted(); }, [loadHunted]);
 
   const handleSearch = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -186,16 +134,6 @@ export default function DiscoverPage() {
     setSavedHunted(prev => new Set([...prev, lead.id]));
   };
 
-  const saveLead = async (lead: Lead) => {
-    if (saved.has(lead.id)) return;
-    await apiFetch('/api/jobs', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company: lead.company, title: lead.title, type: lead.type, status: 'saved', location: lead.location, source: 'Discover', notes: lead.why }),
-    });
-    setSaved(prev => new Set([...prev, lead.id]));
-  };
-
-  const visible = leads.filter(l => !dismissed.has(l.id));
   const huntedAt = hunted.length > 0 ? ageStr(new Date(hunted[0].created_at).getTime()) : '';
 
   return (
@@ -208,21 +146,10 @@ export default function DiscoverPage() {
           <p style={{ color: 'rgba(135,185,230,0.65)', fontSize: '12px', margin: '4px 0 0' }}>Research companies · explore leads</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button onClick={() => loadLeads(true)} disabled={leadsLoading} style={{
-            display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)',
-            color: 'rgba(135,185,230,0.65)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '10px', padding: '6px 12px',
-            fontSize: '11px', cursor: leadsLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          }}
-            onMouseEnter={e => !leadsLoading && (e.currentTarget.style.color = '#3b82f6')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}
-          >
-            <RefreshCw size={11} style={leadsLoading ? { animation: 'spin 1s linear infinite' } : {}} /> Refresh
-          </button>
-          <button onClick={huntJobs} disabled={hunting} style={{
+          <button onClick={huntJobs} disabled={hunting} title="Typically a few cents of API usage per run — several searches plus a larger model" style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
             background: hunting ? 'rgba(125,220,255,0.06)' : 'linear-gradient(135deg, #d97706, #b45309)',
-            color: hunting ? '#94a3b8' : '#fff',
+            color: hunting ? 'rgba(158,202,242,0.85)' : '#fff',
             border: hunting ? '1px solid rgba(125,220,255,0.13)' : 'none',
             borderRadius: '10px', padding: '6px 14px',
             fontSize: '12px', fontWeight: 700, cursor: hunting ? 'wait' : 'pointer',
@@ -241,7 +168,7 @@ export default function DiscoverPage() {
         <div style={{ display: 'flex', gap: '8px', maxWidth: '620px' }}>
           <input
             type="text" value={query} onChange={e => setQuery(e.target.value)}
-            placeholder="Search a company or role — e.g. 'CoStar', 'PropTech analyst', 'Anthropic'..."
+            placeholder="Search a company or role — e.g. 'Anthropic', 'Software Engineering Intern', 'Procter & Gamble'..."
             style={{
               flex: 1, background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '14px',
               padding: '11px 16px', color: 'rgba(232,244,255,0.95)', fontSize: '13px', outline: 'none', fontFamily: 'inherit',
@@ -253,7 +180,7 @@ export default function DiscoverPage() {
           <button type="submit" disabled={searching || !query.trim()} style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0,
             background: searching || !query.trim() ? 'rgba(125,220,255,0.06)' : 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-            color: searching || !query.trim() ? '#94a3b8' : '#fff',
+            color: searching || !query.trim() ? 'rgba(158,202,242,0.85)' : '#fff',
             border: searching || !query.trim() ? '1px solid rgba(125,220,255,0.13)' : 'none',
             borderRadius: '10px', padding: '11px 20px',
             fontSize: '13px', fontWeight: 700, cursor: searching || !query.trim() ? 'not-allowed' : 'pointer',
@@ -316,7 +243,7 @@ export default function DiscoverPage() {
                   <div key={i} style={{ background: 'rgba(125,220,255,0.025)', border: '1px solid rgba(125,220,255,0.06)', borderRadius: '7px', padding: '10px 12px' }}>
                     <div style={{ color: 'rgba(200,228,255,0.85)', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{role.title}</div>
                     <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' }}>
-                      <span style={{ color: TYPE_COLORS[role.type] || '#64748b', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[role.type] || role.type}</span>
+                      <span style={{ color: TYPE_COLORS[role.type] || 'rgba(158,202,242,0.85)', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[role.type] || role.type}</span>
                       <span style={{ color: 'rgba(125,175,230,0.35)', fontSize: '10px' }}>·</span>
                       <span style={{ color: 'rgba(135,185,230,0.65)', fontSize: '10px' }}>{role.location}</span>
                     </div>
@@ -328,15 +255,15 @@ export default function DiscoverPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <div style={{ background: 'rgba(125,220,255,0.025)', border: '1px solid rgba(125,220,255,0.06)', borderRadius: '8px', padding: '13px 15px' }}>
                 <div style={{ color: 'rgba(158,202,242,0.72)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '7px' }}>Why You Fit</div>
-                <p style={{ color: '#475569', fontSize: '12px', margin: 0, lineHeight: 1.65 }}>{result.fit_reasoning}</p>
+                <p style={{ color: 'rgba(200,230,255,0.88)', fontSize: '12px', margin: 0, lineHeight: 1.65 }}>{result.fit_reasoning}</p>
               </div>
               <div style={{ backgroundColor: 'rgba(59,130,246,0.04)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: '8px', padding: '13px 15px' }}>
                 <div style={{ color: '#2563eb', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '7px' }}>Your Angle</div>
-                <p style={{ color: '#2563eb', fontSize: '12px', margin: 0, lineHeight: 1.65 }}>{result.nicholas_angle}</p>
+                <p style={{ color: '#2563eb', fontSize: '12px', margin: 0, lineHeight: 1.65 }}>{result.your_angle}</p>
               </div>
               {result.caveat && (
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', padding: '2px 0' }}>
-                  <span style={{ color: 'rgba(135,185,230,0.65)', fontSize: '11px', flexShrink: 0, marginTop: '1px' }}>⚠</span>
+                  <AlertCircle size={11} color="rgba(135,185,230,0.65)" style={{ flexShrink: 0, marginTop: '1px' }} />
                   <span style={{ color: 'rgba(158,202,242,0.72)', fontSize: '11px', lineHeight: 1.55 }}>{result.caveat}</span>
                 </div>
               )}
@@ -396,13 +323,13 @@ export default function DiscoverPage() {
                       <button onClick={() => dismissHunted(lead.id)} style={{
                         background: 'none', border: 'none', color: 'rgba(125,175,230,0.35)', cursor: 'pointer', padding: '2px', display: 'flex', flexShrink: 0,
                       }}
-                        onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
+                        onMouseEnter={e => (e.currentTarget.style.color = 'rgba(158,202,242,0.85)')}
                         onMouseLeave={e => (e.currentTarget.style.color = 'rgba(125,175,230,0.35)')}
                       ><X size={13} /></button>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-                      <span style={{ color: TYPE_COLORS[lead.type] || '#64748b', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[lead.type] || lead.type}</span>
+                      <span style={{ color: TYPE_COLORS[lead.type] || 'rgba(158,202,242,0.85)', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[lead.type] || lead.type}</span>
                       <span style={{ color: 'rgba(125,175,230,0.35)', fontSize: '10px' }}>·</span>
                       <span style={{ color: 'rgba(158,202,242,0.72)', fontSize: '10px' }}>{lead.location}</span>
                       {lead.type !== 'full-time' && (
@@ -411,6 +338,11 @@ export default function DiscoverPage() {
                           backgroundColor: friendly ? 'rgba(5,150,105,0.07)' : 'rgba(220,38,38,0.07)',
                           color: friendly ? '#059669' : '#dc2626',
                         }}>{friendly ? 'Student-friendly' : 'On-site only'}</span>
+                      )}
+                      {lead.liveness_status === 'live' && (
+                        <span title="Live posting confirmed" style={{ display: 'inline-flex' }}>
+                          <Check size={11} color="#059669" strokeWidth={3} />
+                        </span>
                       )}
                       <span style={{ marginLeft: 'auto', color: fitColor(lead.fit_score), fontSize: '13px', fontWeight: 800 }}>{lead.fit_score}/10</span>
                     </div>
@@ -426,7 +358,7 @@ export default function DiscoverPage() {
                       </div>
                     )}
 
-                    <p style={{ color: '#475569', fontSize: '11px', lineHeight: 1.6, margin: 0 }}>{lead.fit_reasoning}</p>
+                    <p style={{ color: 'rgba(200,230,255,0.88)', fontSize: '11px', lineHeight: 1.6, margin: 0 }}>{lead.fit_reasoning}</p>
 
                     {lead.tags?.length > 0 && (
                       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -448,16 +380,16 @@ export default function DiscoverPage() {
                       <button onClick={() => saveHunted(lead)} disabled={isSaved} style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
                         backgroundColor: isSaved ? 'rgba(5,150,105,0.06)' : 'rgba(125,220,255,0.04)',
-                        color: isSaved ? '#059669' : '#94a3b8',
+                        color: isSaved ? '#059669' : 'rgba(158,202,242,0.85)',
                         border: `1px solid ${isSaved ? 'rgba(5,150,105,0.3)' : 'rgba(125,220,255,0.13)'}`,
                         borderRadius: '6px', padding: '7px', fontSize: '11px', fontWeight: 600,
                         cursor: isSaved ? 'default' : 'pointer', fontFamily: 'inherit',
                         transition: 'all 0.15s',
                       }}
                         onMouseEnter={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(59,130,246,0.3)'; (e.currentTarget as HTMLButtonElement).style.color = '#3b82f6'; } }}
-                        onMouseLeave={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(125,220,255,0.13)'; (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; } }}
+                        onMouseLeave={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(125,220,255,0.13)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(158,202,242,0.85)'; } }}
                       >
-                        {isSaved ? '✓ Saved to Tracker' : <><Plus size={11} /> Save to Tracker</>}
+                        {isSaved ? <><Check size={11} /> Saved to Tracker</> : <><Plus size={11} /> Save to Tracker</>}
                       </button>
                     </div>
                   </div>
@@ -481,11 +413,14 @@ export default function DiscoverPage() {
               <Target size={14} color="#d97706" />
               <span style={{ color: '#92400e', fontSize: '13px', fontWeight: 700 }}>Hunt for Jobs</span>
             </div>
-            <p style={{ color: 'rgba(135,185,230,0.65)', fontSize: '12px', margin: 0, lineHeight: 1.5 }}>
-              AI searches live job boards across 5-6 targeted queries, scores fit, and saves the best matches here permanently.
+            <p style={{ color: 'rgba(135,185,230,0.65)', fontSize: '12px', margin: '0 0 6px', lineHeight: 1.5 }}>
+              AI searches live job boards across 5-6 targeted queries and saves real postings with direct application links here permanently — nothing speculative.
+            </p>
+            <p style={{ color: 'rgba(135,185,230,0.45)', fontSize: '11px', margin: 0, lineHeight: 1.5 }}>
+              Uses more of your API budget than other features — typically a few cents per run, since it's several searches plus a larger model.
             </p>
           </div>
-          <button onClick={huntJobs} style={{
+          <button onClick={huntJobs} title="Typically a few cents of API usage per run" style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0,
             background: 'linear-gradient(135deg, #d97706, #b45309)',
             color: '#fff', border: 'none', borderRadius: '10px', padding: '9px 18px',
@@ -497,119 +432,6 @@ export default function DiscoverPage() {
         </div>
       )}
 
-      {/* Lead feed */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ color: 'rgba(158,202,242,0.72)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>For You</span>
-            {leadsAge && !leadsLoading && <span style={{ color: 'rgba(125,175,230,0.35)', fontSize: '10px' }}>· {leadsAge}</span>}
-          </div>
-          <span style={{ color: 'rgba(135,185,230,0.65)', fontSize: '11px' }}>AI-generated — verify openings on company sites</span>
-        </div>
-
-        {leadsLoading && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'rgba(135,185,230,0.65)', fontSize: '12px', padding: '48px 0' }}>
-            <Loader size={14} color="#94a3b8" style={{ animation: 'spin 1s linear infinite' }} />
-            Finding leads for you…
-          </div>
-        )}
-
-        {!leadsLoading && leads.length > 0 && visible.length === 0 && (
-          <div style={{ color: 'rgba(135,185,230,0.65)', fontSize: '12px', padding: '32px 0' }}>
-            All leads dismissed.{' '}
-            <button onClick={() => loadLeads(true)} style={{ background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Refresh</button>
-            {' '}for new ones.
-          </div>
-        )}
-
-        {!leadsLoading && visible.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {visible.map(lead => {
-              const isSaved = saved.has(lead.id);
-              const friendly = lead.type !== 'full-time' && isStudentFriendly(lead.location);
-              const color = badgeColor(lead.company);
-              return (
-                <div key={lead.id} style={{
-                  background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '12px',
-                  padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                  transition: 'box-shadow 0.15s, border-color 0.15s',
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(125,175,230,0.35)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(125,220,255,0.13)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; }}
-                >
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                      <div style={{
-                        width: '32px', height: '32px', borderRadius: '7px',
-                        backgroundColor: color,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '11px', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px',
-                      }}>{initials(lead.company)}</div>
-                      {connectedCompanies.has(lead.company) && (
-                        <div title="You have a connection at this company" style={{
-                          position: 'absolute', top: '-3px', right: '-3px',
-                          width: '9px', height: '9px', borderRadius: '50%',
-                          backgroundColor: '#7c3aed', border: '1.5px solid rgba(255,255,255,0.9)',
-                        }} />
-                      )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ color: 'rgba(220,235,255,0.90)', fontSize: '12px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.company}</div>
-                      <div style={{ color: 'rgba(158,202,242,0.72)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.title}</div>
-                    </div>
-                    <button onClick={() => setDismissed(prev => new Set([...prev, lead.id]))} style={{
-                      background: 'none', border: 'none', color: 'rgba(125,175,230,0.35)', cursor: 'pointer', padding: '2px', display: 'flex', flexShrink: 0,
-                    }}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
-                      onMouseLeave={e => (e.currentTarget.style.color = 'rgba(125,175,230,0.35)')}
-                    ><X size={13} /></button>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-                    <span style={{ color: TYPE_COLORS[lead.type] || '#64748b', fontSize: '10px', fontWeight: 700 }}>{TYPE_LABELS[lead.type] || lead.type}</span>
-                    <span style={{ color: 'rgba(125,175,230,0.35)', fontSize: '10px' }}>·</span>
-                    <span style={{ color: 'rgba(158,202,242,0.72)', fontSize: '10px' }}>{lead.location}</span>
-                    {lead.type !== 'full-time' && (
-                      <span style={{
-                        fontSize: '9px', fontWeight: 600, padding: '1px 5px', borderRadius: '3px',
-                        backgroundColor: friendly ? 'rgba(5,150,105,0.07)' : 'rgba(220,38,38,0.07)',
-                        color: friendly ? '#059669' : '#dc2626',
-                      }}>{friendly ? 'Student-friendly' : 'On-site only'}</span>
-                    )}
-                    <span style={{ marginLeft: 'auto', color: fitColor(lead.fit_score), fontSize: '13px', fontWeight: 800 }}>{lead.fit_score}/10</span>
-                  </div>
-
-                  <p style={{ color: '#475569', fontSize: '11px', lineHeight: 1.6, margin: 0 }}>{lead.why}</p>
-
-                  {lead.tags?.length > 0 && (
-                    <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                      {lead.tags.map((t, i) => (
-                        <span key={i} style={{ background: 'transparent', color: 'rgba(158,202,242,0.72)', border: '1px solid rgba(125,220,255,0.13)', borderRadius: '3px', padding: '2px 7px', fontSize: '10px' }}>{t}</span>
-                      ))}
-                    </div>
-                  )}
-
-                  <button onClick={() => saveLead(lead)} disabled={isSaved} style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                    backgroundColor: isSaved ? 'rgba(5,150,105,0.06)' : 'rgba(125,220,255,0.04)',
-                    color: isSaved ? '#059669' : '#94a3b8',
-                    border: `1px solid ${isSaved ? 'rgba(5,150,105,0.3)' : 'rgba(125,220,255,0.13)'}`,
-                    borderRadius: '6px', padding: '8px', fontSize: '11px', fontWeight: 600,
-                    cursor: isSaved ? 'default' : 'pointer', fontFamily: 'inherit', width: '100%',
-                    transition: 'all 0.15s',
-                  }}
-                    onMouseEnter={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(59,130,246,0.3)'; (e.currentTarget as HTMLButtonElement).style.color = '#3b82f6'; } }}
-                    onMouseLeave={e => { if (!isSaved) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(125,220,255,0.13)'; (e.currentTarget as HTMLButtonElement).style.color = '#94a3b8'; } }}
-                  >
-                    {isSaved ? '✓ Saved to Tracker' : <><Plus size={11} /> Save to Tracker</>}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
