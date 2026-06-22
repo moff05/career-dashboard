@@ -8,12 +8,17 @@ export function ClientRoot({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (pathname === '/setup') return;
     const userId = localStorage.getItem('cid_user_id');
     const apiKey = localStorage.getItem('cid_api_key');
-    if (!userId || !apiKey) {
-      router.replace('/setup');
+    const hasCreds = !!(userId && apiKey);
+
+    // Already set up? Don't show onboarding again — send straight to the app.
+    if (pathname === '/welcome' || pathname === '/setup') {
+      if (hasCreds) router.replace('/');
+      return;
     }
+
+    if (!hasCreds) router.replace('/welcome');
   }, [pathname, router]);
 
   return <>{children}</>;

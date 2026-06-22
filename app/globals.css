@@ -64,7 +64,12 @@
 }
 
 /* ─── BASE ───────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* Must be inside @layer base — unlayered rules always beat Tailwind's
+   layered utilities regardless of specificity, which was silently
+   zeroing out every margin and padding utility class in the app. */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+}
 html { color-scheme: dark; }
 
 body {
@@ -424,9 +429,99 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.7) hue-ro
 }
 .companion-orb:hover::after { opacity: 1; }
 
+/* ─── BRAND ORB (small standalone mark, e.g. /setup) ───────────── */
+.brand-orb {
+  width: 56px;
+  height: 56px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-orb-halo {
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(125, 244, 252, 0.28) 0%,
+    rgba(74, 158, 248, 0.14) 40%,
+    transparent 70%);
+  filter: blur(9px);
+  animation: orb-breathe 3.5s ease-in-out infinite;
+}
+
+.brand-orb-ring-outer {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid rgba(125, 244, 252, 0.30);
+  animation: spin-cw 11s linear infinite;
+}
+.brand-orb-ring-outer::before {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ice);
+  top: -2.5px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 8px 3px var(--ice-glow);
+}
+
+.brand-orb-ring-mid {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px dashed rgba(74, 158, 248, 0.42);
+  animation: spin-ccw 7s linear infinite;
+}
+.brand-orb-ring-mid::before {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--blue);
+  bottom: -1.5px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 6px 2px var(--blue-glow);
+}
+
+.brand-orb-ring-inner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(125, 244, 252, 0.45);
+  animation: spin-cw 5s linear infinite;
+}
+
+.brand-orb-core {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    #ffffff 0%,
+    #a8f4ff 40%,
+    var(--ice) 100%);
+  box-shadow:
+    0 0 10px 4px var(--ice-glow),
+    0 0 22px 8px rgba(125, 244, 252, 0.20);
+  animation: orb-breathe 3.5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .orb-mega-halo, .orb-core    { animation: none; opacity: 1; }
   .orb-ring-outer, .orb-ring-mid, .orb-ring-inner { animation-duration: 60s; }
+  .brand-orb-halo, .brand-orb-core { animation: none; opacity: 1; }
+  .brand-orb-ring-outer, .brand-orb-ring-mid, .brand-orb-ring-inner { animation-duration: 60s; }
   body::before { animation: none; }
 }
 
