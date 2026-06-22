@@ -8,7 +8,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const db = getDb();
     const { id } = await params;
     const { content, category } = await request.json();
-    await db.execute({ sql: 'UPDATE memories SET content = ?, category = ? WHERE id = ? AND user_id = ?', args: [content, category, parseInt(id), userId] });
+    await db.execute({ sql: 'UPDATE memories SET content = ?, category = ? WHERE id = ? AND user_id = ?', args: [content ?? null, category ?? null, parseInt(id), userId] });
     const updated = (await db.execute({ sql: 'SELECT * FROM memories WHERE id = ?', args: [parseInt(id)] })).rows[0];
     return NextResponse.json(updated);
   } catch (error) {

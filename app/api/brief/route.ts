@@ -26,15 +26,15 @@ export async function GET(request: NextRequest) {
 
 Return ONLY a valid JSON object:
 {
-  "headline": <string: one direct sentence about where Nicholas stands right now in his job search>,
+  "headline": <string: one direct sentence about where the candidate stands right now in their job search>,
   "priority_actions": [
     { "action": <string: concrete specific action>, "urgency": <"today" | "this-week" | "soon">, "reason": <string: why this matters now> }
   ],
   "recommended_roles": [
-    { "title": <string: specific role title>, "why": <string: 1 sentence why it fits Nicholas specifically>, "example_companies": [<3 real company names that hire for this>] }
+    { "title": <string: specific role title>, "why": <string: 1 sentence why it fits this candidate specifically>, "example_companies": [<3 real company names that hire for this>] }
   ],
-  "this_week_focus": <string: 2-3 sentences on exactly what Nicholas should focus on this week>,
-  "honest_assessment": <string: 2-3 honest sentences about his competitiveness for target roles and what he must work on>
+  "this_week_focus": <string: 2-3 sentences on exactly what the candidate should focus on this week>,
+  "honest_assessment": <string: 2-3 honest sentences about their competitiveness for target roles and what they must work on>
 }`,
       }],
     });

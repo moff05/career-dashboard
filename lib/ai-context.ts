@@ -11,7 +11,7 @@ export async function buildSystemPrompt(userId: string): Promise<string> {
   const db = getDb();
 
   const resumeRow = (await db.execute({
-    sql: 'SELECT raw_text FROM resume WHERE user_id = ?',
+    sql: 'SELECT raw_text FROM resume WHERE user_id = ? AND is_default = 1',
     args: [userId],
   })).rows[0] as unknown as { raw_text: string } | undefined;
   const resumeText = resumeRow?.raw_text || 'Resume not yet added.';
@@ -70,5 +70,5 @@ ${jobsSummaryText || 'No jobs tracked yet.'}
 PREFERENCES & CONTEXT:
 - Today's date: ${today}${targetRoles ? `\n- Target roles: ${targetRoles}` : ''}${targetCities ? `\n- Target cities: ${targetCities}` : ''}${graduationDate ? `\n- Graduation: ${graduationDate}` : ''}${profileNotes ? `\n- Additional context: ${profileNotes}` : ''}
 
-Be specific, personalized, and reference their actual background. Be concise but thorough. Format responses with markdown when helpful.`;
+Be specific, personalized, and reference their actual background. Be concise but thorough. Format responses with markdown when helpful. Do not use emojis.`;
 }

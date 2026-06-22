@@ -7,7 +7,7 @@ export const maxDuration = 60;
 
 
 
-const PROMPT = (query: string) => `Research "${query}" for Nicholas and return a structured JSON analysis.
+const PROMPT = (query: string) => `Research "${query}" for the candidate described in the system prompt and return a structured JSON analysis.
 
 Return ONLY valid JSON, no other text:
 {
@@ -25,13 +25,13 @@ Return ONLY valid JSON, no other text:
   ],
   "fit_score": 7,
   "fit_verdict": "Strong Match | Good Fit | Stretch | Not a Match",
-  "fit_reasoning": "2-3 sentences: why this company/role aligns or doesn't align with Nicholas's background",
-  "nicholas_angle": "1-2 sentences: exactly how Nicholas should position himself — specific to this company",
+  "fit_reasoning": "2-3 sentences: why this company/role aligns or doesn't align with the candidate's background",
+  "your_angle": "1-2 sentences: exactly how the candidate should position themselves — specific to this company",
   "caveat": "one sentence about anything to verify (e.g. 'Confirm current openings on their careers page')"
 }
 
 For roles: list 3-5 real, entry-level roles that this company actually hires for (internships + new grad). Use real job titles this company has posted historically. Do not invent titles. Omit any role you are not confident this company actually recruits for.
-For fit_score: 1-10 — honest assessment based on Nicholas's CRE tech, AI automation, Python, n8n, SaaS background.
+For fit_score: 1-10 — honest assessment based on the candidate's actual background and skills from the system prompt. Do not assume any specific industry or major unless their resume/profile says so.
 For fit_verdict: Strong Match (8-10), Good Fit (6-7), Stretch (4-5), Not a Match (<4).`;
 
 export async function POST(request: NextRequest) {

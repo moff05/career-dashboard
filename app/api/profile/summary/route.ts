@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const db = getDb();
 
     const resumeRow = (await db.execute({
-      sql: 'SELECT raw_text FROM resume WHERE user_id = ?',
+      sql: 'SELECT raw_text FROM resume WHERE user_id = ? AND is_default = 1',
       args: [userId],
     })).rows[0] as unknown as { raw_text: string } | undefined;
     const resumeText = resumeRow?.raw_text || 'No resume provided.';
@@ -48,7 +48,7 @@ Return ONLY valid JSON:
   "summary": "2-3 sentence overall summary"
 }
 
-Be specific and reference actual details from the resume. readiness_score is 1-10 for competitive tech/finance roles.`,
+Be specific and reference actual details from the resume. readiness_score is 1-10 for competitive roles in this candidate's field. Do not use emojis.`,
       }],
     });
 

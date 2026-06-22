@@ -19,10 +19,10 @@ export async function POST(request: NextRequest) {
     const apiKey = getApiKey(request);
     if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
     const anthropic = new Anthropic({ apiKey });
-    void getUserId(request);
+    const userId = getUserId(request);
     const { company, title, interview_type, exchanges, action, current_answer, question_number } = await request.json();
 
-    const candidateContext = await buildSystemPrompt('anonymous');
+    const candidateContext = await buildSystemPrompt(userId);
     const totalQuestions = 5;
     const isLast = question_number >= totalQuestions;
 
@@ -42,7 +42,7 @@ INTERVIEW RULES:
     if (action === 'start') {
       userPrompt = `Introduce yourself in one sentence as the interviewer, then ask question 1 of ${totalQuestions}. Make it a strong, realistic opening question for a ${TYPE_LABELS[interview_type] || interview_type} interview at ${company}.`;
     } else if (isLast) {
-      userPrompt = `Nicholas answered question ${question_number} (the final question): "${current_answer}"
+      userPrompt = `The candidate answered question ${question_number} (the final question): "${current_answer}"
 
 Give 2-3 sentences of specific feedback on this answer. Then provide a final assessment:
 **Overall:** [Strong / Good / Needs Work]
@@ -50,7 +50,7 @@ Give 2-3 sentences of specific feedback on this answer. Then provide a final ass
 **Key gap:** [the most important thing to improve before the real interview]
 **Prep tip:** [one concrete, specific thing to do before the actual interview]`;
     } else {
-      userPrompt = `Nicholas answered question ${question_number}: "${current_answer}"
+      userPrompt = `The candidate answered question ${question_number}: "${current_answer}"
 
 Give 2-3 sentences of specific, honest feedback. Then ask question ${question_number + 1} of ${totalQuestions}.`;
     }
@@ -58,7 +58,7 @@ Give 2-3 sentences of specific, honest feedback. Then ask question ${question_nu
     const messages: Anthropic.MessageParam[] = [];
     for (const ex of (exchanges || [])) {
       if (ex.question) messages.push({ role: 'assistant', content: ex.question });
-      if (ex.answer) messages.push({ role: 'user', content: `[Nicholas answered]: ${ex.answer}` });
+      if (ex.answer) messages.push({ role: 'user', content: `[Candidate answered]: ${ex.answer}` });
     }
     messages.push({ role: 'user', content: userPrompt });
 
