@@ -3,6 +3,7 @@ import { getUserId, getApiKey } from '@/lib/user';
 import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
+import { logUsage } from '@/lib/usage';
 
 
 
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
         content: `Today is ${today}. Here are my active jobs:\n\n${jobList}\n\nReturn a JSON application strategy. Raw JSON only, no markdown fences:\n{\n  "narrative": "2-3 sentence strategic overview of my current situation and best approach",\n  "priority_jobs": [\n    {\n      "rank": 1,\n      "job_id": <number>,\n      "company": "<string>",\n      "title": "<string>",\n      "action": "Apply now" | "Follow up" | "Prep for interview" | "Research more" | "Reach out",\n      "urgency": "high" | "medium" | "low",\n      "reasoning": "<one concrete sentence why this rank>"\n    }\n  ],\n  "quick_actions": ["<3-4 specific things to do this week not tied to a single job>"]\n}\n\nPriority factors in order: (1) deadline proximity, (2) fit score, (3) stage (interviewing > applied > saved). Internships must be remote or Miami/FL for school schedule — deprioritize on-site internships in other cities. Show top 5 jobs max.`,
       }],
     });
+    await logUsage(userId, 'strategy_advisor', 'claude-haiku-4-5-20251001', response.usage);
 
     const text = (response.content[0] as { type: string; text: string }).text.trim();
     const match = text.match(/\{[\s\S]*\}/);

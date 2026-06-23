@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, getApiKey } from '@/lib/user';
+import { logUsage } from '@/lib/usage';
 
 export const maxDuration = 60;
 
@@ -27,6 +28,7 @@ JOB: Company: ${job.company} | Title: ${job.title}
 ${job.description ? `JD:\n${String(job.description).slice(0, 6000)}` : '(No JD)'}
 {"gaps":[{"skill":"","severity":"major","how_to_address":""}],"positioning":"","quick_wins":[],"should_apply":true,"apply_reasoning":""}` }],
     });
+    await logUsage(userId, 'fit_gaps', 'claude-haiku-4-5-20251001', response.usage);
     const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json({ error: 'Parse failed' }, { status: 500 });

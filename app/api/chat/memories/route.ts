@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { getUserId, getApiKey } from '@/lib/user';
+import { logUsage } from '@/lib/usage';
 
 
 
@@ -27,6 +28,7 @@ Assistant said: ${response}
 Return ONLY the JSON array.`,
       }],
     });
+    await logUsage(userId, 'memory_extraction', 'claude-haiku-4-5-20251001', completion.usage);
 
     const responseText = completion.content[0].type === 'text' ? completion.content[0].text : '[]';
     let memories: ExtractedMemory[] = [];

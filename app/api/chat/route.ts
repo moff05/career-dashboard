@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, getApiKey } from '@/lib/user';
+import { logUsage } from '@/lib/usage';
 
 export const maxDuration = 60;
 
@@ -61,6 +62,8 @@ export async function POST(request: NextRequest) {
             sql: 'INSERT INTO chat_messages (user_id, role, content, session_id) VALUES (?, ?, ?, ?)',
             args: [userId, 'assistant', fullResponse, sid],
           });
+          const finalMessage = await stream.finalMessage();
+          await logUsage(userId, 'coach_chat', 'claude-sonnet-4-6', finalMessage.usage);
           controller.close();
         } catch (err) {
           controller.error(err);

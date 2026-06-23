@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { getUserId, getApiKey } from '@/lib/user';
+import { logUsage } from '@/lib/usage';
 
 export const maxDuration = 60;
 
@@ -51,6 +52,7 @@ Return ONLY valid JSON:
 Be specific and reference actual details from the resume. readiness_score is 1-10 for competitive roles in this candidate's field. Do not use emojis.`,
       }],
     });
+    await logUsage(userId, 'profile_summary', 'claude-sonnet-4-6', response.usage);
 
     const text = response.content[0].type === 'text' ? response.content[0].text : '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);

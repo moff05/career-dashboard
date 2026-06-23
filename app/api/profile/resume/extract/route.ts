@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import mammoth from 'mammoth';
 import { extractText } from 'unpdf';
-import { getApiKey } from '@/lib/user';
+import { getUserId, getApiKey } from '@/lib/user';
+import { logUsage } from '@/lib/usage';
 
 const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
@@ -23,7 +24,7 @@ function looksFlattened(text: string): boolean {
   return text.length > 400 && lines <= 3;
 }
 
-async function restoreFormatting(anthropic: Anthropic, text: string): Promise<string> {
+async function restoreFormatting(anthropic: Anthropic, text: string, userId: string): Promise<string> {
   try {
     const res = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -37,6 +38,7 @@ ${text}
 Return ONLY the reformatted text, no commentary.`,
       }],
     });
+    await logUsage(userId, 'resume_extract', 'claude-haiku-4-5-20251001', res.usage);
     const out = res.content[0].type === 'text' ? res.content[0].text.trim() : '';
     return out || text;
   } catch {
@@ -45,7 +47,7 @@ Return ONLY the reformatted text, no commentary.`,
 }
 
 // Best-effort — only extracts what's explicitly present, never invents values.
-async function extractProfileFields(anthropic: Anthropic, text: string): Promise<ParsedProfile | null> {
+async function extractProfileFields(anthropic: Anthropic, text: string, userId: string): Promise<ParsedProfile | null> {
   try {
     const res = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
@@ -64,6 +66,7 @@ Return ONLY valid JSON, no other text:
 {"name":"","email":"","phone":"","linkedin":"","university":"","degree":"","graduation_date":"","gpa":"","honors":"","minors":"","target_roles":""}`,
       }],
     });
+    await logUsage(userId, 'resume_extract', 'claude-haiku-4-5-20251001', res.usage);
     const raw = res.content[0].type === 'text' ? res.content[0].text : '{}';
     const match = raw.match(/\{[\s\S]*\}/);
     if (!match) return null;
@@ -84,6 +87,7 @@ export async function POST(request: NextRequest) {
 
     const name = (fileName || '').toLowerCase();
     const buffer = Buffer.from(fileBase64, 'base64');
+    const userId = getUserId(request);
     const apiKey = getApiKey(request);
     const anthropic = apiKey ? new Anthropic({ apiKey }) : null;
 
@@ -115,6 +119,7 @@ export async function POST(request: NextRequest) {
             ],
           }],
         });
+        await logUsage(userId, 'resume_extract', 'claude-haiku-4-5-20251001', res.usage);
         text = res.content[0].type === 'text' ? res.content[0].text.trim() : '';
       }
     } else if (IMAGE_TYPES.includes(fileType as ImageType) || /\.(jpe?g|png|gif|webp)$/.test(name)) {
@@ -131,6 +136,7 @@ export async function POST(request: NextRequest) {
           ],
         }],
       });
+      await logUsage(userId, 'resume_extract', 'claude-haiku-4-5-20251001', res.usage);
       text = res.content[0].type === 'text' ? res.content[0].text.trim() : '';
     } else {
       return NextResponse.json({ error: 'Unsupported file type. Upload a PDF, .docx, .txt, or a photo of your resume.' }, { status: 415 });
@@ -140,8 +146,8 @@ export async function POST(request: NextRequest) {
 
     // Run concurrently — field extraction doesn't need the reformatted version.
     const [formattedText, profile] = await Promise.all([
-      anthropic && looksFlattened(text) ? restoreFormatting(anthropic, text) : Promise.resolve(text),
-      anthropic ? extractProfileFields(anthropic, text) : Promise.resolve(null),
+      anthropic && looksFlattened(text) ? restoreFormatting(anthropic, text, userId) : Promise.resolve(text),
+      anthropic ? extractProfileFields(anthropic, text, userId) : Promise.resolve(null),
     ]);
     return NextResponse.json({ text: formattedText, profile });
   } catch (error) {

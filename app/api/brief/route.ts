@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getUserId, getApiKey } from '@/lib/user';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildSystemPrompt } from '@/lib/ai-context';
+import { logUsage } from '@/lib/usage';
 
 export const maxDuration = 60;
 
@@ -38,6 +39,7 @@ Return ONLY a valid JSON object:
 }`,
       }],
     });
+    await logUsage(userId, 'weekly_brief', 'claude-haiku-4-5-20251001', response.usage);
 
     const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
     const jsonMatch = text.match(/\{[\s\S]*\}/);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, getApiKey } from '@/lib/user';
+import { logUsage } from '@/lib/usage';
 
 export const maxDuration = 60;
 
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
         system: systemPrompt,
         messages: [{ role: 'user', content: userContent }],
       });
+      await logUsage(userId, 'company_research', 'claude-sonnet-4-6', response.usage);
       // Extract text blocks from the response
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       text = (response.content as any[])
@@ -73,6 +75,7 @@ export async function POST(request: NextRequest) {
         system: systemPrompt,
         messages: [{ role: 'user', content: userContent }],
       });
+      await logUsage(userId, 'company_research', 'claude-haiku-4-5-20251001', response.usage);
       text = response.content[0].type === 'text' ? response.content[0].text : '{}';
     }
 

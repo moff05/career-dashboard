@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
-import { Edit2, ExternalLink, RefreshCw, Loader, FileText, Check, Download, Upload, Plus } from 'lucide-react';
+import { Edit2, ExternalLink, RefreshCw, Loader, FileText, Check, Download, Upload, Plus, DollarSign } from 'lucide-react';
 
 interface Profile {
   id?: number; name?: string; email?: string; phone?: string; linkedin?: string;
@@ -13,6 +13,20 @@ interface Profile {
 
 interface Summary { strengths: string[]; gaps: string[]; readiness_score: number; summary: string; }
 interface Resume { id: number; name: string; raw_text: string | null; parsed_at: string | null; is_default: number; }
+interface UsageByRoute { route: string; calls: number; input_tokens: number; output_tokens: number; web_search_requests: number; cost_usd: number; }
+interface Usage {
+  total_calls: number; total_input_tokens: number; total_output_tokens: number;
+  total_web_search_requests: number; total_cost_usd: number; since: string | null;
+  by_route: UsageByRoute[];
+}
+
+const ROUTE_LABELS: Record<string, string> = {
+  coach_chat: 'Coach Chat', memory_extraction: 'Memory Extraction', weekly_brief: 'Weekly Brief',
+  company_research: 'Company Research', hunt_agent: 'Job Hunt Agent', mock_interview: 'Mock Interview',
+  fit_scorecard: 'Fit Scorecard', resume_bullets: 'Resume Bullets', cover_letter: 'Cover Letter',
+  job_details: 'Job Details', fit_gaps: 'Fit Gaps', job_import: 'Job Import',
+  resume_extract: 'Resume Parsing', profile_summary: 'Profile Summary', strategy_advisor: 'Strategy Advisor',
+};
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile>({});
@@ -48,9 +62,13 @@ export default function ProfilePage() {
   const [backupMsg, setBackupMsg] = useState('');
   const [backupErr, setBackupErr] = useState('');
 
+  const [usage, setUsage] = useState<Usage | null>(null);
+  const [loadingUsage, setLoadingUsage] = useState(true);
+
   useEffect(() => {
     apiFetch('/api/profile').then(r => r.json()).then(data => setProfile(data));
     loadResumes();
+    apiFetch('/api/usage').then(r => r.json()).then(data => setUsage(data)).finally(() => setLoadingUsage(false));
   }, []);
 
   async function handleExport() {
@@ -414,6 +432,54 @@ export default function ProfilePage() {
             </div>
             {backupMsg && <div style={{ color: 'rgba(167,243,208,0.90)', fontSize: '11px', marginTop: '10px' }}>{backupMsg}</div>}
             {backupErr && <div style={{ color: 'rgba(252,150,150,0.90)', fontSize: '11px', marginTop: '10px' }}>{backupErr}</div>}
+          </div>
+
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <DollarSign size={12} color="rgba(158,202,242,0.72)" />
+              <h3 style={{ color: 'rgba(158,202,242,0.72)', fontSize: '10px', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Usage &amp; Cost</h3>
+            </div>
+            <p style={{ color: 'rgba(135,185,230,0.65)', fontSize: '11px', margin: '0 0 14px', lineHeight: 1.5 }}>
+              What your Anthropic API key has spent on this dashboard. Estimated from token counts and current published pricing — your Anthropic invoice is authoritative.
+            </p>
+            {loadingUsage ? (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <Loader size={16} color="#3b82f6" style={{ animation: 'spin 1s linear infinite' }} />
+              </div>
+            ) : !usage || usage.total_calls === 0 ? (
+              <p style={{ color: 'rgba(135,185,230,0.55)', fontSize: '12px', fontStyle: 'italic', margin: 0 }}>No AI calls logged yet.</p>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+                  <span style={{ color: 'rgba(232,244,255,0.95)', fontSize: '26px', fontWeight: 800 }}>${usage.total_cost_usd.toFixed(2)}</span>
+                  <span style={{ color: 'rgba(135,185,230,0.65)', fontSize: '11px' }}>
+                    {usage.total_calls} call{usage.total_calls === 1 ? '' : 's'}
+                    {usage.since ? ` since ${new Date(usage.since.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}
+                  </span>
+                </div>
+                {usage.total_web_search_requests > 0 && (
+                  <div style={{ color: 'rgba(135,185,230,0.65)', fontSize: '11px', marginBottom: '14px' }}>
+                    {usage.total_web_search_requests} web search{usage.total_web_search_requests === 1 ? '' : 'es'} included
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginTop: '14px' }}>
+                  {usage.by_route.slice(0, 8).map(r => {
+                    const pct = usage.total_cost_usd > 0 ? (r.cost_usd / usage.total_cost_usd) * 100 : 0;
+                    return (
+                      <div key={r.route}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '3px' }}>
+                          <span style={{ color: 'rgba(200,228,255,0.85)' }}>{ROUTE_LABELS[r.route] || r.route}</span>
+                          <span style={{ color: 'rgba(158,202,242,0.72)' }}>${r.cost_usd.toFixed(3)}</span>
+                        </div>
+                        <div style={{ height: '4px', borderRadius: '2px', background: 'rgba(125,220,255,0.08)', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${Math.max(pct, 2)}%`, background: 'linear-gradient(90deg, #4A9EF8, #7DF4FC)', borderRadius: '2px' }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

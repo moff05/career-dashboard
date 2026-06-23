@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getUserId, getApiKey } from '@/lib/user';
 import { buildSystemPrompt } from '@/lib/ai-context';
+import { logUsage } from '@/lib/usage';
 
 export const maxDuration = 60;
 
@@ -78,6 +79,8 @@ Give 2-3 sentences of specific, honest feedback. Then ask question ${question_nu
               controller.enqueue(encoder.encode(event.delta.text));
             }
           }
+          const finalMessage = await stream.finalMessage();
+          await logUsage(userId, 'mock_interview', 'claude-sonnet-4-6', finalMessage.usage);
           controller.close();
         } catch (err) {
           controller.error(err);

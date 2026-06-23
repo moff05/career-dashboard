@@ -5,6 +5,7 @@ import { getUserId, getApiKey } from '@/lib/user';
 import { getDb } from '@/lib/db';
 import { checkLiveness } from '@/lib/liveness';
 import { resolveCompanyAts, ensureAtsCacheTable } from '@/lib/ats';
+import { logUsage } from '@/lib/usage';
 
 export const maxDuration = 120;
 
@@ -124,6 +125,7 @@ Additional rules:
       system: systemPrompt,
       messages: [{ role: 'user', content: huntPrompt }],
     });
+    await logUsage(userId, 'hunt_agent', 'claude-sonnet-4-6', response.usage);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const blocks = response.content as any[];

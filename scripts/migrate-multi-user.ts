@@ -157,6 +157,23 @@ async function migrate() {
       slug TEXT,
       resolved_at TEXT NOT NULL
     );
+
+    -- One row per Claude API call, written by lib/usage.ts. Powers the
+    -- Profile page's Usage & Cost card — the only visibility a BYOK user
+    -- has into what their key is actually spending.
+    CREATE TABLE IF NOT EXISTS usage_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL DEFAULT 'anonymous',
+      route TEXT NOT NULL,
+      model TEXT NOT NULL,
+      input_tokens INTEGER NOT NULL DEFAULT 0,
+      output_tokens INTEGER NOT NULL DEFAULT 0,
+      cache_creation_input_tokens INTEGER NOT NULL DEFAULT 0,
+      cache_read_input_tokens INTEGER NOT NULL DEFAULT 0,
+      web_search_requests INTEGER NOT NULL DEFAULT 0,
+      cost_usd REAL NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Add user_id to pre-existing tables that might not have it
@@ -191,6 +208,8 @@ async function migrate() {
     'CREATE INDEX IF NOT EXISTS idx_resume_user ON resume(user_id)',
     // At most one default resume per user — enforced at the DB level.
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_resume_one_default ON resume(user_id) WHERE is_default = 1',
+    'CREATE INDEX IF NOT EXISTS idx_usage_log_user ON usage_log(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_usage_log_user_route ON usage_log(user_id, route)',
   ];
 
   for (const idx of indexes) {

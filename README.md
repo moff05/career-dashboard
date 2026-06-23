@@ -42,6 +42,9 @@ An AI-powered job search command center built with Next.js, TypeScript, and Clau
 ### Timeline
 - Vertical timeline merging manual milestones with job deadlines from the tracker
 
+### Profile
+- **Usage & Cost** — running total of what your own Anthropic API key has spent on this dashboard, with a per-feature cost breakdown (estimated from token counts and published pricing, including the web search per-call fee)
+
 ---
 
 ## Stack

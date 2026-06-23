@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, getApiKey } from '@/lib/user';
+import { logUsage } from '@/lib/usage';
 
 export const maxDuration = 60;
 
@@ -47,6 +48,7 @@ Return ONLY valid JSON, no other text:
   "letter": "full cover letter text here"
 }` }],
     });
+    await logUsage(userId, 'cover_letter', 'claude-haiku-4-5-20251001', response.usage);
     const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     let letter = '';

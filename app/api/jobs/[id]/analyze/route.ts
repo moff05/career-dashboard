@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, getApiKey } from '@/lib/user';
+import { logUsage } from '@/lib/usage';
 
 export const maxDuration = 60;
 
@@ -34,6 +35,7 @@ ${job.description ? `Description:\n${job.description}` : '(No description)'}
 
 {"categories":[{"name":"Industry Fit","score":0,"rationale":""},{"name":"Skills Match","score":0,"rationale":""},{"name":"Role Alignment","score":0,"rationale":""},{"name":"Location Match","score":0,"rationale":""},{"name":"Growth Potential","score":0,"rationale":""}],"total":0,"summary":""}` }],
     });
+    await logUsage(userId, 'fit_scorecard', 'claude-haiku-4-5-20251001', response.usage);
     const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json({ error: 'Parse failed' }, { status: 500 });

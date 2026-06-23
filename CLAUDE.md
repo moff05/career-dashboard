@@ -10,7 +10,7 @@ Originally built as a single-user tool for Nicholas Moffett (University of Miami
 - `/setup` (`app/setup/page.tsx`) is a 4-step onboarding flow: **identity** (name/email/linkedin) → **background** (school, grad date, target roles/cities, free-text notes) → **resume** (pasted plain text) → **API key** (validated as starting with `sk-ant-`).
 - On finish: client generates a UUID (`crypto.randomUUID()`), saves `cid_user_id` / `cid_api_key` / `cid_display_name` to `localStorage`, then `PUT`s the profile (and resume, if provided) to the API with those values as headers.
 - Every later request goes through `lib/apiFetch.ts`, which auto-injects `x-user-id` and `x-api-key` headers from `localStorage`.
-- Server-side, `lib/user.ts` reads `x-user-id` (defaults to `'anonymous'` if absent) and `x-api-key` (falls back to `process.env.ANTHROPIC_API_KEY` if unset — an admin/dev convenience, not meant for the public flow) from every request. All 25 API routes scope their queries by `user_id`.
+- Server-side, `lib/user.ts` reads `x-user-id` (defaults to `'anonymous'` if absent) and `x-api-key` (falls back to `process.env.ANTHROPIC_API_KEY` if unset — an admin/dev convenience, not meant for the public flow) from every request. All 31 API routes scope their queries by `user_id`.
 - API keys are never persisted server-side — they travel per-request only and live in the user's browser.
 
 ## How to run
@@ -33,7 +33,7 @@ npm run build   # production build check
 
 `lib/db.ts` → `getDb()` returns a singleton `@libsql/client`, pointed at `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` in production or a local SQLite file (`file:./data/career.db`) when those env vars are absent.
 
-Schema lives in `scripts/migrate-multi-user.ts` — `npm run migrate` creates all 8 tables (if missing) and adds `user_id` columns + indexes (safe to re-run). The legacy single-user migrations (`migrate.ts`, `migrate-v2.ts`, `migrate-v3.ts`) have been deleted — this is the only migration script now.
+Schema lives in `scripts/migrate-multi-user.ts` — `npm run migrate` creates all 9 tables (if missing) and adds `user_id` columns + indexes (safe to re-run). The legacy single-user migrations (`migrate.ts`, `migrate-v2.ts`, `migrate-v3.ts`) have been deleted — this is the only migration script now.
 
 **Tables (all scoped by `user_id` unless noted):**
 - `profile` — name, email, phone, linkedin, university, degree, graduation_date, gpa, honors, minors, target_roles, target_cities, notes, resume_text. Unique per `user_id`.
@@ -44,6 +44,7 @@ Schema lives in `scripts/migrate-multi-user.ts` — `npm run migrate` creates al
 - `resume` — name, raw_text, parsed_at, is_default. Multiple resumes per `user_id` are allowed; a partial unique index (`idx_resume_one_default`) enforces at most one `is_default = 1` row per user. AI features always read whichever resume is currently default.
 - `connections` — company, name, relationship, notes, status (`not_reached_out` → `reached_out` → `responded` → `warm`).
 - `leads` — company, title, url, location, type, fit_score, fit_reasoning, tags, source_query, dismissed. Written by the Job Hunt Agent.
+- `usage_log` — one row per Claude API call: route, model, input/output/cache tokens, web_search_requests, cost_usd. Written by `lib/usage.ts`, read by the Profile page's Usage & Cost card. Not scoped to a user for billing purposes server-side (the underlying Anthropic key is the real meter) — `user_id` here is for the per-user breakdown UI only.
 
 There is no hardcoded seed data anymore — a fresh `user_id` starts with empty tables until they complete `/setup` and start using the app.
 
@@ -61,7 +62,7 @@ app/
 ├── coach/page.tsx       # Streaming chat + mock interview mode
 ├── analytics/page.tsx   # Pipeline stats
 ├── timeline/page.tsx    # Vertical timeline — manual events + job deadlines from tracker
-├── profile/page.tsx     # Editable profile + AI strength summary
+├── profile/page.tsx     # Editable profile + AI strength summary + Usage & Cost card
 ├── memory/page.tsx      # Memory CRUD panel
 ├── hooks/useUser.ts      # Reads cid_user_id / display name from localStorage
 └── api/
@@ -85,13 +86,15 @@ app/
     ├── profile/route.ts, profile/resume/route.ts, profile/summary/route.ts
     ├── resumes/route.ts, resumes/[id]/route.ts  # Multi-resume CRUD — list/create/rename/set-default/delete
     ├── strategy/route.ts                # Application strategy advisor, consumed by Home
-    └── timeline/route.ts, timeline/[id]/route.ts
+    ├── timeline/route.ts, timeline/[id]/route.ts
+    └── usage/route.ts                   # Aggregated cost/token totals for the current user, consumed by Profile
 
 lib/
 ├── db.ts              # Turso/libsql singleton
 ├── user.ts            # getUserId / getApiKey from request headers
 ├── apiFetch.ts         # Client fetch wrapper — injects x-user-id / x-api-key
 ├── ai-context.ts       # buildSystemPrompt(userId) — resume + profile + memories + jobs, scoped per user
+├── usage.ts            # computeCost() + logUsage() — every Claude call site awaits this after the response comes back
 └── resume-parser.ts    # getResumeText(userId) — reads the resume table, no hardcoded fallback
 
 scripts/
@@ -215,6 +218,7 @@ Each call uses the requesting user's own API key (from `x-api-key`, via `lib/use
 14. **Multi-resume support** — `resume` table now allows many rows per user (`name` + `is_default`), managed via `/api/resumes` + `/api/resumes/[id]` and a resume-switcher UI on Profile. AI features always read whichever resume is the user's current default.
 15. Discover restructured so Hunt Agent (real, grounded links) leads; the AI-guessed feed is relabeled "Idea Feed — Unverified" and demoted.
 16. Resume auto-populate extended to infer `target_roles` from resume content (the one field that's reasonable to infer rather than extract verbatim).
+17. **In-app usage/cost meter** — `lib/usage.ts` logs every Claude API call (all 14 call sites: chat, mock interview, hunt agent, company research, weekly brief, strategy advisor, per-job AI tabs, resume parsing, job import, memory extraction, profile summary) to the `usage_log` table with computed `cost_usd` based on published per-model pricing, cache write/read multipliers, and the flat web-search-per-call fee. `GET /api/usage` aggregates totals + a per-feature breakdown, surfaced on Profile via a "Usage & Cost" card — so BYOK users can see what their key has spent without checking the Anthropic console.
 
 ### Cut
 - `/api/analyze/jd` — deleted (was dead code, no UI consumer).
@@ -226,5 +230,4 @@ Each call uses the requesting user's own API key (from `x-api-key`, via `lib/use
 - Mobile-responsive pass beyond the existing bottom nav (spot-check tracker/detail panel on small screens) — in progress.
 - Weekly email digest (Sunday summary via Resend or similar) — needs a cron/scheduling decision (Vercel Cron is paid-tier, or use an external trigger).
 - BYOK onboarding friction — getting an Anthropic API key is real friction for non-technical users; consider a hand-holding flow or a capped trial key pool.
-- In-app usage/cost meter so BYOK users can see what they've spent without checking the Anthropic console.
 - The legacy orphaned `profile` row (`id=1`, `user_id` still `NULL` — predates the multi-user migration) is dead/unreachable but hasn't been deleted. The equivalent legacy `resume` row was migrated to `user_id='anonymous'` as part of the multi-resume migration.

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { getApiKey } from '@/lib/user';
+import { getUserId, getApiKey } from '@/lib/user';
+import { logUsage } from '@/lib/usage';
 
 
 
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
   try {
     const apiKey = getApiKey(request);
     if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
+    const userId = getUserId(request);
     const anthropic = new Anthropic({ apiKey });
     const body = await request.json();
     const { url, extraText, imageBase64, imageMediaType, extraLink } = body as {
@@ -111,6 +113,7 @@ export async function POST(request: NextRequest) {
             ],
           }],
         });
+        await logUsage(userId, 'job_import', 'claude-haiku-4-5-20251001', visionRes.usage);
         const imageText = visionRes.content[0].type === 'text' ? visionRes.content[0].text : '';
         if (imageText) contextParts.push(`[FROM SCREENSHOT]\n${imageText}`);
       } catch {
@@ -167,6 +170,7 @@ Rules:
 - description: the FULL job description including all responsibilities, requirements, and qualifications — copy the actual text, do not summarize. Empty if insufficient info.`,
       }],
     });
+    await logUsage(userId, 'job_import', 'claude-haiku-4-5-20251001', response.usage);
 
     const rawText = response.content[0].type === 'text' ? response.content[0].text : '{}';
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
