@@ -5,5 +5,11 @@ export function getUserId(request: NextRequest): string {
 }
 
 export function getApiKey(request: NextRequest): string | null {
-  return request.headers.get('x-api-key') || process.env.ANTHROPIC_API_KEY || null;
+  const headerKey = request.headers.get('x-api-key');
+  if (headerKey) return headerKey;
+  // Admin/dev convenience only — gated out of production so a request with
+  // no key of its own fails closed instead of silently billing whatever
+  // ANTHROPIC_API_KEY happens to be configured on the deployment.
+  if (process.env.NODE_ENV !== 'production') return process.env.ANTHROPIC_API_KEY || null;
+  return null;
 }

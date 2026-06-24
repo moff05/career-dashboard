@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     const userId = getUserId(request);
     const apiKey = getApiKey(request);
-    const anthropic = new Anthropic({ apiKey: apiKey || process.env.ANTHROPIC_API_KEY || '' });
+    const anthropic = new Anthropic({ apiKey: apiKey || '' });
     const { message, response, session_id } = await request.json();
 
     const completion = await anthropic.messages.create({
