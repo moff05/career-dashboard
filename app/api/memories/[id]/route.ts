@@ -9,7 +9,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const { content, category } = await request.json();
     await db.execute({ sql: 'UPDATE memories SET content = ?, category = ? WHERE id = ? AND user_id = ?', args: [content ?? null, category ?? null, parseInt(id), userId] });
-    const updated = (await db.execute({ sql: 'SELECT * FROM memories WHERE id = ?', args: [parseInt(id)] })).rows[0];
+    const updated = (await db.execute({ sql: 'SELECT * FROM memories WHERE id = ? AND user_id = ?', args: [parseInt(id), userId] })).rows[0];
+    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(updated);
   } catch (error) {
     console.error('PUT /api/memories/[id] error:', error);

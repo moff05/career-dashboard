@@ -17,7 +17,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
              url || null, description || null, salary_range || null, location || null, source || null, notes || null,
              parseInt(id), userId],
     });
-    const updated = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ?', args: [parseInt(id)] })).rows[0];
+    const updated = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ? AND user_id = ?', args: [parseInt(id), userId] })).rows[0];
+    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(updated);
   } catch (error) {
     console.error('PUT /api/jobs/[id] error:', error);
@@ -36,7 +37,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const args = [...Object.values(body), parseInt(id), userId] as any[];
     await db.execute({ sql: `UPDATE jobs SET ${fields} WHERE id = ? AND user_id = ?`, args });
-    const updated = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ?', args: [parseInt(id)] })).rows[0];
+    const updated = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ? AND user_id = ?', args: [parseInt(id), userId] })).rows[0];
+    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(updated);
   } catch (error) {
     console.error('PATCH /api/jobs/[id] error:', error);
