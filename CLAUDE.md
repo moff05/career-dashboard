@@ -53,11 +53,11 @@ There is no hardcoded seed data anymore — a fresh `user_id` starts with empty 
 
 ## Architecture
 
-One page, two overlays (June 2026 redesign — see Design system below). `app/page.tsx` carries the greeting, free Priorities strip, stats, and the full job tracker table — this is the whole app for a logged-in user. Coach and Profile/Memory are summonable panels rendered globally from `layout.tsx`, opened via `useOverlays()` (`app/OverlayContext.tsx`), not routes. There is no sidebar and no per-page nav; the header (`app/layout.tsx`) is a slim, sticky top bar with the fox mark + wordmark on the left and Coach/Profile triggers on the right.
+One page, two overlays (June 2026 redesign — see Design system below). `app/page.tsx` carries the greeting, free Priorities strip, stats, and the full job tracker table — this is the whole app for a logged-in user. Coach and Profile/Memory are summonable panels rendered globally from `layout.tsx`, opened via `useOverlays()` (`app/OverlayContext.tsx`), not routes. There is no sidebar and no per-page nav; the header (`app/layout.tsx`) is a slim, sticky top bar with the `jobs_` wordmark on the left (no icon mark — tried a fox-head logo, cut it, see roadmap) and Coach/Profile triggers on the right.
 
 ```
 app/
-├── layout.tsx              # Slim sticky header (fox mark, Coach/Profile triggers) + OverlayProvider, renders CoachPanel/ProfilePanel globally
+├── layout.tsx              # Slim sticky header (jobs_ wordmark, no icon mark, Coach/Profile triggers) + OverlayProvider, renders CoachPanel/ProfilePanel globally
 ├── OverlayContext.tsx      # useOverlays() — coachOpen/profileOpen state + openCoach(prefill?)/openProfile(tab?), consumed by page.tsx and the header
 ├── ClientRoot.tsx          # Redirects to /welcome if cid_user_id missing from localStorage (the API key is optional — see Multi-user model)
 ├── globals.css             # Design tokens (see Design system below)
@@ -65,7 +65,6 @@ app/
 ├── welcome/page.tsx        # Landing page (pre-auth, full-bleed) — Get Started, or restore-from-backup shortcut
 ├── setup/page.tsx          # 4-step onboarding (pre-auth, full-bleed)
 ├── components/
-│   ├── FoxMark.tsx         # The brand mark — reused in the header, /welcome, /setup, and the tracker's empty state
 │   ├── CoachPanel.tsx      # General chat overlay — knows resume/profile/memories/jobs, no job-specific analysis. Slides in from the right.
 │   └── ProfilePanel.tsx    # Profile + Memory merged into one tabbed overlay (Profile / Strength / Usage / Memory). Centered modal.
 ├── hooks/useUser.ts        # Reads cid_user_id / display name from localStorage
@@ -130,7 +129,7 @@ Greeting + Priorities strip + stats + the job tracker table, top to bottom, one 
 - **Inline status change** — click status badge → dropdown → `PATCH` partial update.
 - **Detail slide panel** — location, deadline countdown, source, salary, URL, notes, description, plus AI Score / Gaps / Bullets / Cover Letter / Connections tabs. These are the only per-job AI surfaces — there is no "discuss with Coach" handoff anymore (cut deliberately; Coach is general-only, see below).
 - **Search + filter, column sorting, smart deadline countdown.**
-- **Empty state** — tracker starts empty; prompts the user to import a job; shows the fox mark at reduced opacity.
+- **Empty state** — tracker starts empty; prompts the user to import a job.
 
 ## Coach (overlay, `app/components/CoachPanel.tsx`)
 
@@ -161,7 +160,7 @@ Greeting + Priorities strip + stats + the job tracker table, top to bottom, one 
 
 ## Design system (terminal, June 2026)
 
-Full rebuild from the old "icy glass" theme (midnight navy, cyan glow, backdrop-blur glass cards, an animated orb mascot) — deliberately replaced per direct user direction: primary black, terminal/monospace, one orange accent, a static fox mark, no glow/blur/gradient decoration anywhere. See PRODUCT.md for the brand rationale and the non-negotiable rule: the terminal look is skin-deep, every interaction stays point-and-click.
+Full rebuild from the old "icy glass" theme (midnight navy, cyan glow, backdrop-blur glass cards, an animated orb mascot) — deliberately replaced per direct user direction: primary black, terminal/monospace, one orange accent, no glow/blur/gradient decoration anywhere, no icon mark of any kind (a fox-head logo was tried, iterated twice, then cut entirely — see roadmap). See PRODUCT.md for the brand rationale and the non-negotiable rule: the terminal look is skin-deep, every interaction stays point-and-click.
 
 Tokens defined in `app/globals.css`, all verified against WCAG AA on the `--bg` canvas (ratios noted in the CSS comment):
 - Background: `--bg #0A0A0A` (primary black), `--surface #161616` / `--surface-2 #1F1F1F` for elevated panels — flat fills, no blur
@@ -173,7 +172,7 @@ Tokens defined in `app/globals.css`, all verified against WCAG AA on the `--bg` 
 - Font: JetBrains Mono, one family for everything (headings, labels, data, AI-generated prose) — no sans-serif anywhere
 - Radius scale tightened for a sharper, less-rounded feel: `--r-sm 4px` / `--r 6px` / `--r-lg 10px`
 - The `>` prompt motif: `.prompt::before` prefixes section headers; the brand wordmark is `jobs_` with the trailing underscore in accent orange
-- Brand mark: `FoxMark` (`app/components/FoxMark.tsx`) — an original geometric fox-head SVG, orange on the canvas color, static (no idle animation, unlike the old orb)
+- No brand/icon mark — the `jobs_` wordmark (monospace, trailing underscore in accent orange) is the only brand element. A fox-head SVG mark was built, iterated on twice, then cut entirely (see roadmap) rather than kept as a half-right compromise.
 - No sidebar, no per-page chrome — see Architecture above for the one-page-plus-overlays shell
 
 ## AI model usage
@@ -220,6 +219,7 @@ Each call uses the requesting user's own API key (from `x-api-key`, via `lib/use
     - **Cut the manual "Add Memory" form** from Profile's Memory tab — kept view/delete (transparency into what the AI has learned), removed the add-it-yourself form since manually feeding the AI facts about yourself isn't a real usage pattern. Added a one-line clarification to the Strength tab explaining it answers a different question than the per-job AI Score (general resume quality vs. fit for one specific posting), since the two looked redundant without that context.
 
 ### Cut
+- **The fox-head brand mark** (`app/components/FoxMark.tsx`, `app/icon.svg`) — built and iterated on twice (the first pass didn't read as a fox at all; the second pass fixed that but still looked like a jack-o-lantern), then removed entirely on "get rid of the logo everywhere" rather than attempting a third pass. The `jobs_` wordmark alone carries the brand now. Favicon falls back to the pre-existing `app/favicon.ico`.
 - `/api/analyze/jd` — deleted (was dead code, no UI consumer).
 - Analytics and Timeline pages — removed (low utility for new users with few/no jobs tracked).
 - Legacy single-user migration scripts (`migrate.ts`, `migrate-v2.ts`, `migrate-v3.ts`) — deleted; `migrate-multi-user.ts` is the only migration now.

@@ -93,7 +93,6 @@ app/
 ├── welcome/            # Landing page — get started, or restore from backup
 ├── setup/              # 4-step onboarding
 ├── components/
-│   ├── FoxMark.tsx     # Brand mark
 │   ├── CoachPanel.tsx  # Coach overlay (general chat)
 │   └── ProfilePanel.tsx# Profile + Strength + Usage + Memory, tabbed overlay
 ├── OverlayContext.tsx  # useOverlays() — opens/closes the two overlays from anywhere

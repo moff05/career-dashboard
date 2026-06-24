@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Briefcase, Sparkles, MessageSquare, ArrowRight, Upload, Loader } from 'lucide-react';
 import { saveUser } from '@/app/hooks/useUser';
-import { FoxMark } from '@/app/components/FoxMark';
 
 const FEATURES = [
   { icon: Briefcase, title: 'Import a job, get a real score', desc: 'Paste a link or just the job description — it gets parsed and scored against your resume, 5 categories, no false hope.' },
@@ -93,9 +92,6 @@ export default function WelcomePage() {
       <div style={{ width: '100%', maxWidth: '640px' }}>
 
         <div style={{ textAlign: 'center', marginBottom: '36px' }}>
-          <div style={{ margin: '0 auto 16px', display: 'flex', justifyContent: 'center' }}>
-            <FoxMark size={48} />
-          </div>
           <h1 className="prompt" style={{ color: 'var(--text)', fontSize: '26px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em', justifyContent: 'center', display: 'flex' }}>
             jobs<span style={{ color: 'var(--accent)' }}>_</span>
           </h1>

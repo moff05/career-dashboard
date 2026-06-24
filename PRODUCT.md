@@ -18,11 +18,7 @@ Terminal · Minimal · Sharp
 
 Looks like a developer tool. Operates like consumer software. The aesthetic borrows from CLI/terminal culture — monospace type, the `>` prompt as a recurring motif, a black canvas — but every interaction underneath is point-and-click, plainly labeled, and impossible to get lost in. The look is for someone who'd recognize a terminal aesthetic as "techy and cool"; the actual usability bar is a college student who has never opened one and never will. Nothing about the terminal styling is functional — there is no command input anywhere in the product. It's a skin, not an interaction model.
 
-The fox mark (see Logo below) is the one warm, organic touch against an otherwise cold, geometric system — a mascot, not a corporate logo.
-
-## Logo
-
-A geometric, angular fox-head mark in the accent orange — sharp, symmetrical, built from clean vector lines, not illustrative or sketchy. Used as the brand mark in the header and as the favicon. It's the only place in the UI where a literal "character" appears; everywhere else, personality comes from the typography and the `>` motif, not from an animated companion (the old icy-glass "orb" is gone).
+There is no mascot or icon mark — the brand mark tried a fox head through a couple of iterations and was removed entirely rather than kept as a half-right compromise. Personality comes from the typography and the `>` motif alone: the `jobs_` wordmark, monospace rhythm, and the prompt prefix. No logo to design around, no icon to keep legible at every size — one less thing to get wrong.
 
 ## Anti-references
 
@@ -30,7 +26,7 @@ A geometric, angular fox-head mark in the accent orange — sharp, symmetrical, 
 - Generic SaaS dashboards (Linear, Notion in their most neutral states) — too impersonal, and not what "terminal" means here either.
 - Corporate HR / ATS tools — sterile, cold, built for companies not people.
 - Actual terminal emulators / CLI tools as an interaction model. The reference is the *look* of a terminal (monospace, black canvas, `>` prompts), never its *behavior*. If a feature would require someone to type a command, recall a flag, or remember syntax, it has crossed from aesthetic into interaction model and must be rebuilt as a button, form, or menu.
-- Cute, animated mascots that move on their own (the old breathing/spinning orb). The fox mark is static — a mark, not a character with idle animations.
+- Cute, animated mascots that move on their own (the old breathing/spinning orb) — and mascots/icon marks generally now; the fox mark that briefly replaced the orb was tried and cut. Don't reintroduce a character or icon mark without it being asked for again.
 
 ## Design Principles
 

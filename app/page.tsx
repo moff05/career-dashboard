@@ -5,7 +5,6 @@ import { apiFetch } from '@/lib/apiFetch';
 import { Star, Trash2, ExternalLink, ChevronDown, ChevronRight, Plus, LinkIcon, Loader, AlertCircle, ArrowLeft, ImageIcon, Edit2, RotateCcw, X, Check, AlertTriangle, Clock, Bell, Zap } from 'lucide-react';
 import { useUser } from '@/app/hooks/useUser';
 import { useOverlays } from '@/app/OverlayContext';
-import { FoxMark } from '@/app/components/FoxMark';
 
 interface Job {
   id: number; company: string; title: string; type: string; status: string;
@@ -717,7 +716,6 @@ export default function DashboardPage() {
         <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '80px', fontSize: '13px' }}>Loading...</div>
       ) : jobs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px 32px' }}>
-          <div style={{ marginBottom: '16px', opacity: 0.5 }}><FoxMark size={32} /></div>
           <div style={{ color: 'var(--text)', fontSize: '14px', marginBottom: '6px' }}>No jobs tracked yet</div>
           <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '24px' }}>Paste a link, paste the description, or just type it in yourself</div>
           <button onClick={openImport} className="btn-primary" style={{ margin: '0 auto' }}>

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Check, FileText } from 'lucide-react';
 import { saveUser } from '@/app/hooks/useUser';
 import { extractResumeText } from '@/lib/resumeExtract';
-import { FoxMark } from '@/app/components/FoxMark';
 
 // API key comes first (resume parsing may need Claude), then resume — uploading
 // it early lets us pre-fill identity/background below from what it finds.
@@ -179,11 +178,8 @@ export default function SetupPage() {
     }}>
       <div style={{ width: '100%', maxWidth: '520px' }}>
 
-        {/* Logo / brand */}
+        {/* Brand */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{ margin: '0 auto 16px', display: 'flex', justifyContent: 'center' }}>
-            <FoxMark size={40} />
-          </div>
           <h1 className="prompt" style={{ color: 'var(--text)', fontSize: '22px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em', justifyContent: 'center', display: 'flex' }}>
             jobs<span style={{ color: 'var(--accent)' }}>_</span>
           </h1>

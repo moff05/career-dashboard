@@ -8,7 +8,6 @@ import { useUser } from './hooks/useUser';
 import { OverlayProvider, useOverlays } from './OverlayContext';
 import { CoachPanel } from './components/CoachPanel';
 import { ProfilePanel } from './components/ProfilePanel';
-import { FoxMark } from './components/FoxMark';
 
 function Header() {
   const { displayName } = useUser();
@@ -20,7 +19,6 @@ function Header() {
   return (
     <header className="app-header">
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <FoxMark size={24} />
         <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: '14px', letterSpacing: '-0.01em' }}>
           jobs<span style={{ color: 'var(--accent)' }}>_</span>
         </span>
