@@ -9,6 +9,7 @@ const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 type ImageMediaType = typeof VALID_IMAGE_TYPES[number];
 
 function detectSource(url: string): string {
+  if (!url?.trim()) return 'Pasted';
   try {
     const host = new URL(url).hostname.toLowerCase();
     if (host.includes('linkedin')) return 'LinkedIn';
@@ -61,31 +62,36 @@ export async function POST(request: NextRequest) {
     const anthropic = new Anthropic({ apiKey });
     const body = await request.json();
     const { url, extraText, imageBase64, imageMediaType, extraLink } = body as {
-      url: string;
+      url?: string;
       extraText?: string;
       imageBase64?: string;
       imageMediaType?: string;
       extraLink?: string;
     };
 
-    if (!url?.trim()) return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
+    if (!url?.trim() && !extraText?.trim()) {
+      return NextResponse.json({ error: 'Paste a job posting link or the job description text.' }, { status: 400 });
+    }
 
-    const source = detectSource(url);
+    const cleanUrl = url?.trim() || null;
+    const source = detectSource(url || '');
     const contextParts: string[] = [];
     const warnings: string[] = [];
 
-    // 1. Fetch the main URL — try Jina reader first (handles JS-rendered pages), fallback to plain fetch
-    try {
-      let text = '';
+    // 1. Fetch the main URL (if given) — try Jina reader first (handles JS-rendered pages), fallback to plain fetch
+    if (url?.trim()) {
       try {
-        text = await fetchWithJina(url);
+        let text = '';
+        try {
+          text = await fetchWithJina(url);
+        } catch {
+          text = await fetchAndStrip(url);
+        }
+        if (text) contextParts.push(`[PAGE: ${url}]\n${text}`);
+        else warnings.push('Page loaded but had no readable content.');
       } catch {
-        text = await fetchAndStrip(url);
+        warnings.push('Could not fetch the page — it may require login or block automated access.');
       }
-      if (text) contextParts.push(`[PAGE: ${url}]\n${text}`);
-      else warnings.push('Page loaded but had no readable content.');
-    } catch {
-      warnings.push('Could not fetch the page — it may require login or block automated access.');
     }
 
     // 2. User-provided extra text (paste, recruiter message, JD copy-paste, etc.)
@@ -133,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     if (contextParts.length === 0) {
       const warning = warnings.join(' ') || 'No content could be extracted. Fill in the fields manually.';
-      return NextResponse.json({ ...blank, url, source, warning });
+      return NextResponse.json({ ...blank, url: cleanUrl, source, warning });
     }
 
     const combinedContext = contextParts.join('\n\n---\n\n').slice(0, 18000);
@@ -183,10 +189,10 @@ Rules:
         ...warnings,
         missing.length > 0 ? `Not found: ${missing.join(', ')}. Fill in manually.` : '',
       ].filter(Boolean).join(' ');
-      return NextResponse.json({ ...extracted, url, source, warning });
+      return NextResponse.json({ ...extracted, url: cleanUrl, source, warning });
     }
 
-    return NextResponse.json({ ...blank, url, source, warning: 'Could not parse content. Fill in manually.' });
+    return NextResponse.json({ ...blank, url: cleanUrl, source, warning: 'Could not parse content. Fill in manually.' });
   } catch (error) {
     console.error('POST /api/jobs/import error:', error);
     return NextResponse.json({ error: 'Import failed' }, { status: 500 });

@@ -3,14 +3,13 @@
 import './globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, Compass, MessageSquare, User, Brain } from 'lucide-react';
+import { LayoutDashboard, Briefcase, MessageSquare, User, Brain } from 'lucide-react';
 import { ClientRoot } from './ClientRoot';
 import { useUser } from './hooks/useUser';
 
 const navItems = [
   { href: '/',          label: 'Home',      icon: LayoutDashboard },
   { href: '/tracker',   label: 'Jobs',      icon: Briefcase },
-  { href: '/discover',  label: 'Discover',  icon: Compass },
   { href: '/coach',     label: 'Coach',     icon: MessageSquare },
   { href: '/profile',   label: 'Profile',   icon: User },
   { href: '/memory',    label: 'Memory',    icon: Brain },
@@ -48,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     : 'CD';
 
   const mobileNavItems = navItems.filter(n =>
-    ['/', '/tracker', '/discover', '/coach', '/profile'].includes(n.href)
+    ['/', '/tracker', '/coach', '/profile'].includes(n.href)
   );
 
   // Onboarding screens are full-bleed — no point showing app nav before setup is done.

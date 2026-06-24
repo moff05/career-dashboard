@@ -1,6 +1,6 @@
 import { getDb } from './db';
 
-interface Memory { content: string; category: string; }
+interface Memory { content: string; category: string; created_at: string; }
 interface Job { type: string; status: string; company: string; title: string; }
 interface Profile {
   name?: string; graduation_date?: string; target_roles?: string;
@@ -27,13 +27,14 @@ export async function buildSystemPrompt(userId: string): Promise<string> {
   const profileNotes = profileRow?.notes || '';
 
   const memoriesRows = (await db.execute({
-    sql: 'SELECT content, category FROM memories WHERE user_id = ? ORDER BY category, created_at DESC',
+    sql: 'SELECT content, category, created_at FROM memories WHERE user_id = ? ORDER BY category, created_at DESC',
     args: [userId],
   })).rows as unknown as Memory[];
   const memoriesByCategory: Record<string, string[]> = {};
   for (const m of memoriesRows) {
     if (!memoriesByCategory[m.category]) memoriesByCategory[m.category] = [];
-    memoriesByCategory[m.category].push(m.content);
+    const date = m.created_at ? new Date(m.created_at.replace(' ', 'T') + 'Z').toISOString().slice(0, 10) : '';
+    memoriesByCategory[m.category].push(date ? `[${date}] ${m.content}` : m.content);
   }
   const memoriesText = Object.keys(memoriesByCategory).length === 0
     ? 'No memories saved yet.'
@@ -61,8 +62,10 @@ export async function buildSystemPrompt(userId: string): Promise<string> {
 RESUME:
 ${resumeText}
 
-WHAT I KNOW ABOUT ${name.toUpperCase()} (Saved Memories):
+WHAT I KNOW ABOUT ${name.toUpperCase()} (Saved Memories, dated):
 ${memoriesText}
+
+Memories are notes from past conversations, not fixed truth — people's goals and preferences change. If a memory conflicts with something the user is saying right now, or with a more recent memory, trust the newer one and what they're telling you in this conversation. Don't hold them to an old stated goal as if it still applies by default.
 
 CURRENT JOBS IN TRACKER:
 ${jobsSummaryText || 'No jobs tracked yet.'}

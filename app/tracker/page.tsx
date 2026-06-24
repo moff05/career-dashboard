@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
-import { Star, Trash2, ExternalLink, FileText, ChevronDown, ChevronRight, Plus, LinkIcon, Loader, AlertCircle, ArrowLeft, ImageIcon, Edit2, RotateCcw, X, Check } from 'lucide-react';
+import { Star, Trash2, ExternalLink, ChevronDown, ChevronRight, Plus, LinkIcon, Loader, AlertCircle, ArrowLeft, ImageIcon, Edit2, RotateCcw, X, Check } from 'lucide-react';
 
 interface Job {
   id: number; company: string; title: string; type: string; status: string;
@@ -380,18 +380,19 @@ export default function TrackerPage() {
   const closeImport = () => { removeImage(); setImportStep(null); };
 
   const fetchImport = async () => {
-    const trimmed = importUrl.trim();
-    if (!trimmed) return;
+    const trimmedUrl = importUrl.trim();
+    const trimmedText = importExtraText.trim();
+    if (!trimmedUrl && !trimmedText) return;
     setImportFetchError(''); setImportStep('loading');
     try {
       const res = await apiFetch('/api/jobs/import', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: trimmed, extraText: importExtraText.trim() || undefined, imageBase64: importImage?.base64, imageMediaType: importImage?.mediaType, extraLink: importExtraLink.trim() || undefined }),
+        body: JSON.stringify({ url: trimmedUrl || undefined, extraText: trimmedText || undefined, imageBase64: importImage?.base64, imageMediaType: importImage?.mediaType, extraLink: importExtraLink.trim() || undefined }),
       });
       const data = await res.json();
-      if (data.error && !data.url) { setImportFetchError(data.error); setImportStep('input'); return; }
+      if (data.error) { setImportFetchError(data.error); setImportStep('input'); return; }
       setImportWarning(data.warning || '');
-      setImportForm({ company: data.company||'', title: data.title||'', type: data.type||'fall-2026-internship', status: 'saved', match_score: '', location: data.location||'', source: data.source||'company site', posting_date: data.posting_date||'', deadline: data.deadline||'', url: data.url||trimmed, salary_range: data.salary_range||'', notes: '', description: data.description||'' });
+      setImportForm({ company: data.company||'', title: data.title||'', type: data.type||'fall-2026-internship', status: 'saved', match_score: '', location: data.location||'', source: data.source||'Pasted', posting_date: data.posting_date||'', deadline: data.deadline||'', url: data.url||trimmedUrl, salary_range: data.salary_range||'', notes: '', description: data.description||'' });
       setImportStep('review');
     } catch { setImportFetchError('Request failed.'); setImportStep('input'); }
   };
@@ -552,7 +553,7 @@ export default function TrackerPage() {
             borderRadius: '7px', padding: '8px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
             boxShadow: '0 0 16px rgba(59,130,246,0.25)',
           }}>
-            <LinkIcon size={13} /> Import from URL
+            <LinkIcon size={13} /> Import a Job
           </button>
           <button onClick={() => { setEditingJob(null); setForm(EMPTY_FORM); setShowModal(true); }} style={{
             display: 'flex', alignItems: 'center', gap: '5px',
@@ -628,7 +629,7 @@ export default function TrackerPage() {
             background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', border: 'none',
             borderRadius: '7px', padding: '10px 20px', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
           }}>
-            <LinkIcon size={13} /> Import from URL
+            <LinkIcon size={13} /> Import a Job
           </button>
         </div>
       ) : (
@@ -744,10 +745,6 @@ export default function TrackerPage() {
                           <button onClick={() => openEdit(job)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(80,130,185,0.38)', padding: '5px', borderRadius: '20px', display: 'flex' }}
                             onMouseEnter={e => (e.currentTarget.style.color = 'rgba(150,195,240,0.65)')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(80,130,185,0.38)')}>
                             <Edit2 size={11} />
-                          </button>
-                          <button onClick={() => window.location.href = `/coach?prefill=cover-letter&company=${encodeURIComponent(job.company)}&title=${encodeURIComponent(job.title)}`} title="Cover letter" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(80,130,185,0.38)', padding: '5px', borderRadius: '20px', display: 'flex' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#7DF4FC')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(80,130,185,0.38)')}>
-                            <FileText size={11} />
                           </button>
                           <button onClick={() => handleDelete(job.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(80,130,185,0.38)', padding: '5px', borderRadius: '20px', display: 'flex' }}
                             onMouseEnter={e => (e.currentTarget.style.color = 'rgba(248,100,100,0.9)')} onMouseLeave={e => (e.currentTarget.style.color = 'rgba(80,130,185,0.38)')}>
@@ -1047,24 +1044,6 @@ export default function TrackerPage() {
                                         </div>
                                       ))}
                                     </div>
-                                    <button onClick={() => {
-                                        const scoreData = analysisResults[job.id];
-                                        if (scoreData && scoreData !== 'loading' && scoreData !== 'error') {
-                                          sessionStorage.setItem('coach-score-brief', JSON.stringify({
-                                            company: job.company, title: job.title,
-                                            ...(scoreData as AnalysisResult),
-                                          }));
-                                        }
-                                        window.location.href = '/coach';
-                                      }}
-                                      style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: '5px',
-                                        backgroundColor: 'transparent', color: '#a855f7', border: '1px solid rgba(168,85,247,0.3)',
-                                        borderRadius: '10px', padding: '7px 14px', fontSize: '12px', fontWeight: 600,
-                                        cursor: 'pointer', fontFamily: 'inherit',
-                                      }}>
-                                      <MessageSquare size={12} /> Discuss with Coach
-                                    </button>
                                   </div>
                                 );
                               })()}
@@ -1366,17 +1345,17 @@ export default function TrackerPage() {
             {importStep === 'input' && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <h2 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Import from URL</h2>
+                  <h2 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Import a job</h2>
                   <button onClick={closeImport} style={{ background: 'none', border: 'none', color: 'rgba(125,175,230,0.52)', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
                 </div>
-                <p style={{ color: 'rgba(140,185,235,0.62)', fontSize: '12px', margin: '0 0 16px' }}>Paste a job posting link. Add context below if the page doesn&apos;t load or you have extra info.</p>
+                <p style={{ color: 'rgba(140,185,235,0.62)', fontSize: '12px', margin: '0 0 16px' }}>Paste a job posting link, or paste the job description below if you don&apos;t have a link.</p>
                 <input type="url" value={importUrl} onChange={e => setImportUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') fetchImport(); }}
                   placeholder="https://jobs.company.com/..." autoFocus
                   style={{ width: '100%', backgroundColor: 'transparent', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '14px', padding: '11px 14px', color: 'rgba(232,244,255,0.95)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                   onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.14)')} />
                 <div style={{ marginTop: '16px', borderTop: '1px solid rgba(125,220,255,0.10)', paddingTop: '14px' }}>
-                  <div style={{ color: 'rgba(90,140,200,0.42)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Extra context <span style={{ color: 'rgba(90,140,200,0.42)', fontWeight: 400 }}>— optional</span></div>
-                  <textarea value={importExtraText} onChange={e => setImportExtraText(e.target.value)} placeholder="Paste job description, recruiter email, or any extra details..." rows={3}
+                  <div style={{ color: 'rgba(90,140,200,0.42)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Job description <span style={{ color: 'rgba(90,140,200,0.42)', fontWeight: 400 }}>— required if no link above</span></div>
+                  <textarea value={importExtraText} onChange={e => setImportExtraText(e.target.value)} placeholder="Paste the job description, a recruiter email, or any extra details..." rows={3}
                     style={{ width: '100%', backgroundColor: 'transparent', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '10px 12px', color: 'rgba(140,185,235,0.62)', fontSize: '12px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, marginBottom: '8px' }} />
                   <input type="url" value={importExtraLink} onChange={e => setImportExtraLink(e.target.value)} placeholder="Additional link (LinkedIn, company page...)"
                     style={{ width: '100%', backgroundColor: 'transparent', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '9px 12px', color: 'rgba(140,185,235,0.62)', fontSize: '12px', outline: 'none', boxSizing: 'border-box', marginBottom: '8px' }} />
@@ -1397,8 +1376,8 @@ export default function TrackerPage() {
                 {importFetchError && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f87171', fontSize: '12px', marginTop: '12px' }}><AlertCircle size={13} /> {importFetchError}</div>}
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '18px' }}>
                   <button onClick={closeImport} style={{ backgroundColor: 'rgba(4,12,32,0.70)', color: 'rgba(140,185,235,0.62)', border: '1px solid rgba(125,220,255,0.14)', borderRadius: '10px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={fetchImport} disabled={!importUrl.trim()} style={{ background: !importUrl.trim() ? 'rgba(125,220,255,0.06)' : 'linear-gradient(135deg, #7DF4FC, #4A9EF8)', color: !importUrl.trim() ? 'rgba(100,155,210,0.50)' : '#fff', border: 'none', borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700, cursor: !importUrl.trim() ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <LinkIcon size={13} /> Fetch & Parse
+                  <button onClick={fetchImport} disabled={!importUrl.trim() && !importExtraText.trim()} style={{ background: (!importUrl.trim() && !importExtraText.trim()) ? 'rgba(125,220,255,0.06)' : 'linear-gradient(135deg, #7DF4FC, #4A9EF8)', color: (!importUrl.trim() && !importExtraText.trim()) ? 'rgba(100,155,210,0.50)' : '#fff', border: 'none', borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700, cursor: (!importUrl.trim() && !importExtraText.trim()) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <LinkIcon size={13} /> Parse Job
                   </button>
                 </div>
               </>
@@ -1528,9 +1507,4 @@ export default function TrackerPage() {
       )}
     </div>
   );
-}
-
-// Fix unused import warning
-function MessageSquare({ size }: { size: number }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
 }

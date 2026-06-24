@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import Link from 'next/link';
-import { AlertTriangle, Clock, MessageSquare, Zap, Plus, RefreshCw, Bell } from 'lucide-react';
+import { AlertTriangle, Clock, MessageSquare, Zap, Plus, Bell } from 'lucide-react';
 import { useUser } from '@/app/hooks/useUser';
 
 interface Job {
@@ -15,22 +15,6 @@ interface Job {
 interface Priority {
   level: 'urgent' | 'soon' | 'followup' | 'interview';
   label: string; sub: string; href: string; score: number | null;
-}
-
-interface Brief {
-  headline: string;
-  priority_actions: { action: string; urgency: string; reason: string }[];
-  this_week_focus: string;
-  honest_assessment: string;
-}
-
-const BRIEF_TTL_MS = 24 * 60 * 60 * 1000;
-
-// Cache keys are scoped per user — otherwise switching accounts on the same
-// browser surfaces the previous user's cached brief.
-function scopedKey(base: string): string {
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('cid_user_id') || 'anon' : 'anon';
-  return `${base}:${userId}`;
 }
 
 function greeting() {
@@ -107,41 +91,11 @@ export default function DashboardPage() {
   const { displayName } = useUser();
   const firstName = displayName.split(' ')[0];
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [brief, setBrief] = useState<Brief | null>(null);
-  const [briefLoading, setBriefLoading] = useState(false);
-  const [briefAge, setBriefAge] = useState<string>('');
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   useEffect(() => {
     apiFetch('/api/jobs').then(r => r.json()).then(setJobs).catch(() => {});
   }, []);
-
-  const loadBrief = async (force = false) => {
-    if (!force) {
-      try {
-        const cached = JSON.parse(localStorage.getItem(scopedKey('dashboard-brief-v1')) || '{}');
-        if (cached.data && Date.now() - cached.ts < BRIEF_TTL_MS) {
-          setBrief(cached.data);
-          const mins = Math.round((Date.now() - cached.ts) / 60000);
-          setBriefAge(mins < 60 ? `${mins}m ago` : `${Math.round(mins / 60)}h ago`);
-          return;
-        }
-      } catch { /* ignore */ }
-    }
-    setBriefLoading(true);
-    try {
-      const res = await apiFetch('/api/brief');
-      const data = await res.json();
-      if (!data.error) {
-        setBrief(data);
-        setBriefAge('just now');
-        localStorage.setItem(scopedKey('dashboard-brief-v1'), JSON.stringify({ data, ts: Date.now() }));
-      }
-    } catch { /* silently fail */ }
-    setBriefLoading(false);
-  };
-
-  useEffect(() => { loadBrief(); }, []);
 
   const stats = {
     total:        jobs.length,
@@ -269,7 +223,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+      <div style={{ marginBottom: '40px' }}>
 
         {/* Today's Priorities */}
         <div>
@@ -324,70 +278,6 @@ export default function DashboardPage() {
                   </Link>
                 );
               })}
-            </div>
-          )}
-        </div>
-
-        {/* Weekly Brief */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: 'rgba(180,212,240,0.88)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Weekly Brief</span>
-              {briefAge && !briefLoading && <span style={{ color: 'rgba(135,185,230,0.70)', fontSize: '10px' }}>· {briefAge}</span>}
-            </div>
-            <button onClick={() => loadBrief(true)} disabled={briefLoading} style={{
-              display: 'flex', alignItems: 'center', gap: '4px',
-              backgroundColor: 'transparent', color: 'rgba(100,155,210,0.50)', border: 'none',
-              padding: '2px', fontSize: '10px', cursor: briefLoading ? 'wait' : 'pointer', fontFamily: 'inherit',
-            }}
-              onMouseEnter={e => !briefLoading && ((e.currentTarget as HTMLButtonElement).style.color = '#3b82f6')}
-              onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = 'rgba(158,202,242,0.85)')}
-            >
-              <RefreshCw size={11} style={briefLoading ? { animation: 'spin 1s linear infinite' } : {}} />
-            </button>
-          </div>
-
-          {briefLoading && !brief && (
-            <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
-              <RefreshCw size={14} color="rgba(158,202,242,0.85)" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px', display: 'block' }} />
-              <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '12px' }}>Generating your brief…</div>
-            </div>
-          )}
-
-          {!brief && !briefLoading && (
-            <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
-              <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '12px', marginBottom: '12px' }}>Your weekly brief wasn&apos;t loaded.</div>
-              <button onClick={() => loadBrief(true)} style={{
-                background: 'rgba(125,220,255,0.03)', color: 'rgba(170,205,235,0.80)', border: '1px solid rgba(125,220,255,0.09)',
-                borderRadius: '8px', padding: '6px 14px', fontSize: '11px', fontWeight: 500,
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}>Generate</button>
-            </div>
-          )}
-
-          {brief && (
-            <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '20px', animation: 'fadeIn 0.3s ease', maxHeight: '320px', overflowY: 'auto' }}>
-              <p style={{ color: 'rgba(200,230,255,0.92)', fontSize: '13px', fontWeight: 600, margin: '0 0 16px', lineHeight: 1.7 }}>{brief.headline}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
-                {brief.priority_actions?.slice(0, 3).map((a, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                    <span style={{
-                      fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '20px', flexShrink: 0,
-                      marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.05em',
-                      background: a.urgency === 'today' ? 'rgba(248,100,100,0.12)' : a.urgency === 'this-week' ? 'rgba(74,158,248,0.12)' : 'rgba(125,220,255,0.06)',
-                      color: a.urgency === 'today' ? '#dc2626' : a.urgency === 'this-week' ? '#3b82f6' : 'rgba(158,202,242,0.85)',
-                      border: `1px solid ${a.urgency === 'today' ? 'rgba(239,68,68,0.2)' : a.urgency === 'this-week' ? 'rgba(59,130,246,0.2)' : 'rgba(125,220,255,0.10)'}`,
-                    }}>{a.urgency}</span>
-                    <div style={{ color: 'rgba(210,234,255,0.92)', fontSize: '13px', lineHeight: 1.65 }}>{a.action}</div>
-                  </div>
-                ))}
-              </div>
-              {brief.this_week_focus && (
-                <div style={{ borderTop: '1px solid rgba(125,220,255,0.08)', marginTop: '16px', paddingTop: '14px' }}>
-                  <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '7px' }}>This Week</div>
-                  <p style={{ color: 'rgba(190,220,250,0.85)', fontSize: '12px', margin: 0, lineHeight: 1.7 }}>{brief.this_week_focus}</p>
-                </div>
-              )}
             </div>
           )}
         </div>
