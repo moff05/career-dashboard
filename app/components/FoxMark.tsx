@@ -1,8 +1,12 @@
-const FOX_PATH = 'M 50 12 L 23 2 L 28 31 L 6 36 L 26 51 L 17 68 L 50 90 L 83 68 L 74 51 L 94 36 L 72 31 L 77 2 Z';
+// Tall, clearly separated pointed ears with a real notch between them,
+// flared cheeks, and a long tapered snout — v1 was a blunt hexagon-ish
+// blob that didn't read as a fox at any size; this is built specifically
+// around the features that make a fox silhouette recognizable as a fox.
+const FOX_PATH = 'M 20 8 L 38 30 L 50 24 L 62 30 L 80 8 L 88 38 L 92 52 L 70 75 L 50 95 L 30 75 L 8 52 L 12 38 Z';
 const FOX_DETAILS = [
-  'M 36 47 L 30 38 L 41 40 Z',
-  'M 64 47 L 70 38 L 59 40 Z',
-  'M 50 78 L 43 66 L 57 66 Z',
+  'M 33 48 L 40 41 L 45 50 Z',
+  'M 67 48 L 60 41 L 55 50 Z',
+  'M 50 84 L 45 72 L 55 72 Z',
 ];
 
 // Geometric brand mark — the one warm/organic touch against an otherwise
@@ -10,7 +14,7 @@ const FOX_DETAILS = [
 // breathed and spun; this is a mark, not a character). Holds up down to
 // ~16px, verified — keep `cutout` matched to whatever it sits on so the
 // negative-space face details don't show a seam.
-export function FoxMark({ size = 28, color = '#F97316', cutout = '#0A0A0A' }: { size?: number; color?: string; cutout?: string }) {
+export function FoxMark({ size = 28, color = '#F97316', cutout = '#101012' }: { size?: number; color?: string; cutout?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none" aria-hidden="true">
       <path d={FOX_PATH} fill={color} />
