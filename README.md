@@ -1,6 +1,6 @@
 # Career Dashboard
 
-An AI-powered job search command center built with Next.js, TypeScript, and Claude. Tracks applications, surfaces leads, generates cover letters, runs mock interviews, and advises on application strategy — all from one dashboard.
+An AI-powered job search command center built with Next.js, TypeScript, and Claude. Tracks applications, surfaces leads, generates cover letters, and runs mock interviews — all from one dashboard.
 
 > **Note:** Multi-user, no accounts. A 4-step setup flow (name → background → resume → your own Anthropic API key) creates a local identity stored in your browser; every visitor gets their own scoped data. Your API key is stored client-side only and sent per-request via headers — it's never saved on the server.
 
@@ -34,7 +34,8 @@ An AI-powered job search command center built with Next.js, TypeScript, and Clau
 
 ### Home Dashboard
 - Pipeline stats, upcoming deadlines, follow-up nudges
-- **Application strategy advisor** — ranked list of which jobs to prioritize and why, based on fit score, deadline, and stage
+- **Priorities** — deadlines, stale follow-ups, and interview prep, ranked by urgency then by fit score within each
+- **Weekly Brief** — AI-generated headline, priority actions, and weekly focus
 
 ### Analytics
 - Applications by week, response rate, fit score distribution, avg days per stage
@@ -43,6 +44,7 @@ An AI-powered job search command center built with Next.js, TypeScript, and Clau
 - Vertical timeline merging manual milestones with job deadlines from the tracker
 
 ### Profile
+- **Candidate Strength** — a brutal, rubric-scored readiness assessment (relevant experience, quantified impact, technical depth, academic credibility, differentiation), each category anchored to explicit point bands so repeat scoring stays consistent instead of swinging
 - **Usage & Cost** — running total of what your own Anthropic API key has spent on this dashboard, with a per-feature cost breakdown (estimated from token counts and published pricing, including the web search per-call fee)
 
 ---
@@ -92,7 +94,7 @@ app/
 ├── timeline/       # Career milestones
 ├── profile/        # Editable profile + AI summary
 ├── memory/         # Extracted memory CRUD
-└── api/            # All backend routes (jobs, connections, interview, strategy, …)
+└── api/            # All backend routes (jobs, connections, interview, usage, …)
 
 lib/
 ├── db.ts           # SQLite/Turso client singleton + schema

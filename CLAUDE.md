@@ -55,7 +55,7 @@ app/
 ├── layout.tsx          # Sidebar nav (Home, Jobs, Discover, Coach, Analytics, Timeline, Profile, Memory) + mobile bottom nav
 ├── ClientRoot.tsx       # Redirects to /setup if cid_user_id/cid_api_key missing from localStorage
 ├── globals.css          # Design tokens (see Design system below)
-├── page.tsx             # Home dashboard — stats, weekly brief, strategy advisor, deadlines
+├── page.tsx             # Home dashboard — stats, weekly brief, fit-score-sorted priorities, deadlines
 ├── setup/page.tsx       # 4-step onboarding
 ├── tracker/page.tsx     # Job tracker — URL import, company groups, detail panel
 ├── discover/page.tsx    # Lead feed, company research, Hunt Agent trigger
@@ -85,7 +85,6 @@ app/
     ├── memories/route.ts, memories/[id]/route.ts
     ├── profile/route.ts, profile/resume/route.ts, profile/summary/route.ts
     ├── resumes/route.ts, resumes/[id]/route.ts  # Multi-resume CRUD — list/create/rename/set-default/delete
-    ├── strategy/route.ts                # Application strategy advisor, consumed by Home
     ├── timeline/route.ts, timeline/[id]/route.ts
     └── usage/route.ts                   # Aggregated cost/token totals for the current user, consumed by Profile
 
@@ -153,7 +152,7 @@ Companies display vibrant hash-based initials badges — no network calls, no Cl
 
 - Pipeline stats, upcoming deadlines, follow-up nudges.
 - **Weekly Brief** (`GET /api/brief`) — personalized snapshot: headline, priority actions, recommended roles, this-week focus, honest assessment. Haiku, ~15s, client-cached.
-- **Application strategy advisor** (`GET /api/strategy`) — ranked list of which jobs to prioritize and why, based on fit score, deadline, and stage.
+- **Priorities** — free, no AI call. Computed client-side from tracked jobs: deadlines (≤3 days = urgent, ≤7 = soon), 14+ day no-response follow-ups, interview-prep flags. Sorted by urgency bucket first, then by `match_score` descending as a tiebreaker within each bucket — this is the fit-score ranking signal the old Strategy advisor provided, folded into the free card instead of a separate AI call.
 
 ## Timeline features
 
@@ -195,7 +194,7 @@ There is no dark-navy/amber single-user theme left in the codebase — the full 
 - Chat + coach: `claude-sonnet-4-6`, streaming via `anthropic.messages.stream()`
 - Discovery search + Hunt Agent: `claude-sonnet-4-6` with `betas: ['web-search-2025-03-05']` and the `web_search_20250305` tool; fallback to knowledge-only on error
 - Suggestions (auto-leads), memory extraction, JD fit analysis, weekly brief, URL import parsing: `claude-haiku-4-5-20251001`, non-streaming
-- Profile summary: `claude-sonnet-4-6`, returns JSON `{strengths, gaps, readiness_score, summary}`
+- Profile summary: `claude-sonnet-4-6`, `temperature: 0`, returns JSON `{strengths, gaps, score_breakdown, readiness_score, summary}` — `readiness_score` is computed server-side as the sum of `score_breakdown`'s sub-scores, not read directly from the model's output
 
 Each call uses the requesting user's own API key (from `x-api-key`, via `lib/user.ts`), not a shared server key — so the old shared-key rate-limit ceiling no longer applies to public users. The `ANTHROPIC_API_KEY` env var is only a fallback for local/admin use without going through `/setup`.
 
@@ -218,12 +217,14 @@ Each call uses the requesting user's own API key (from `x-api-key`, via `lib/use
 14. **Multi-resume support** — `resume` table now allows many rows per user (`name` + `is_default`), managed via `/api/resumes` + `/api/resumes/[id]` and a resume-switcher UI on Profile. AI features always read whichever resume is the user's current default.
 15. Discover restructured so Hunt Agent (real, grounded links) leads; the AI-guessed feed is relabeled "Idea Feed — Unverified" and demoted.
 16. Resume auto-populate extended to infer `target_roles` from resume content (the one field that's reasonable to infer rather than extract verbatim).
-17. **In-app usage/cost meter** — `lib/usage.ts` logs every Claude API call (all 14 call sites: chat, mock interview, hunt agent, company research, weekly brief, strategy advisor, per-job AI tabs, resume parsing, job import, memory extraction, profile summary) to the `usage_log` table with computed `cost_usd` based on published per-model pricing, cache write/read multipliers, and the flat web-search-per-call fee. `GET /api/usage` aggregates totals + a per-feature breakdown, surfaced on Profile via a "Usage & Cost" card — so BYOK users can see what their key has spent without checking the Anthropic console.
+17. **In-app usage/cost meter** — `lib/usage.ts` logs every Claude API call (chat, mock interview, hunt agent, company research, weekly brief, per-job AI tabs, resume parsing, job import, memory extraction, profile summary) to the `usage_log` table with computed `cost_usd` based on published per-model pricing, cache write/read multipliers, and the flat web-search-per-call fee. `GET /api/usage` aggregates totals + a per-feature breakdown, surfaced on Profile via a "Usage & Cost" card — so BYOK users can see what their key has spent without checking the Anthropic console.
+18. **Readiness-score rubric** — `/api/profile/summary` replaced the unanchored "1-10, your call" prompt with a 5-category additive rubric (relevant experience, quantified impact, technical depth, academic credibility, differentiation), each with explicit point-band anchors. The server sums the model's own sub-scores into `readiness_score` rather than trusting its arithmetic, and `temperature: 0` cuts run-to-run drift — repeat "Generate" clicks now land within ~0.1-0.2, not swing by a point or more. Sub-scores + one-line rationale per category render on Profile so the number is explainable, not a black box.
 
 ### Cut
 - `/api/analyze/jd` — deleted (was dead code, no UI consumer).
 - Analytics and Timeline pages — removed (low utility for new users with few/no jobs tracked; see audit memory for reasoning).
 - Legacy single-user migration scripts (`migrate.ts`, `migrate-v2.ts`, `migrate-v3.ts`) — deleted; `migrate-multi-user.ts` is the only migration now.
+- **Application Strategy advisor** (`/api/strategy` + the Home page Strategy card) — removed. It was a separate Haiku call answering "what should I prioritize," which already overlapped with the free rule-based Priorities card and Weekly Brief's `priority_actions`. It also silently no-op'd (no error UI) when a user had zero active tracked jobs, looking broken rather than empty. The one thing it added — ranking by fit score, not just deadline — is now folded into Priorities as a free sort tiebreaker (see Home dashboard section above) instead of a fourth AI-backed surface answering the same question.
 
 ### Not yet done
 - Chrome extension for one-click save from any tab.

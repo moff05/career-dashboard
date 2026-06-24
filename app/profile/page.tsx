@@ -11,7 +11,17 @@ interface Profile {
   honors?: string; minors?: string; target_roles?: string; target_cities?: string; notes?: string;
 }
 
-interface Summary { strengths: string[]; gaps: string[]; readiness_score: number; summary: string; }
+interface ScoreCategory { score: number; max: number; rationale: string; }
+interface Summary {
+  strengths: string[]; gaps: string[]; readiness_score: number; summary: string;
+  score_breakdown: Record<string, ScoreCategory>;
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  relevant_experience: 'Relevant Experience', quantified_impact: 'Quantified Impact',
+  technical_depth: 'Technical Depth', academic_credibility: 'Academic Credibility',
+  differentiation: 'Differentiation',
+};
 interface Resume { id: number; name: string; raw_text: string | null; parsed_at: string | null; is_default: number; }
 interface UsageByRoute { route: string; calls: number; input_tokens: number; output_tokens: number; web_search_requests: number; cost_usd: number; }
 interface Usage {
@@ -520,10 +530,31 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <div style={{ color: 'rgba(232,244,255,0.95)', fontWeight: 700, fontSize: '13px' }}>Readiness Score</div>
-                  <div style={{ color: 'rgba(158,202,242,0.72)', fontSize: '12px', marginTop: '3px' }}>For competitive tech/CRE roles</div>
+                  <div style={{ color: 'rgba(158,202,242,0.72)', fontSize: '12px', marginTop: '3px' }}>For internship &amp; entry-level roles</div>
                 </div>
               </div>
               <p style={{ color: 'rgba(200,228,255,0.85)', fontSize: '13px', lineHeight: '1.65', margin: '0 0 16px' }}>{summary.summary}</p>
+
+              {summary.score_breakdown && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                  {Object.entries(summary.score_breakdown).map(([key, cat]) => {
+                    const pct = cat.max > 0 ? (cat.score / cat.max) * 100 : 0;
+                    return (
+                      <div key={key}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '3px' }}>
+                          <span style={{ color: 'rgba(200,228,255,0.85)', fontWeight: 600 }}>{CATEGORY_LABELS[key] || key}</span>
+                          <span style={{ color: 'rgba(158,202,242,0.72)' }}>{cat.score}/{cat.max}</span>
+                        </div>
+                        <div style={{ height: '4px', borderRadius: '2px', background: 'rgba(125,220,255,0.08)', overflow: 'hidden', marginBottom: '4px' }}>
+                          <div style={{ height: '100%', width: `${Math.max(pct, 2)}%`, background: 'linear-gradient(90deg, #4A9EF8, #7DF4FC)', borderRadius: '2px' }} />
+                        </div>
+                        {cat.rationale && <div style={{ color: 'rgba(158,202,242,0.60)', fontSize: '11px', lineHeight: 1.5 }}>{cat.rationale}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
               <div style={{ marginBottom: '14px' }}>
                 <h4 style={{ color: '#059669', fontSize: '11px', fontWeight: 700, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Strengths</h4>
                 <ul style={{ margin: 0, paddingLeft: '16px' }}>

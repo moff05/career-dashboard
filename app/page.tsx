@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import Link from 'next/link';
-import { AlertTriangle, Clock, MessageSquare, Zap, Plus, RefreshCw, Bell, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Clock, MessageSquare, Zap, Plus, RefreshCw, Bell } from 'lucide-react';
 import { useUser } from '@/app/hooks/useUser';
 
 interface Job {
@@ -14,7 +14,7 @@ interface Job {
 
 interface Priority {
   level: 'urgent' | 'soon' | 'followup' | 'interview';
-  label: string; sub: string; href: string;
+  label: string; sub: string; href: string; score: number | null;
 }
 
 interface Brief {
@@ -25,17 +25,13 @@ interface Brief {
 }
 
 const BRIEF_TTL_MS = 24 * 60 * 60 * 1000;
-const STRATEGY_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 // Cache keys are scoped per user — otherwise switching accounts on the same
-// browser surfaces the previous user's cached brief/strategy.
+// browser surfaces the previous user's cached brief.
 function scopedKey(base: string): string {
   const userId = typeof window !== 'undefined' ? localStorage.getItem('cid_user_id') || 'anon' : 'anon';
   return `${base}:${userId}`;
 }
-
-interface StrategyJob { rank: number; job_id: number; company: string; title: string; action: string; urgency: 'high' | 'medium' | 'low'; reasoning: string; }
-interface Strategy { narrative: string; priority_jobs: StrategyJob[]; quick_actions: string[]; }
 
 function greeting() {
   const h = new Date().getHours();
@@ -48,24 +44,37 @@ function deadlineDays(deadline: string) {
   return Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000);
 }
 
+// Urgency bucket (deadline > follow-up > interview prep) is the primary sort —
+// fit score only breaks ties within a bucket. Replaces the old separate
+// "Strategy" AI call: same ranking signal (deadline + fit), computed for free
+// from data already on hand instead of a second Haiku round-trip.
 function getPriorities(jobs: Job[]): Priority[] {
-  const result: Priority[] = [];
+  const deadlineItems: (Priority & { days: number })[] = [];
   for (const j of jobs) {
     if (!j.deadline || j.status === 'rejected' || j.status === 'offer') continue;
     const days = deadlineDays(j.deadline);
     if (days < 0) continue;
-    if (days <= 3) result.push({ level: 'urgent', label: `${j.title} at ${j.company}`, sub: `Deadline ${days === 0 ? 'today' : `in ${days}d`}`, href: '/tracker' });
-    else if (days <= 7) result.push({ level: 'soon', label: `${j.company} — ${j.title}`, sub: `Due in ${days} days`, href: '/tracker' });
+    if (days <= 3) deadlineItems.push({ level: 'urgent', label: `${j.title} at ${j.company}`, sub: `Deadline ${days === 0 ? 'today' : `in ${days}d`}`, href: '/tracker', score: j.match_score, days });
+    else if (days <= 7) deadlineItems.push({ level: 'soon', label: `${j.company} — ${j.title}`, sub: `Due in ${days} days`, href: '/tracker', score: j.match_score, days });
   }
+  // Closest deadline first; fit score breaks ties between equally urgent jobs.
+  deadlineItems.sort((a, b) => a.days - b.days || (b.score ?? -1) - (a.score ?? -1));
+
+  const followups: Priority[] = [];
   for (const j of jobs) {
     if (j.status !== 'applied' || !j.status_updated_at) continue;
     const days = Math.floor((Date.now() - new Date(j.status_updated_at).getTime()) / 86400000);
-    if (days >= 14) result.push({ level: 'followup', label: `Follow up — ${j.company}`, sub: `${j.title} · applied ${days}d ago`, href: '/tracker' });
+    if (days >= 14) followups.push({ level: 'followup', label: `Follow up — ${j.company}`, sub: `${j.title} · applied ${days}d ago`, href: '/tracker', score: j.match_score });
   }
+  followups.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+
+  const interviews: Priority[] = [];
   for (const j of jobs) {
-    if (j.status === 'interviewing') result.push({ level: 'interview', label: `Prep — ${j.company}`, sub: j.title, href: '/coach' });
+    if (j.status === 'interviewing') interviews.push({ level: 'interview', label: `Prep — ${j.company}`, sub: j.title, href: '/coach', score: j.match_score });
   }
-  return result;
+  interviews.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+
+  return [...deadlineItems, ...followups, ...interviews];
 }
 
 const LEVEL_CFG = {
@@ -101,9 +110,6 @@ export default function DashboardPage() {
   const [brief, setBrief] = useState<Brief | null>(null);
   const [briefLoading, setBriefLoading] = useState(false);
   const [briefAge, setBriefAge] = useState<string>('');
-  const [strategy, setStrategy] = useState<Strategy | null>(null);
-  const [strategyLoading, setStrategyLoading] = useState(false);
-  const [strategyAge, setStrategyAge] = useState<string>('');
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   useEffect(() => {
@@ -136,31 +142,6 @@ export default function DashboardPage() {
   };
 
   useEffect(() => { loadBrief(); }, []);
-
-  const loadStrategy = async (force = false) => {
-    if (!force) {
-      try {
-        const cached = JSON.parse(localStorage.getItem(scopedKey('dashboard-strategy-v1')) || '{}');
-        if (cached.data && Date.now() - cached.ts < STRATEGY_TTL_MS) {
-          setStrategy(cached.data);
-          const mins = Math.round((Date.now() - cached.ts) / 60000);
-          setStrategyAge(mins < 60 ? `${mins}m ago` : `${Math.round(mins / 60)}h ago`);
-          return;
-        }
-      } catch { /* ignore */ }
-    }
-    setStrategyLoading(true);
-    try {
-      const res = await apiFetch('/api/strategy');
-      const data = await res.json();
-      if (!data.error) {
-        setStrategy(data);
-        setStrategyAge('just now');
-        localStorage.setItem(scopedKey('dashboard-strategy-v1'), JSON.stringify({ data, ts: Date.now() }));
-      }
-    } catch { /* ignore */ }
-    setStrategyLoading(false);
-  };
 
   const stats = {
     total:        jobs.length,
@@ -338,6 +319,7 @@ export default function DashboardPage() {
                       <div style={{ color: 'rgba(232,244,255,0.95)', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.label}</div>
                       <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '11px', marginTop: '1px' }}>{p.sub}</div>
                     </div>
+                    {p.score != null && <span style={{ fontSize: '11px', fontWeight: 700, color: scoreColor(p.score), flexShrink: 0 }}>{p.score}/10</span>}
                     <span style={{ fontSize: '9px', fontWeight: 700, color: c.color, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '2px 7px', borderRadius: '20px', backgroundColor: c.bg, border: `1px solid ${c.border}` }}>{c.tag}</span>
                   </Link>
                 );
@@ -411,11 +393,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent Jobs + Strategy */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-        {/* Recent Jobs */}
-        <div>
+      {/* Recent Jobs */}
+      <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
             <span style={{ color: 'rgba(180,212,240,0.88)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Recent Jobs</span>
             <Link href="/tracker" style={{ color: 'rgba(170,205,235,0.80)', fontSize: '11px', textDecoration: 'none' }}
@@ -455,82 +434,6 @@ export default function DashboardPage() {
               })}
             </div>
           )}
-        </div>
-
-        {/* Application Strategy */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: 'rgba(180,212,240,0.88)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.09em' }}>Strategy</span>
-              {strategyAge && !strategyLoading && <span style={{ color: 'rgba(135,185,230,0.70)', fontSize: '10px' }}>· {strategyAge}</span>}
-            </div>
-            <button onClick={() => loadStrategy(true)} disabled={strategyLoading} style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'transparent', color: 'rgba(100,155,210,0.50)', border: 'none', padding: '2px', fontSize: '10px', cursor: strategyLoading ? 'wait' : 'pointer', fontFamily: 'inherit' }}
-              onMouseEnter={e => !strategyLoading && ((e.currentTarget as HTMLButtonElement).style.color = '#3b82f6')}
-              onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = 'rgba(158,202,242,0.85)')}>
-              <RefreshCw size={11} style={strategyLoading ? { animation: 'spin 1s linear infinite' } : {}} />
-            </button>
-          </div>
-
-          {!strategy && !strategyLoading && (
-            <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
-              <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '12px', marginBottom: '12px' }}>AI-ranked application priority based on deadlines, fit scores, and your goals.</div>
-              <button onClick={() => loadStrategy(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, rgba(74,158,248,0.28), rgba(125,244,252,0.18))', color: '#7DF4FC', border: '1px solid rgba(125,244,252,0.30)', borderRadius: '8px', padding: '7px 16px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                <Zap size={11} /> Generate Strategy
-              </button>
-            </div>
-          )}
-
-          {strategyLoading && !strategy && (
-            <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', padding: '32px 20px', textAlign: 'center' }}>
-              <RefreshCw size={14} color="rgba(158,202,242,0.85)" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 8px', display: 'block' }} />
-              <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '12px' }}>Generating your strategy…</div>
-            </div>
-          )}
-
-          {strategy && (
-            <div style={{ background: 'rgba(125,220,255,0.04)', backdropFilter: 'blur(20px)', border: '1px solid rgba(125,220,255,0.12)', borderRadius: '14px', overflow: 'hidden', animation: 'fadeIn 0.3s ease' }}>
-              {/* Narrative */}
-              <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(125,220,255,0.08)', background: 'rgba(74,158,248,0.06)' }}>
-                <p style={{ color: 'rgba(210,234,255,0.92)', fontSize: '13px', lineHeight: 1.7, margin: 0 }}>{strategy.narrative}</p>
-              </div>
-
-              {/* Priority jobs */}
-              {strategy.priority_jobs.map((job, i) => {
-                const urgencyColor = job.urgency === 'high' ? '#dc2626' : job.urgency === 'medium' ? '#3b82f6' : 'rgba(158,202,242,0.85)';
-                const urgencyBg = job.urgency === 'high' ? 'rgba(220,38,38,0.07)' : job.urgency === 'medium' ? 'rgba(59,130,246,0.07)' : 'rgba(148,163,184,0.07)';
-                return (
-                  <Link key={i} href="/tracker" style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 16px', textDecoration: 'none', borderBottom: i < strategy.priority_jobs.length - 1 ? '1px solid rgba(125,220,255,0.08)' : 'none', backgroundColor: 'transparent', transition: 'background 0.1s' }}
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(125,220,255,0.06)')}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-                    <span style={{ color: 'rgba(135,185,230,0.70)', fontSize: '11px', fontWeight: 700, flexShrink: 0, width: '16px', textAlign: 'right', marginTop: '2px' }}>{job.rank}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                        <span style={{ color: 'rgba(232,244,255,0.95)', fontSize: '12px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.company}</span>
-                        <span style={{ fontSize: '9px', fontWeight: 700, color: urgencyColor, backgroundColor: urgencyBg, padding: '1px 6px', borderRadius: '20px', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{job.action}</span>
-                      </div>
-                      <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.title}</div>
-                      <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '10px', marginTop: '2px', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{job.reasoning}</div>
-                    </div>
-                    <ChevronRight size={12} color="rgba(135,185,230,0.70)" style={{ flexShrink: 0, marginTop: '4px' }} />
-                  </Link>
-                );
-              })}
-
-              {/* Quick actions */}
-              {strategy.quick_actions?.length > 0 && (
-                <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(125,220,255,0.08)', background: 'rgba(125,220,255,0.04)' }}>
-                  <div style={{ color: 'rgba(170,205,235,0.80)', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '7px' }}>This Week</div>
-                  {strategy.quick_actions.map((a, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
-                      <span style={{ color: '#3b82f6', fontSize: '10px', flexShrink: 0 }}>→</span>
-                      <span style={{ color: 'rgba(170,205,235,0.80)', fontSize: '11px', lineHeight: 1.4 }}>{a}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
