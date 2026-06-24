@@ -62,9 +62,6 @@ const STATUS_STYLE: Record<string, { bg: string; text: string; border: string }>
 function scoreColor(s: number) {
   if (s >= 80) return 'var(--success)'; if (s >= 60) return 'var(--accent)'; return 'var(--danger)';
 }
-function scoreGlow(s: number) {
-  if (s >= 80) return 'var(--success-bg)'; if (s >= 60) return 'var(--accent-dim)'; return 'var(--danger-bg)';
-}
 
 // ─── Home summary (greeting, priorities) — merged in from the old / page so
 // the tracker table is the one thing on screen, not a separate destination ──
@@ -189,7 +186,7 @@ function StatusBadge({ job, onStatusChange }: { job: Job; onStatusChange: (id: n
         <div style={{
           position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 100,
           backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
-          overflow: 'hidden', minWidth: '120px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          overflow: 'hidden', minWidth: '120px',
         }}>
           {STATUS_OPTIONS.map(st => {
             const ss = STATUS_STYLE[st] || STATUS_STYLE.saved;
@@ -1070,7 +1067,6 @@ export default function DashboardPage() {
                                   <div style={{
                                     width: '82px', height: '82px', borderRadius: '50%', flexShrink: 0,
                                     border: `3px solid ${scoreColor(job.match_score * 10)}`,
-                                    boxShadow: `0 0 28px ${scoreGlow(job.match_score * 10)}`,
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                   }}>
                                     <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(job.match_score * 10), lineHeight: 1 }}>{job.match_score * 10}</span>
@@ -1107,7 +1103,6 @@ export default function DashboardPage() {
                                       <div style={{
                                         width: '82px', height: '82px', borderRadius: '50%', flexShrink: 0,
                                         border: `3px solid ${scoreColor(r.total)}`,
-                                        boxShadow: `0 0 28px ${scoreGlow(r.total)}`,
                                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                       }}>
                                         <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(r.total), lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{r.total}</span>
@@ -1135,10 +1130,10 @@ export default function DashboardPage() {
                                             </div>
                                             <div style={{ backgroundColor: 'var(--surface)', borderRadius: '20px', height: '4px', overflow: 'hidden', marginBottom: '4px' }}>
                                               <div style={{
-                                                width: `${pct}%`, height: '100%', borderRadius: '20px',
+                                                width: '100%', height: '100%', borderRadius: '20px',
                                                 backgroundColor: scoreColor(pct),
-                                                boxShadow: `0 0 6px ${scoreGlow(pct)}`,
-                                                transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1)',
+                                                transform: `scaleX(${pct / 100})`, transformOrigin: 'left',
+                                                transition: 'transform 0.8s cubic-bezier(0.4,0,0.2,1)',
                                               }} />
                                             </div>
                                             <div style={{ color: 'var(--text-muted)', fontSize: '11px', lineHeight: 1.5 }}>{cat.rationale}</div>
@@ -1438,7 +1433,7 @@ export default function DashboardPage() {
       {importStep && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300 }}
           onClick={e => { if (e.target === e.currentTarget) closeImport(); }}>
-          <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '28px', width: '560px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
+          <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '28px', width: '560px', maxHeight: '88vh', overflowY: 'auto' }}>
             {importStep === 'input' && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -1556,7 +1551,7 @@ export default function DashboardPage() {
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300 }}
           onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
-          <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px', width: '580px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
+          <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px', width: '580px', maxHeight: '88vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h2 style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Edit Job</h2>
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
