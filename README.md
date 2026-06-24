@@ -1,6 +1,6 @@
 # Career Dashboard
 
-A job tracker built to feel like a great spreadsheet, with two AI features that actually earn their place: import any job posting and get an in-depth AI fit score, and a coach that knows your background. Built with Next.js, TypeScript, and Claude.
+A job tracker built to feel like a great spreadsheet, with two AI features that actually earn their place: import any job posting and get an in-depth AI fit score, and a coach that knows your background. Black canvas, one orange accent, monospace type — looks like a terminal, operates like consumer software; there's no command input anywhere. Built with Next.js, TypeScript, and Claude.
 
 > **Note:** Multi-user, no accounts. A 4-step setup flow (name → background → resume → your own Anthropic API key) creates a local identity stored in your browser; every visitor gets their own scoped data. Your API key is stored client-side only and sent per-request via headers — it's never saved on the server.
 
@@ -10,10 +10,13 @@ A job tracker built to feel like a great spreadsheet, with two AI features that 
 
 ## Features
 
-### Job Tracker
+One page, plus two summonable overlays — no sidebar, no separate nav destinations for Coach or Profile.
+
+### The Tracker (the whole app)
 - Import a job posting from a URL, paste the job description directly with no link at all, or both — handles JS-rendered pages via Jina reader, and a multi-source pass (extra text, a second link, a screenshot) feeds one extraction call
+- A free Priorities strip up top — deadlines, stale follow-ups, and interview prep, ranked by urgency then by fit score, no AI call. Clicking one expands and scrolls to the matching row instead of navigating anywhere
 - Company-grouped rows with collapsible expand, inline status updates, column sorting, and search/filter
-- AI match scorecard (5 categories × 100) auto-fires on panel open, cached per session — this is the core AI feature the tracker is built around
+- AI match scorecard (5 categories, weighted to 100) auto-fires on panel open, cached per session — this is the core AI feature the tracker is built around
 
 ### AI-Powered Detail Panel
 - **AI Score** — the 5-category fit scorecard above, in depth
@@ -22,18 +25,16 @@ A job tracker built to feel like a great spreadsheet, with two AI features that 
 - **Cover letter generator** — full draft in seconds, with tone and angle controls, prefilled from the job record
 - **Network section** — save contacts at each company, track outreach status (not reached out → reached out → responded → warm), company-keyed so contacts appear across all jobs at that company
 
-### Coach
-- General streaming chat that knows your resume, profile, memories, and tracked jobs — not a place for job-specific analysis, which lives entirely in the detail panel above
+### Coach (overlay)
+- A right-side panel summoned from the header — not a page. General streaming chat that knows your resume, profile, memories, and tracked jobs; no job-specific analysis, which lives entirely in the detail panel above
 - Persistent memory extraction — facts about you are saved after each exchange and used in every future AI call, with the date attached so a newer fact (or whatever you're saying right now) outweighs a stale one instead of the AI anchoring on an old stated goal
 - Quick-action prefills: "What should I apply to?", "Interview prep" (a conversation, not a simulation), "Cold outreach"
 
-### Home Dashboard
-- Pipeline stats, upcoming deadlines, follow-up nudges
-- **Priorities** — free, no AI call. Deadlines, stale follow-ups, and interview prep, ranked by urgency then by fit score within each bucket
-
-### Profile
+### Profile (overlay)
+- A centered panel summoned from the header, tabbed: **Profile** (personal/education/target fields, multi-resume management, backup & restore), **Strength**, **Usage**, **Memory**
 - **Candidate Strength** — a brutal, rubric-scored readiness assessment (relevant experience, quantified impact, technical depth, academic credibility, differentiation). Each category is constrained to an explicit set of anchored point values via structured outputs, so repeat scoring stays consistent instead of swinging a point or more between clicks
 - **Usage & Cost** — running total of what your own Anthropic API key has spent on this dashboard, with a per-feature cost breakdown (estimated from token counts and published pricing, including the web search per-call fee)
+- **Memory** — the facts the AI has extracted about you from Coach conversations, browsable and editable
 - **Backup & Restore** — full data export/import; also reachable from a fresh browser via the landing page's restore shortcut, no need to complete setup first
 
 ---
@@ -88,12 +89,15 @@ An optional `ANTHROPIC_API_KEY` in `.env.local` can serve as a server-side fallb
 
 ```
 app/
-├── welcome/        # Landing page — get started, or restore from backup
-├── tracker/        # Job applications + detail panel (AI score, gaps, bullets, cover letter, connections)
-├── coach/          # General chat only
-├── profile/        # Editable profile + Candidate Strength + Usage & Cost
-├── memory/         # Extracted memory CRUD
-└── api/            # All backend routes (jobs, connections, chat, usage, …)
+├── page.tsx            # THE app — greeting, Priorities, stats, the full job tracker table + detail panel
+├── welcome/            # Landing page — get started, or restore from backup
+├── setup/              # 4-step onboarding
+├── components/
+│   ├── FoxMark.tsx     # Brand mark
+│   ├── CoachPanel.tsx  # Coach overlay (general chat)
+│   └── ProfilePanel.tsx# Profile + Strength + Usage + Memory, tabbed overlay
+├── OverlayContext.tsx  # useOverlays() — opens/closes the two overlays from anywhere
+└── api/                # All backend routes (jobs, connections, chat, usage, …)
 
 lib/
 ├── db.ts           # SQLite/Turso client singleton + schema
@@ -102,3 +106,7 @@ lib/
 ├── usage.ts        # Per-call cost computation and logging
 └── resume-parser.ts
 ```
+
+## Design
+
+Primary black canvas (`#0A0A0A`), white/gray text, one orange accent (`#F97316`) — verified against WCAG AA, not eyeballed. JetBrains Mono for everything, including AI-generated prose. The `>` prompt is the recurring brand motif. The aesthetic borrows from terminal/CLI culture; the product underneath does not — every action is a button or a form, never a command to type or remember.

@@ -1,58 +1,67 @@
 'use client';
 
 import './globals.css';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Briefcase, MessageSquare, User, Brain } from 'lucide-react';
+import { User, MessageSquare } from 'lucide-react';
 import { ClientRoot } from './ClientRoot';
 import { useUser } from './hooks/useUser';
+import { OverlayProvider, useOverlays } from './OverlayContext';
+import { CoachPanel } from './components/CoachPanel';
+import { ProfilePanel } from './components/ProfilePanel';
+import { FoxMark } from './components/FoxMark';
 
-const navItems = [
-  { href: '/',          label: 'Home',      icon: LayoutDashboard },
-  { href: '/tracker',   label: 'Jobs',      icon: Briefcase },
-  { href: '/coach',     label: 'Coach',     icon: MessageSquare },
-  { href: '/profile',   label: 'Profile',   icon: User },
-  { href: '/memory',    label: 'Memory',    icon: Brain },
-];
+function Header() {
+  const { displayName } = useUser();
+  const { openCoach, openProfile } = useOverlays();
+  const initials = displayName
+    ? displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+    : '';
 
-function CompanionOrb() {
   return (
-    <div className="companion-section">
-      <span className="companion-label">Neural Link</span>
-
-      <div className="companion-orb">
-        <div className="orb-mega-halo" />
-        <div className="orb-ring-outer" />
-        <div className="orb-ring-mid" />
-        <div className="orb-ring-inner" />
-        <div className="orb-core" />
+    <header className="app-header">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <FoxMark size={24} />
+        <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: '14px', letterSpacing: '-0.01em' }}>
+          jobs<span style={{ color: 'var(--accent)' }}>_</span>
+        </span>
       </div>
 
-      <div className="companion-status">
-        <div className="companion-status-dot" />
-        Claude · Active
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button onClick={() => openCoach()} className="nav-item">
+          <MessageSquare size={14} /> Coach
+        </button>
+        <button onClick={() => openProfile()} className="nav-item" style={{ gap: '8px' }}>
+          {initials ? (
+            <span style={{ width: '18px', height: '18px', borderRadius: '4px', background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)' }}>{initials}</span>
+          ) : <User size={14} />}
+          Profile
+        </button>
       </div>
-    </div>
+    </header>
+  );
+}
+
+function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isOnboarding = pathname === '/welcome' || pathname === '/setup';
+
+  if (isOnboarding) return <>{children}</>;
+
+  return (
+    <>
+      <Header />
+      <main className="app-main">
+        <div key={pathname} className="page-enter">
+          {children}
+        </div>
+      </main>
+      <CoachPanel />
+      <ProfilePanel />
+    </>
   );
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const { displayName } = useUser();
-
-  // displayName is '' until after mount (see useUser) — falls back to 'CD' on
-  // both server and the first client render so hydration always matches.
-  const initials = displayName
-    ? displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
-    : 'CD';
-
-  const mobileNavItems = navItems.filter(n =>
-    ['/', '/tracker', '/coach', '/profile'].includes(n.href)
-  );
-
-  // Onboarding screens are full-bleed — no point showing app nav before setup is done.
-  const isOnboarding = pathname === '/welcome' || pathname === '/setup';
-
   return (
     <html lang="en">
       <head>
@@ -60,113 +69,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
           rel="stylesheet"
         />
         <style>{`
-          @keyframes spin     { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-          @keyframes fadeIn   { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-          @keyframes slideUp  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-          @keyframes barGrow  { from { width: 0%; } }
+          @keyframes spin    { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+          @keyframes fadeIn  { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+          @keyframes barGrow { from { width: 0%; } }
         `}</style>
       </head>
       <body>
         <ClientRoot>
-        {isOnboarding ? children : (
-        <>
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
-
-          {/* ── Sidebar ─────────────────────────────────────────── */}
-          <aside className="app-sidebar">
-
-            {/* Brand / User */}
-            <div style={{
-              padding: '18px 16px 16px',
-              borderBottom: '1px solid rgba(125, 220, 255, 0.09)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {/* Avatar */}
-                <div style={{
-                  width: '36px', height: '36px', borderRadius: '10px', flexShrink: 0,
-                  background: 'linear-gradient(135deg, #4A9EF8, #7DF4FC)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '13px', fontWeight: 800, color: '#03091A', letterSpacing: '-0.5px',
-                  boxShadow: '0 0 0 1px rgba(125,244,252,0.3), 0 0 20px rgba(125,244,252,0.2)',
-                }}>{initials}</div>
-
-                <div style={{ minWidth: 0 }}>
-                  <div style={{
-                    color: 'rgba(232, 244, 255, 0.95)',
-                    fontWeight: 700, fontSize: '13px',
-                    lineHeight: 1.2, letterSpacing: '-0.01em',
-                  }}>{displayName || 'You'}</div>
-                  <div style={{
-                    color: 'rgba(170,205,235,0.70)',
-                    marginTop: '2px', letterSpacing: '0.04em',
-                    fontSize: '10px', fontWeight: 500,
-                  }}>Local profile</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Companion Orb */}
-            <CompanionOrb />
-
-            {/* Nav */}
-            <nav style={{ padding: '4px 10px', flex: 1 }}>
-              {navItems.map(({ href, label, icon: Icon }) => {
-                const isActive = href === '/'
-                  ? pathname === '/'
-                  : pathname === href || pathname.startsWith(href + '/');
-                return (
-                  <Link key={href} href={href} className={`nav-item${isActive ? ' active' : ''}`}>
-                    <Icon size={14} className="nav-icon" />
-                    {label}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            {/* Bottom status bar */}
-            <div style={{
-              padding: '12px 16px',
-              borderTop: '1px solid rgba(125, 220, 255, 0.08)',
-              display: 'flex', alignItems: 'center', gap: '6px',
-            }}>
-              <div style={{
-                width: '5px', height: '5px', borderRadius: '50%',
-                background: '#34d399',
-                boxShadow: '0 0 8px rgba(52,211,153,0.7)',
-              }} />
-              <span style={{ color: 'rgba(125, 175, 230, 0.45)', fontSize: '10px', letterSpacing: '0.05em' }}>
-                Powered by Claude
-              </span>
-            </div>
-          </aside>
-
-          {/* ── Main ──────────────────────────────────────────── */}
-          <main className="app-main">
-            <div key={pathname} className="page-enter">
-              {children}
-            </div>
-          </main>
-
-        </div>
-
-        {/* Mobile bottom nav */}
-        <nav className="bottom-nav">
-          {mobileNavItems.map(({ href, label, icon: Icon }) => {
-            const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href);
-            return (
-              <Link key={href} href={href} className={isActive ? 'active' : ''}>
-                <Icon size={18} />
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
-        </>
-        )}
+          <OverlayProvider>
+            <AppShell>{children}</AppShell>
+          </OverlayProvider>
         </ClientRoot>
       </body>
     </html>

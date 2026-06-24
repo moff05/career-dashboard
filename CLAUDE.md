@@ -52,19 +52,22 @@ There is no hardcoded seed data anymore — a fresh `user_id` starts with empty 
 
 ## Architecture
 
+One page, two overlays (June 2026 redesign — see Design system below). `app/page.tsx` carries the greeting, free Priorities strip, stats, and the full job tracker table — this is the whole app for a logged-in user. Coach and Profile/Memory are summonable panels rendered globally from `layout.tsx`, opened via `useOverlays()` (`app/OverlayContext.tsx`), not routes. There is no sidebar and no per-page nav; the header (`app/layout.tsx`) is a slim, sticky top bar with the fox mark + wordmark on the left and Coach/Profile triggers on the right.
+
 ```
 app/
-├── layout.tsx          # Sidebar nav (Home, Jobs, Coach, Profile, Memory) + mobile bottom nav
-├── ClientRoot.tsx       # Redirects to /welcome if cid_user_id/cid_api_key missing from localStorage
-├── globals.css          # Design tokens (see Design system below)
-├── page.tsx             # Home dashboard — stats, free fit-score-sorted priorities, recent jobs
-├── welcome/page.tsx     # Landing page — Get Started, or restore-from-backup shortcut
-├── setup/page.tsx       # 4-step onboarding
-├── tracker/page.tsx     # Job tracker — import (URL or pasted text), company groups, detail panel
-├── coach/page.tsx       # General chat only — knows resume/profile/memories/jobs, no job-specific analysis
-├── profile/page.tsx     # Editable profile + rubric-scored Candidate Strength + Usage & Cost card
-├── memory/page.tsx      # Memory CRUD panel
-├── hooks/useUser.ts      # Reads cid_user_id / display name from localStorage
+├── layout.tsx              # Slim sticky header (fox mark, Coach/Profile triggers) + OverlayProvider, renders CoachPanel/ProfilePanel globally
+├── OverlayContext.tsx      # useOverlays() — coachOpen/profileOpen state + openCoach(prefill?)/openProfile(tab?), consumed by page.tsx and the header
+├── ClientRoot.tsx          # Redirects to /welcome if cid_user_id/cid_api_key missing from localStorage
+├── globals.css             # Design tokens (see Design system below)
+├── page.tsx                # THE app: greeting + Priorities strip + stats + the full job tracker (import, company groups, detail panel) — everything lives here now
+├── welcome/page.tsx        # Landing page (pre-auth, full-bleed) — Get Started, or restore-from-backup shortcut
+├── setup/page.tsx          # 4-step onboarding (pre-auth, full-bleed)
+├── components/
+│   ├── FoxMark.tsx         # The brand mark — reused in the header, /welcome, /setup, and the tracker's empty state
+│   ├── CoachPanel.tsx      # General chat overlay — knows resume/profile/memories/jobs, no job-specific analysis. Slides in from the right.
+│   └── ProfilePanel.tsx    # Profile + Memory merged into one tabbed overlay (Profile / Strength / Usage / Memory). Centered modal.
+├── hooks/useUser.ts        # Reads cid_user_id / display name from localStorage
 └── api/
     ├── export/route.ts, import/route.ts # Full data export/restore (no accounts — this is the only recovery path)
     ├── chat/route.ts, chat/history/route.ts, chat/memories/route.ts
@@ -114,28 +117,30 @@ After each Coach chat response, `/api/chat/memories` is called with the user mes
 
 ## Company badges
 
-Companies display vibrant hash-based initials badges — no network calls, no Clearbit dependency. Color is deterministic per company name using a 12-color palette. `CompanyBadge` is defined locally in `tracker/page.tsx`.
+Companies display vibrant hash-based initials badges — no network calls, no Clearbit dependency. Color is deterministic per company name using a 12-color palette. `CompanyBadge` is defined locally in `app/page.tsx`. These categorical company/status/score colors are a deliberate exception to the monochrome system (see Design system) — they exist to disambiguate at a glance, not to decorate.
 
-## Job Tracker features
+## The main page (`app/page.tsx`)
 
+Greeting + Priorities strip + stats + the job tracker table, top to bottom, one page:
+- **Greeting + Priorities** — `getPriorities(jobs)` computes free, no-AI-call priority items from whatever's already loaded: deadlines (≤3 days = urgent, ≤7 = soon), 14+ day no-response follow-ups, interview-prep flags. Sorted by urgency bucket first, then `match_score` descending as a tiebreaker. Clicking a priority item calls `jumpToJob(id)` — expands that job's company group and row in the table below and scrolls to it (`id="job-row-{id}"`), rather than navigating anywhere. An "interview prep" priority instead opens the Coach overlay with a prefilled prompt about that job. This is the only "what should I prioritize" surface — Weekly Brief and the Strategy advisor were both cut as redundant with it (see roadmap).
 - **Import (primary)** — opens a modal: paste a URL, paste a job description, or both, then review/edit → save. A URL alone fetches and parses the page (Jina reader first, falls back to plain fetch); pasted text alone needs no link. Combines up to 4 context sources (URL, pasted text, screenshot, extra link) before extracting structured fields in one Haiku pass. Fields not found anywhere are left blank — no data is invented.
 - **Source detection** — URL hostname mapped to a source label (LinkedIn, Greenhouse, Lever, Workday, Handshake, etc.); pasted-text-only jobs are labeled "Pasted."
 - **Company groups** — jobs grouped by company, collapsible, with aggregate match score.
 - **Inline status change** — click status badge → dropdown → `PATCH` partial update.
 - **Detail slide panel** — location, deadline countdown, source, salary, URL, notes, description, plus AI Score / Gaps / Bullets / Cover Letter / Connections tabs. These are the only per-job AI surfaces — there is no "discuss with Coach" handoff anymore (cut deliberately; Coach is general-only, see below).
 - **Search + filter, column sorting, smart deadline countdown.**
-- **Empty state** — tracker starts empty; prompts the user to import a job.
+- **Empty state** — tracker starts empty; prompts the user to import a job; shows the fox mark at reduced opacity.
 
-## Coach features
+## Coach (overlay, `app/components/CoachPanel.tsx`)
 
 - General streaming chat only — no job-specific analysis (that lives in the tracker's detail-panel tabs) and no mock interview mode (cut — pointless without voice).
+- A right-side slide-in panel summoned via `useOverlays().openCoach(prefill?)`, not a route. `openCoach` accepts an optional prefilled message (used by the Priorities "interview prep" item).
 - Persistent memory extraction after each response (see Memory system above).
 - Quick-action prefills: "What should I apply to?", "Interview prep" (a conversation about prep, not a simulation), "Cold outreach."
 
-## Home dashboard
+## Profile + Memory (overlay, `app/components/ProfilePanel.tsx`)
 
-- Pipeline stats, upcoming deadlines, follow-up nudges.
-- **Priorities** — free, no AI call. Computed client-side from tracked jobs: deadlines (≤3 days = urgent, ≤7 = soon), 14+ day no-response follow-ups, interview-prep flags. Sorted by urgency bucket first, then by `match_score` descending as a tiebreaker within each bucket. This is the only "what should I prioritize" surface on Home — Weekly Brief and the Strategy advisor were both cut as redundant with it (see roadmap).
+- A centered modal summoned via `useOverlays().openProfile(tab?)`, tabbed: **Profile** (personal/education/targets fields, multi-resume management, backup & restore), **Strength** (the rubric-scored Candidate Strength), **Usage** (cost/token breakdown), **Memory** (the memory CRUD list, merged in from the old standalone `/memory` page).
 
 ## Networking / connections
 
@@ -153,16 +158,22 @@ Companies display vibrant hash-based initials badges — no network calls, no Cl
 - `GET /api/export` — full data dump for the current user across all active tables. `POST /api/import` — restores from that dump into the current user (upserts profile, appends everything else including resumes). Used by Profile's Backup & Restore card, and by `/welcome`'s restore shortcut for a fresh browser/device; the only recovery path since there are no accounts.
 - `GET /api/resumes` — list the user's resumes (default first). `POST /api/resumes` — create one (`{name, raw_text}`); the first resume for a user is auto-marked default. `PUT /api/resumes/[id]` — update `name`/`raw_text`, or pass `{set_default: true}` to make it the one AI features read (clears the previous default first to respect the partial unique index). `DELETE /api/resumes/[id]` — deletes it; if it was the default, the oldest remaining resume is auto-promoted.
 
-## Design system (icy glass)
+## Design system (terminal, June 2026)
 
-Tokens defined in `app/globals.css`:
-- Background: `--void #07152B` / `--void-2 #0B1D38`, layered radial-gradient glow + faint grid overlay
-- Glass surfaces: `--glass rgba(125,220,255,0.055)` and `--glass-hi` with `backdrop-filter: blur(...)`
-- Accent: `--ice #7DF4FC` (icy cyan), `--blue #4A9EF8` (electric blue)
-- Text: `--text rgba(232,244,255,0.95)` down through `--text-4` for the dimmest tier
-- Status colors: dedicated `--s-saved` / `--s-applied` / `--s-interview` / `--s-offer` / `--s-rejected` tokens
-- Font: Inter (Google Fonts)
-- Sidebar avatar/brand mark: gradient square (`#4A9EF8` → `#7DF4FC`) with user initials, derived from `cid_display_name`
+Full rebuild from the old "icy glass" theme (midnight navy, cyan glow, backdrop-blur glass cards, an animated orb mascot) — deliberately replaced per direct user direction: primary black, terminal/monospace, one orange accent, a static fox mark, no glow/blur/gradient decoration anywhere. See PRODUCT.md for the brand rationale and the non-negotiable rule: the terminal look is skin-deep, every interaction stays point-and-click.
+
+Tokens defined in `app/globals.css`, all verified against WCAG AA on the `--bg` canvas (ratios noted in the CSS comment):
+- Background: `--bg #0A0A0A` (primary black), `--surface #161616` / `--surface-2 #1F1F1F` for elevated panels — flat fills, no blur
+- Borders: `--border #2A2A2A` / `--border-hi #3A3A3A` / `--border-dim #1C1C1C`
+- Text: `--text #F5F5F5` (~18:1), `--text-muted #9CA3AF` (~7.8:1, the floor for any real body/label text), `--text-dim #6B7280` (~4.1:1 — large/bold or decorative only, never body copy or placeholders)
+- Accent: `--accent #F97316` (orange, ~7.1:1) — the brand color, primary actions, and the "medium score / in-progress" semantic tier. `--accent-hi #FB923C` for hover.
+- Semantic (kept to the minimum the product needs, restrained color strategy): `--success #34D399` (~10.3:1 — offer status, high score), `--danger #F87171` (~7.2:1 — rejected status, low score)
+- Categorical exceptions: `BADGE_PALETTE` (company initials), `TYPE_COLORS`, `STATUS_STYLE`/`CONN_STATUS` keep distinct varied hues on purpose — they disambiguate data, not decorate chrome. Everything else on the page is monochrome + the one accent.
+- Font: JetBrains Mono, one family for everything (headings, labels, data, AI-generated prose) — no sans-serif anywhere
+- Radius scale tightened for a sharper, less-rounded feel: `--r-sm 4px` / `--r 6px` / `--r-lg 10px`
+- The `>` prompt motif: `.prompt::before` prefixes section headers; the brand wordmark is `jobs_` with the trailing underscore in accent orange
+- Brand mark: `FoxMark` (`app/components/FoxMark.tsx`) — an original geometric fox-head SVG, orange on the canvas color, static (no idle animation, unlike the old orb)
+- No sidebar, no per-page chrome — see Architecture above for the one-page-plus-overlays shell
 
 ## AI model usage
 
@@ -197,6 +208,7 @@ Each call uses the requesting user's own API key (from `x-api-key`, via `lib/use
 20. **Restore from `/welcome`** — a backup can now be restored on a brand-new browser/device without first completing `/setup`.
 21. **Reshape to tracker-first** (June 2026) — see Cut below. Relaxed `/api/jobs/import` to accept pasted text with no URL, specifically to absorb the "analyze a JD I don't have a link for" use case that Coach used to handle. Added recency-weighting to the memory system (dated memories + an explicit instruction to trust the newer fact or the live conversation over a stale one) so Coach doesn't anchor on an outdated stated goal.
 22. **Fit scorecard rubric rewrite** — same fix as the Candidate Strength rubric, applied to `jobs/[id]/analyze`: dropped the open 0-100-per-category continuum (and the "Growth Potential" category entirely — "could grow into it" is exactly the speculative credit that produces false hope) for 5 categories on anchored, enum-constrained bands, weighted toward a literal Explicit Requirements Met check as the most realistic predictor of clearing a screen. Upgraded Haiku → Sonnet 4.6 given this is now the centerpiece feature. Verified live against two sharply different test jobs (a bulge-bracket IB stretch role vs. a realistic regional-bank match for the same resume): scores landed at 39/100 and 86-92/100 respectively, with specific, falsifiable rationale, and were bit-for-bit identical across repeated runs on the same job after one rubric-wording fix (the "no location stated" case was genuinely ambiguous and caused the only observed wobble).
+23. **Terminal redesign** (June 2026, via `/impeccable`) — full visual + IA rebuild on explicit user direction. Replaced the icy-glass theme with the black/white/orange terminal system (see Design system). Collapsed Home + Tracker into one page (`app/page.tsx`) — Coach and Profile/Memory became summonable overlays (`OverlayContext`, `CoachPanel`, `ProfilePanel`) instead of nav destinations, dropping the sidebar entirely for a slim sticky header. Added an original geometric fox-head brand mark (`FoxMark`). Caught and fixed real pre-existing staleness while in there: `/welcome`'s feature copy still advertised the cut Hunt Agent and mock interview mode; `/welcome` and `/setup` both referenced `.brand-orb` CSS classes that no longer existed post-rebuild. Verified via Playwright across the full flow (welcome → setup → populated tracker → AI Score tab → both overlays → mobile viewport) before shipping.
 
 ### Cut
 - `/api/analyze/jd` — deleted (was dead code, no UI consumer).
@@ -211,7 +223,7 @@ Each call uses the requesting user's own API key (from `x-api-key`, via `lib/use
 
 ### Not yet done
 - Chrome extension for one-click save from any tab.
-- Mobile-responsive pass beyond the existing bottom nav (spot-check tracker/detail panel on small screens) — in progress.
+- Mobile-responsive pass on the tracker table specifically — the header/overlays/modals held up fine at a 390px viewport in testing, but the table itself still relies on horizontal scroll (`overflowX: auto`) rather than a dedicated narrow-screen layout.
 - BYOK onboarding friction — getting an Anthropic API key is real friction for non-technical users; consider a hand-holding flow or a capped trial key pool.
 - A "Contact us" / feedback surface (bug reports + feature requests, with screenshot attachment) that routes to an AI which can read, triage, and partially or fully act on submissions — floated as an idea for once there are real outside users (Nicholas's friends), not yet designed or built. Worth thinking through the auto-approve attack surface before building the "AI acts on it directly" part.
 - The legacy orphaned `profile` row (`id=1`, `user_id` still `NULL` — predates the multi-user migration) is dead/unreachable but hasn't been deleted.

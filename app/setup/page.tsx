@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Check, FileText } from 'lucide-react';
 import { saveUser } from '@/app/hooks/useUser';
 import { extractResumeText } from '@/lib/resumeExtract';
+import { FoxMark } from '@/app/components/FoxMark';
 
 // API key comes first (resume parsing may need Claude), then resume — uploading
 // it early lets us pre-fill identity/background below from what it finds.
@@ -24,15 +25,15 @@ function generateUserId(): string {
 }
 
 const INPUT: React.CSSProperties = {
-  width: '100%', background: 'rgba(125,220,255,0.06)', backdropFilter: 'blur(12px)',
-  border: '1px solid rgba(125,220,255,0.18)', borderRadius: '10px',
-  padding: '11px 14px', color: 'rgba(232,244,255,0.95)', fontSize: '14px',
+  width: '100%', background: 'var(--surface)',
+  border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
+  padding: '11px 14px', color: 'var(--text)', fontSize: '14px',
   outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
   transition: 'border-color 0.15s',
 };
 
 const LABEL: React.CSSProperties = {
-  display: 'block', color: 'rgba(158,202,242,0.75)', fontSize: '11px',
+  display: 'block', color: 'var(--text-muted)', fontSize: '11px',
   fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px',
 };
 
@@ -173,18 +174,14 @@ export default function SetupPage() {
 
         {/* Logo / brand */}
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div className="brand-orb" style={{ margin: '0 auto 16px' }}>
-            <div className="brand-orb-halo" />
-            <div className="brand-orb-ring-outer" />
-            <div className="brand-orb-ring-mid" />
-            <div className="brand-orb-ring-inner" />
-            <div className="brand-orb-core" />
+          <div style={{ margin: '0 auto 16px', display: 'flex', justifyContent: 'center' }}>
+            <FoxMark size={40} />
           </div>
-          <h1 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '22px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>
-            Career Dashboard
+          <h1 className="prompt" style={{ color: 'var(--text)', fontSize: '22px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em', justifyContent: 'center', display: 'flex' }}>
+            jobs<span style={{ color: 'var(--accent)' }}>_</span>
           </h1>
-          <p style={{ color: 'rgba(158,202,242,0.65)', fontSize: '13px', margin: '6px 0 0' }}>
-            Your AI-powered job search command center
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '6px 0 0' }}>
+            Your job tracker, set up in under a minute
           </p>
         </div>
 
@@ -193,24 +190,23 @@ export default function SetupPage() {
           {STEPS.map((s, i) => (
             <div key={s} style={{
               flex: 1, height: '3px', borderRadius: '2px',
-              background: i <= stepIdx ? '#7DF4FC' : 'rgba(125,220,255,0.15)',
+              background: i <= stepIdx ? 'var(--accent)' : 'var(--border)',
               transition: 'background 0.3s ease',
-              boxShadow: i <= stepIdx ? '0 0 8px rgba(125,244,252,0.5)' : 'none',
             }} />
           ))}
         </div>
 
         {/* Card */}
         <div style={{
-          background: 'rgba(125,220,255,0.055)', backdropFilter: 'blur(24px)',
-          border: '1px solid rgba(125,220,255,0.14)', borderRadius: '18px',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
           padding: '32px 28px',
         }}>
           <div style={{ marginBottom: '24px' }}>
-            <h2 style={{ color: 'rgba(232,244,255,0.95)', fontSize: '17px', fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.01em' }}>
+            <h2 style={{ color: 'var(--text)', fontSize: '17px', fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.01em' }}>
               {STEP_META[step].label}
             </h2>
-            <p style={{ color: 'rgba(158,202,242,0.65)', fontSize: '12px', margin: 0 }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0 }}>
               {STEP_META[step].hint}
             </p>
           </div>
@@ -222,22 +218,22 @@ export default function SetupPage() {
                 <label style={LABEL}>Full name *</label>
                 <input value={form.name} onChange={e => set('name', e.target.value)}
                   placeholder="Alex Johnson" style={INPUT} autoFocus
-                  onFocus={e => (e.target.style.borderColor = 'rgba(125,244,252,0.45)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.18)')} />
+                  onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
               </div>
               <div>
                 <label style={LABEL}>Email</label>
                 <input value={form.email} onChange={e => set('email', e.target.value)}
                   placeholder="alex@example.com" type="email" style={INPUT}
-                  onFocus={e => (e.target.style.borderColor = 'rgba(125,244,252,0.45)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.18)')} />
+                  onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
               </div>
               <div>
                 <label style={LABEL}>LinkedIn URL</label>
                 <input value={form.linkedin} onChange={e => set('linkedin', e.target.value)}
                   placeholder="linkedin.com/in/yourname" style={INPUT}
-                  onFocus={e => (e.target.style.borderColor = 'rgba(125,244,252,0.45)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.18)')} />
+                  onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
               </div>
             </div>
           )}
@@ -250,45 +246,45 @@ export default function SetupPage() {
                   <label style={LABEL}>School / University</label>
                   <input value={form.university} onChange={e => set('university', e.target.value)}
                     placeholder="University of Miami" style={INPUT}
-                    onFocus={e => (e.target.style.borderColor = 'rgba(125,244,252,0.45)')}
-                    onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.18)')} />
+                    onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                    onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
                 </div>
                 <div>
                   <label style={LABEL}>Graduation date</label>
                   <input value={form.graduation_date} onChange={e => set('graduation_date', e.target.value)}
                     placeholder="May 2027" style={INPUT}
-                    onFocus={e => (e.target.style.borderColor = 'rgba(125,244,252,0.45)')}
-                    onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.18)')} />
+                    onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                    onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
                 </div>
               </div>
               <div>
                 <label style={LABEL}>Degree / Major</label>
                 <input value={form.degree} onChange={e => set('degree', e.target.value)}
                   placeholder="BS Computer Science" style={INPUT}
-                  onFocus={e => (e.target.style.borderColor = 'rgba(125,244,252,0.45)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.18)')} />
+                  onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
               </div>
               <div>
                 <label style={LABEL}>Target roles</label>
                 <input value={form.target_roles} onChange={e => set('target_roles', e.target.value)}
                   placeholder="Software Engineer, PM, Data Analyst" style={INPUT}
-                  onFocus={e => (e.target.style.borderColor = 'rgba(125,244,252,0.45)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.18)')} />
+                  onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
               </div>
               <div>
                 <label style={LABEL}>Target cities / locations</label>
                 <input value={form.target_cities} onChange={e => set('target_cities', e.target.value)}
                   placeholder="New York, San Francisco, Remote" style={INPUT}
-                  onFocus={e => (e.target.style.borderColor = 'rgba(125,244,252,0.45)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.18)')} />
+                  onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
               </div>
               <div>
                 <label style={LABEL}>Anything else the AI should know</label>
                 <textarea value={form.notes} onChange={e => set('notes', e.target.value)}
                   placeholder="e.g. 'Remote only for internships, open to relocation full-time. Strong interest in fintech.'"
                   rows={3} style={{ ...INPUT, resize: 'vertical' }}
-                  onFocus={e => (e.target.style.borderColor = 'rgba(125,244,252,0.45)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.18)')} />
+                  onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
               </div>
             </div>
           )}
@@ -306,11 +302,11 @@ export default function SetupPage() {
                 />
                 <label htmlFor="resume-file-input" style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  border: '1px dashed rgba(125,220,255,0.32)', borderRadius: '10px',
+                  border: '1px dashed var(--border-hi)', borderRadius: 'var(--r-lg)',
                   padding: '16px', cursor: parsingFile ? 'wait' : 'pointer',
-                  color: parsingFile ? 'rgba(158,202,242,0.50)' : 'rgba(125,244,252,0.85)',
+                  color: parsingFile ? 'var(--text-muted)' : 'var(--accent)',
                   fontSize: '13px', fontWeight: 600, textAlign: 'center',
-                  background: 'rgba(125,220,255,0.04)', transition: 'border-color 0.15s, background 0.15s',
+                  background: 'var(--surface)', transition: 'border-color 0.15s, background 0.15s',
                   overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
                 }}>
                   {parsingFile
@@ -323,8 +319,8 @@ export default function SetupPage() {
 
               {prefilledFields.length > 0 && (
                 <div style={{
-                  background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.22)',
-                  borderRadius: '8px', padding: '9px 12px', color: 'rgba(167,243,208,0.90)', fontSize: '11px', lineHeight: 1.5,
+                  background: 'var(--success-bg)', border: '1px solid var(--success-bg)',
+                  borderRadius: 'var(--r)', padding: '9px 12px', color: 'var(--success)', fontSize: '11px', lineHeight: 1.5,
                   display: 'flex', alignItems: 'flex-start', gap: '6px',
                 }}>
                   <Check size={13} style={{ flexShrink: 0, marginTop: '1px' }} />
@@ -333,17 +329,17 @@ export default function SetupPage() {
               )}
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(125,220,255,0.12)' }} />
-                <span style={{ color: 'rgba(125,175,230,0.45)', fontSize: '11px' }}>or paste plain text</span>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(125,220,255,0.12)' }} />
+                <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>or paste plain text</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
               </div>
 
               <textarea value={form.resume_text} onChange={e => { set('resume_text', e.target.value); setResumeFileName(''); }}
                 placeholder={`Paste your resume as plain text here...\n\nEXAMPLE:\n\nAlex Johnson\nalexj@email.com | linkedin.com/in/alexj\n\nEDUCATION\nUniversity of Miami — BS Computer Science, May 2027\nGPA: 3.8/4.0\n\nEXPERIENCE\nSoftware Engineering Intern — Acme Corp (Summer 2024)\n- Built REST APIs serving 10k+ daily users\n- Reduced query latency by 40% via index optimization\n\nSKILLS\nPython, TypeScript, React, PostgreSQL, AWS`}
                 rows={12} style={{ ...INPUT, resize: 'vertical', fontSize: '12px', lineHeight: 1.6 }}
-                onFocus={e => (e.target.style.borderColor = 'rgba(125,244,252,0.45)')}
-                onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.18)')} />
-              <p style={{ color: 'rgba(158,202,242,0.50)', fontSize: '11px', margin: 0 }}>
+                onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
+              <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: 0 }}>
                 Optional but strongly recommended — enables tailored cover letters, gap analysis, and personalized coaching. We&apos;ll use it to pre-fill the next two steps; you can always adjust afterward.
               </p>
             </div>
@@ -356,21 +352,21 @@ export default function SetupPage() {
                 <label style={LABEL}>Anthropic API key *</label>
                 <input value={form.api_key} onChange={e => set('api_key', e.target.value)}
                   placeholder="sk-ant-api03-..." type="password" style={INPUT} autoFocus
-                  onFocus={e => (e.target.style.borderColor = 'rgba(125,244,252,0.45)')}
-                  onBlur={e => (e.target.style.borderColor = 'rgba(125,220,255,0.18)')} />
+                  onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
               </div>
 
               <div style={{
-                background: 'rgba(125,220,255,0.04)', border: '1px solid rgba(125,220,255,0.10)',
-                borderRadius: '10px', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px',
+                background: 'var(--surface)', border: '1px solid var(--border)',
+                borderRadius: 'var(--r-lg)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px',
               }}>
-                <div style={{ color: 'rgba(158,202,242,0.80)', fontSize: '12px', fontWeight: 600 }}>Where to get one:</div>
-                <div style={{ color: 'rgba(158,202,242,0.60)', fontSize: '12px', lineHeight: 1.5 }}>
-                  1. Go to <span style={{ color: '#7DF4FC' }}>console.anthropic.com</span><br />
+                <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>Where to get one:</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5 }}>
+                  1. Go to <span style={{ color: 'var(--accent)' }}>console.anthropic.com</span><br />
                   2. Sign up / log in → API Keys → Create Key<br />
                   3. Paste it above
                 </div>
-                <div style={{ color: 'rgba(158,202,242,0.45)', fontSize: '11px', marginTop: '2px' }}>
+                <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '2px' }}>
                   Typical cost: ~$0.05–0.20/day for normal use. Your key is stored in your browser only.
                 </div>
               </div>
@@ -380,9 +376,9 @@ export default function SetupPage() {
           {/* Error */}
           {error && (
             <div style={{
-              marginTop: '16px', padding: '10px 14px', borderRadius: '8px',
-              background: 'rgba(248,100,100,0.10)', border: '1px solid rgba(248,100,100,0.22)',
-              color: 'rgba(252,150,150,0.90)', fontSize: '12px',
+              marginTop: '16px', padding: '10px 14px', borderRadius: 'var(--r)',
+              background: 'var(--danger-bg)', border: '1px solid var(--danger-bg)',
+              color: 'var(--danger)', fontSize: '12px',
             }}>{error}</div>
           )}
 
@@ -392,20 +388,19 @@ export default function SetupPage() {
               onClick={() => stepIdx > 0 && setStep(STEPS[stepIdx - 1])}
               disabled={stepIdx === 0}
               style={{
-                background: 'transparent', border: 'none', color: stepIdx === 0 ? 'rgba(125,220,255,0.20)' : 'rgba(158,202,242,0.60)',
+                background: 'transparent', border: 'none', color: stepIdx === 0 ? 'var(--border)' : 'var(--text-muted)',
                 fontSize: '13px', cursor: stepIdx === 0 ? 'default' : 'pointer', padding: '8px 0', fontFamily: 'inherit',
               }}>
               ← Back
             </button>
 
             <button onClick={advance} disabled={saving} style={{
-              background: saving ? 'rgba(125,220,255,0.08)' : 'linear-gradient(135deg, rgba(74,158,248,0.3), rgba(125,244,252,0.22))',
-              color: saving ? 'rgba(125,220,255,0.40)' : '#7DF4FC',
-              border: '1px solid rgba(125,244,252,0.32)', borderRadius: '10px',
+              background: saving ? 'var(--border-dim)' : 'var(--accent)',
+              color: saving ? 'var(--border-hi)' : '#0A0A0A',
+              border: saving ? '1px solid var(--border)' : '1px solid var(--accent)', borderRadius: 'var(--r-lg)',
               padding: '10px 24px', fontSize: '13px', fontWeight: 700,
               cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
               letterSpacing: '0.02em', transition: 'all 0.15s',
-              boxShadow: saving ? 'none' : '0 0 20px -6px rgba(125,244,252,0.3)',
             }}>
               {saving ? 'Setting up…' : isLast ? 'Launch →' : `Next →`}
             </button>
@@ -413,7 +408,7 @@ export default function SetupPage() {
         </div>
 
         {/* Footer note */}
-        <p style={{ textAlign: 'center', color: 'rgba(125,175,230,0.35)', fontSize: '11px', marginTop: '20px' }}>
+        <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '11px', marginTop: '20px' }}>
           Open source · Your data stays with you · No account required
         </p>
       </div>

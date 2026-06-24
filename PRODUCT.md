@@ -6,34 +6,40 @@ product
 
 ## Users
 
-Any job seeker who lands on the live instance or self-hosts the project — no accounts, no passwords. A UUID identity is generated client-side at `/setup` and paired with the user's own Anthropic API key (BYOK), stored in `localStorage` only. Originally built by and for Nicholas Moffett (University of Miami junior, builder, CRE/AI intern, active job seeker); his daily-use habits are still the reference for feature priorities — opens it to track applications, get AI coaching, and find new leads, often in focused sessions late at night — but as of the multi-user launch the product is no longer single-tenant.
+Any job seeker who lands on the live instance or self-hosts the project — no accounts, no passwords. A UUID identity is generated client-side at `/setup` and paired with the user's own Anthropic API key (BYOK), stored in `localStorage` only. Originally built by and for Nicholas Moffett (University of Miami junior, builder, CRE/AI intern); his daily-use habits are still the reference for feature priorities. As of the multi-user launch the product is no longer single-tenant — but the actual target user is still someone exactly like him: a college student, often not technical, who would otherwise be tracking applications in a spreadsheet. Design for that person specifically, not for a developer who'd be comfortable in a real terminal.
 
 ## Product Purpose
 
-AI-powered job search command center. Tracks applications, surfaces leads, coaches on interviews and cover letters, and advises on strategy — scoped entirely to whoever is using it. Each user brings their own resume and API key through a 4-step setup, and the dashboard personalizes to them from that point on. Success = the user opens this instead of a spreadsheet, every time — for any user, not just the original one.
+A job tracker that feels like a great spreadsheet, with two AI features that earn their place: import a job posting and get an in-depth, brutally honest fit score, and a coach that knows your background. Each user brings their own resume and API key through setup, and the dashboard personalizes to them from that point on. Success = the user opens this instead of a spreadsheet, every time.
 
 ## Brand Personality
 
-Atmospheric · Personal · Sharp
+Terminal · Minimal · Sharp
 
-This isn't a dashboard. It's a command center that knows you. The vibe is ethereal personal project — the kind of thing you'd stumble on and wonder who built it. Handcrafted energy, not enterprise polish. Feels like an AI companion more than a tool, even though many different people now use their own instance of it.
+Looks like a developer tool. Operates like consumer software. The aesthetic borrows from CLI/terminal culture — monospace type, the `>` prompt as a recurring motif, a black canvas — but every interaction underneath is point-and-click, plainly labeled, and impossible to get lost in. The look is for someone who'd recognize a terminal aesthetic as "techy and cool"; the actual usability bar is a college student who has never opened one and never will. Nothing about the terminal styling is functional — there is no command input anywhere in the product. It's a skin, not an interaction model.
+
+The fox mark (see Logo below) is the one warm, organic touch against an otherwise cold, geometric system — a mascot, not a corporate logo.
+
+## Logo
+
+A geometric, angular fox-head mark in the accent orange — sharp, symmetrical, built from clean vector lines, not illustrative or sketchy. Used as the brand mark in the header and as the favicon. It's the only place in the UI where a literal "character" appears; everywhere else, personality comes from the typography and the `>` motif, not from an animated companion (the old icy-glass "orb" is gone).
 
 ## Anti-references
 
-- Generic SaaS dashboards (Linear, Notion in their most neutral states) — too impersonal
-- Corporate HR / ATS tools — sterile, cold, built for companies not people
-- Endless card grids with the same rhythm
-
-> Note: earlier versions of this brief also listed "glassmorphism decoration" and "the dark-navy-plus-blue-accent formula" as anti-references. The June 2026 multi-user redesign (`app/globals.css`) deliberately moved to an icy-glass aesthetic — midnight background, cyan/blue accent, backdrop-blur glass surfaces — which is exactly that formula. Flagging the conflict rather than silently resolving it: either the anti-reference was wrong for where this product ended up, or the redesign drifted from the brief. Worth a deliberate call rather than leaving stale guidance in place.
+- **The icy-glass aesthetic this product shipped with through mid-2026** (`app/globals.css` pre-redesign) — midnight-navy background, cyan/blue glow accents, backdrop-blur glass cards, an animated orb mascot. Deliberately replaced. Don't reintroduce glow, blur-as-decoration, or gradient accents anywhere in the new system.
+- Generic SaaS dashboards (Linear, Notion in their most neutral states) — too impersonal, and not what "terminal" means here either.
+- Corporate HR / ATS tools — sterile, cold, built for companies not people.
+- Actual terminal emulators / CLI tools as an interaction model. The reference is the *look* of a terminal (monospace, black canvas, `>` prompts), never its *behavior*. If a feature would require someone to type a command, recall a flag, or remember syntax, it has crossed from aesthetic into interaction model and must be rebuilt as a button, form, or menu.
+- Cute, animated mascots that move on their own (the old breathing/spinning orb). The fox mark is static — a mark, not a character with idle animations.
 
 ## Design Principles
 
-1. **It knows you** — Everything is personalized to the current user. The UI should feel like it's been configured by and for one specific person, not a blank template — even though it's now the same template doing that for many different people.
-2. **Atmosphere over chrome** — Use depth, glow, and subtle motion to create presence. The background is alive; the UI breathes.
-3. **Companion, not tool** — The app has a personality. There's something in it that reacts, encourages, and feels alive. Not cutesy — ethereal.
-4. **Information density earns its place** — Dense where tasks demand it (job table), spacious where thinking happens (coach, home).
-5. **Fluid, not decorated** — Transitions and animations exist to convey state and make the experience feel seamless, not to show off.
+1. **The look is a skin, the product is an iPhone.** Terminal aesthetic, zero terminal literacy required. Every screen must be usable by someone who has never seen a command line, with no exceptions made for "it looks cool this way." If a usability concern and an aesthetic preference conflict, usability wins, every time — and that includes color: status and score signals keep color (red/green/orange) even on an otherwise monochrome page, because color is faster to read than text for someone scanning quickly.
+2. **One page, not a tour.** The job tracker table is the product; it gets the most space and the least friction to reach. Coach and Profile are summonable overlays, not destinations — consolidation isn't a visual style, it's fewer places to get lost.
+3. **Restrained, not flat.** Primary black canvas, white/gray text, one accent (orange) used deliberately for actions and brand, plus the minimum semantic colors needed for status/score (green, red). No fourth hue. Dynamism comes from motion and typography, not from decoration — clean transitions, a blinking cursor, monospace rhythm, not gradients or glow.
+4. **Honest, not flattering.** This extends past visual design into the product's voice: AI-generated scores and summaries (fit score, Candidate Strength) are calibrated to be realistic, not encouraging. The interface should look confident and sharp; the words in it should never give false hope.
+5. **Density where the data is, room where the thinking is.** The tracker table is dense — many rows, many columns, no wasted padding. Overlays (Coach, Profile) get more breathing room since they're a different mode of use.
 
 ## Accessibility & Inclusion
 
-WCAG AA as a floor for every user, not just the original one. Full reduced-motion support. High contrast text required.
+WCAG AA as a floor — body text ≥4.5:1 against the black canvas, large/bold text ≥3:1. A monochrome-plus-one-accent palette makes this easier, not harder: verify every gray-on-black and orange-on-black pairing numerically before locking it in, don't eyeball it. Full reduced-motion support. High contrast text required.
