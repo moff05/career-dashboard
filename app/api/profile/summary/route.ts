@@ -118,7 +118,7 @@ Score these 5 categories against their exact anchors below. Each category's scor
 0.5 = one real differentiator (substantive leadership title, relevant certification, notable competition)
 1 = multiple strong differentiators, or one exceptional one (founded something real, published, nationally competitive result)
 
-For strengths, give exactly 4. For gaps, give exactly 3. Each rationale: one sentence citing the specific resume detail that justifies that exact score. Be specific — reference actual details from the resume, not generic praise. Do not use emojis.`,
+For strengths, give exactly 4. For gaps, give exactly 3. Each rationale: one sentence citing the specific resume detail that justifies that exact score. Be specific — reference actual details from the resume, not generic praise. The summary must be direct and unsentimental, not encouraging — state plainly where this candidate actually stands and what it would take to be competitive. Softening it to make someone feel better defeats the point of an honest readiness check. Do not use emojis.`,
       }],
     });
     await logUsage(userId, 'profile_summary', 'claude-sonnet-4-6', response.usage);

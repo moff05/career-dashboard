@@ -12,7 +12,7 @@ interface Job {
   created_at: string; status_updated_at: string | null; starred: number;
 }
 
-interface AnalysisCategory { name: string; score: number; rationale: string; }
+interface AnalysisCategory { name: string; score: number; max: number; rationale: string; }
 interface AnalysisResult { categories: AnalysisCategory[]; total: number; summary: string; }
 type AnalysisState = AnalysisResult | 'loading' | 'error';
 
@@ -1024,25 +1024,30 @@ export default function TrackerPage() {
                                         </button>
                                       </div>
                                     </div>
-                                    {/* Category bars */}
+                                    {/* Category bars — each category has its own max (25/20/20/20/15,
+                                        not a uniform 0-100), so color/width are driven by percent-of-max,
+                                        not the raw score. */}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
-                                      {r.categories.map(cat => (
-                                        <div key={cat.name}>
-                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '5px' }}>
-                                            <span style={{ color: 'rgba(180,215,255,0.80)', fontSize: '12px', fontWeight: 600 }}>{cat.name}</span>
-                                            <span style={{ color: scoreColor(cat.score), fontSize: '13px', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{cat.score}</span>
+                                      {r.categories.map(cat => {
+                                        const pct = cat.max > 0 ? (cat.score / cat.max) * 100 : 0;
+                                        return (
+                                          <div key={cat.name}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '5px' }}>
+                                              <span style={{ color: 'rgba(180,215,255,0.80)', fontSize: '12px', fontWeight: 600 }}>{cat.name}</span>
+                                              <span style={{ color: scoreColor(pct), fontSize: '13px', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{cat.score}/{cat.max}</span>
+                                            </div>
+                                            <div style={{ backgroundColor: 'rgba(125,220,255,0.06)', borderRadius: '20px', height: '4px', overflow: 'hidden', marginBottom: '4px' }}>
+                                              <div style={{
+                                                width: `${pct}%`, height: '100%', borderRadius: '20px',
+                                                backgroundColor: scoreColor(pct),
+                                                boxShadow: `0 0 6px ${scoreGlow(pct)}`,
+                                                transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1)',
+                                              }} />
+                                            </div>
+                                            <div style={{ color: 'rgba(90,140,200,0.44)', fontSize: '11px', lineHeight: 1.5 }}>{cat.rationale}</div>
                                           </div>
-                                          <div style={{ backgroundColor: 'rgba(125,220,255,0.06)', borderRadius: '20px', height: '4px', overflow: 'hidden', marginBottom: '4px' }}>
-                                            <div style={{
-                                              width: `${cat.score}%`, height: '100%', borderRadius: '20px',
-                                              backgroundColor: scoreColor(cat.score),
-                                              boxShadow: `0 0 6px ${scoreGlow(cat.score)}`,
-                                              transition: 'width 0.8s cubic-bezier(0.4,0,0.2,1)',
-                                            }} />
-                                          </div>
-                                          <div style={{ color: 'rgba(90,140,200,0.44)', fontSize: '11px', lineHeight: 1.5 }}>{cat.rationale}</div>
-                                        </div>
-                                      ))}
+                                        );
+                                      })}
                                     </div>
                                   </div>
                                 );
