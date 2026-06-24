@@ -19,7 +19,7 @@ export function useUser(): UserState {
     const userId = localStorage.getItem('cid_user_id') || '';
     const apiKey = localStorage.getItem('cid_api_key') || '';
     const displayName = localStorage.getItem('cid_display_name') || '';
-    setState({ userId, apiKey, displayName, isReady: true, isSetup: !!(userId && apiKey) });
+    setState({ userId, apiKey, displayName, isReady: true, isSetup: !!userId });
   }, []);
 
   return state;

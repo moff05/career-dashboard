@@ -9,16 +9,19 @@ export function ClientRoot({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const userId = localStorage.getItem('cid_user_id');
-    const apiKey = localStorage.getItem('cid_api_key');
-    const hasCreds = !!(userId && apiKey);
+    // The API key is no longer required to finish setup — you can track jobs
+    // manually and add a key later from Profile, so identity alone is what
+    // gates onboarding. AI routes enforce the key themselves when it's
+    // actually needed.
+    const hasIdentity = !!userId;
 
     // Already set up? Don't show onboarding again — send straight to the app.
     if (pathname === '/welcome' || pathname === '/setup') {
-      if (hasCreds) router.replace('/');
+      if (hasIdentity) router.replace('/');
       return;
     }
 
-    if (!hasCreds) router.replace('/welcome');
+    if (!hasIdentity) router.replace('/welcome');
   }, [pathname, router]);
 
   return <>{children}</>;

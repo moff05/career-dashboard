@@ -65,6 +65,7 @@ export function ProfilePanel() {
   const [saving, setSaving] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [summaryNoKey, setSummaryNoKey] = useState(false);
 
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [activeResumeId, setActiveResumeId] = useState<number | null>(null);
@@ -84,14 +85,25 @@ export function ProfilePanel() {
   const [backupMsg, setBackupMsg] = useState('');
   const [backupErr, setBackupErr] = useState('');
 
+  const [currentApiKey, setCurrentApiKey] = useState('');
+  const [apiKeyDraft, setApiKeyDraft] = useState('');
+  const [apiKeyEditing, setApiKeyEditing] = useState(false);
+  const [apiKeySaved, setApiKeySaved] = useState(false);
+  function saveApiKey() {
+    const trimmed = apiKeyDraft.trim();
+    localStorage.setItem('cid_api_key', trimmed);
+    setCurrentApiKey(trimmed);
+    setApiKeyEditing(false);
+    setApiKeySaved(true);
+    setTimeout(() => setApiKeySaved(false), 3000);
+  }
+
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(true);
 
   const [memories, setMemories] = useState<Memory[]>([]);
   const [memLoading, setMemLoading] = useState(true);
   const [memFilter, setMemFilter] = useState('all');
-  const [addForm, setAddForm] = useState({ show: false, content: '', category: 'insight' });
-  const [memSaving, setMemSaving] = useState(false);
 
   async function loadResumes(selectId?: number) {
     const data = await apiFetch('/api/resumes').then(r => r.json()) as Resume[];
@@ -109,6 +121,7 @@ export function ProfilePanel() {
   useEffect(() => {
     if (!profileOpen || loaded.done) return;
     loaded.done = true;
+    setCurrentApiKey(localStorage.getItem('cid_api_key') || '');
     apiFetch('/api/profile').then(r => r.json()).then(data => setProfile(data));
     loadResumes();
     apiFetch('/api/usage').then(r => r.json()).then(data => setUsage(data)).finally(() => setLoadingUsage(false));
@@ -225,6 +238,8 @@ export function ProfilePanel() {
     setProfile(await res.json()); setEditField(null); setSaving(false);
   };
   const generateSummary = async () => {
+    if (!localStorage.getItem('cid_api_key')) { setSummaryNoKey(true); return; }
+    setSummaryNoKey(false);
     setLoadingSummary(true);
     try { const res = await apiFetch('/api/profile/summary', { method: 'POST' }); setSummary(await res.json()); }
     catch { setSummary(null); }
@@ -234,12 +249,6 @@ export function ProfilePanel() {
   async function deleteMemory(id: number) {
     await apiFetch(`/api/memories/${id}`, { method: 'DELETE' });
     setMemories(prev => prev.filter(m => m.id !== id));
-  }
-  async function addMemory() {
-    if (!addForm.content.trim()) return;
-    setMemSaving(true);
-    await apiFetch('/api/memories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: addForm.content.trim(), category: addForm.category, source: 'manual' }) });
-    setMemSaving(false); setAddForm({ show: false, content: '', category: 'insight' }); fetchMemories();
   }
 
   const EditableField = ({ field, label, value, multiline = false }: { field: string; label: string; value: string | undefined; multiline?: boolean }) => {
@@ -286,7 +295,7 @@ export function ProfilePanel() {
       <div className="overlay-panel from-bottom" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(760px, 94vw)', maxHeight: '88vh', borderRadius: 'var(--r-lg)', display: 'flex', flexDirection: 'column' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <h1 className="prompt" style={{ color: 'var(--text)', fontSize: '14px', fontWeight: 700, margin: 0 }}>profile</h1>
+          <h1 style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Profile</h1>
           <button onClick={closeProfile} aria-label="Close" style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r)', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}>
             <X size={14} />
           </button>
@@ -302,8 +311,34 @@ export function ProfilePanel() {
 
           {tab === 'resume' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={card}>
+                <h3 className="section-label" style={{ margin: '0 0 6px' }}>API Key</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 12px', lineHeight: 1.5 }}>
+                  Needed for AI features (scoring, coach, cover letters) — tracking jobs manually works without one. Stored in your browser only.
+                </p>
+                {apiKeyEditing ? (
+                  <div>
+                    <input value={apiKeyDraft} onChange={e => setApiKeyDraft(e.target.value)} placeholder="sk-ant-api03-..." type="password" autoFocus className="field-input" style={{ width: '100%', marginBottom: '8px' }} />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button onClick={saveApiKey} className="btn-primary" style={{ padding: '5px 14px', fontSize: '12px' }}>Save</button>
+                      <button onClick={() => { setApiKeyEditing(false); setApiKeyDraft(currentApiKey); }} className="btn-ghost" style={{ padding: '5px 12px', fontSize: '12px' }}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ color: currentApiKey ? 'var(--success)' : 'var(--text-dim)', fontSize: '12px', fontWeight: 600 }}>
+                      {currentApiKey ? `Configured (sk-ant-...${currentApiKey.slice(-4)})` : 'Not set'}
+                    </span>
+                    <button onClick={() => { setApiKeyDraft(currentApiKey); setApiKeyEditing(true); }} className="btn-ghost" style={{ padding: '5px 12px', fontSize: '12px' }}>
+                      {currentApiKey ? 'Update' : 'Add key'}
+                    </button>
+                  </div>
+                )}
+                {apiKeySaved && <div style={{ color: 'var(--success)', fontSize: '11px', marginTop: '8px' }}>Saved.</div>}
+              </div>
+
               {[
-                { title: 'Personal', fields: [{ field: 'name', label: 'Full Name' }, { field: 'email', label: 'Email' }, { field: 'phone', label: 'Phone' }, { field: 'linkedin', label: 'LinkedIn' }] },
+                { title: 'Personal', fields: [{ field: 'name', label: 'Full Name' }, { field: 'email', label: 'Email (optional — used to sign cover letters)' }, { field: 'phone', label: 'Phone (optional)' }, { field: 'linkedin', label: 'LinkedIn (optional — used to sign cover letters)' }] },
                 { title: 'Education', fields: [{ field: 'university', label: 'University' }, { field: 'degree', label: 'Degree' }, { field: 'graduation_date', label: 'Graduation' }, { field: 'gpa', label: 'GPA' }, { field: 'minors', label: 'Minors' }, { field: 'honors', label: 'Honors', multiline: true }] },
                 { title: 'Targets', fields: [{ field: 'target_roles', label: 'Target Roles', multiline: true }, { field: 'target_cities', label: 'Target Cities', multiline: true }, { field: 'notes', label: 'Notes', multiline: true }] },
               ].map(section => (
@@ -386,17 +421,28 @@ export function ProfilePanel() {
 
           {tab === 'strength' && (
             <div style={card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ color: 'var(--text)', fontSize: '14px', fontWeight: 700, margin: 0 }}>Candidate Strength</h3>
-                <button onClick={generateSummary} disabled={loadingSummary} className="btn-ghost">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '12px' }}>
+                <div>
+                  <h3 style={{ color: 'var(--text)', fontSize: '14px', fontWeight: 700, margin: 0 }}>Candidate Strength</h3>
+                  <p style={{ color: 'var(--text-dim)', fontSize: '11px', margin: '4px 0 0', lineHeight: 1.4, maxWidth: '380px' }}>
+                    General resume quality, independent of any specific job — different question from the AI Score on each job, which is about fit for that exact posting.
+                  </p>
+                </div>
+                <button onClick={generateSummary} disabled={loadingSummary} className="btn-ghost" style={{ flexShrink: 0 }}>
                   {loadingSummary ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={12} />} {loadingSummary ? 'Generating…' : 'Generate'}
                 </button>
               </div>
 
-              {!summary && !loadingSummary && (
+              {!summary && !loadingSummary && !summaryNoKey && (
                 <div style={{ textAlign: 'center', padding: '40px 24px' }}>
                   <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '0 0 8px' }}>Click &quot;Generate&quot; for a brutally honest assessment of your candidacy.</p>
                   <p style={{ color: 'var(--text-dim)', fontSize: '12px', margin: 0 }}>Analyzes your resume, experiences, and saved context.</p>
+                </div>
+              )}
+              {summaryNoKey && (
+                <div style={{ textAlign: 'center', padding: '40px 24px' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '0 0 12px' }}>Add your API key to generate this.</p>
+                  <button onClick={() => setTab('resume')} className="btn-ghost">Add key</button>
                 </div>
               )}
               {loadingSummary && (
@@ -498,27 +544,9 @@ export function ProfilePanel() {
 
           {tab === 'memory' && (
             <div>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0, maxWidth: '480px' }}>
-                  Facts the AI has learned about you from Coach conversations, or added manually.{memories.length > 0 && ` ${memories.length} saved.`}
-                </p>
-                <button onClick={() => setAddForm(f => ({ ...f, show: !f.show }))} className={addForm.show ? 'btn-ghost' : 'btn-primary'} style={{ fontSize: '12px', padding: '7px 14px' }}>
-                  <Plus size={13} /> Add Memory
-                </button>
-              </div>
-
-              {addForm.show && (
-                <div style={{ ...card, marginBottom: '16px' }}>
-                  <textarea autoFocus placeholder="What should the AI remember about you?" value={addForm.content} onChange={e => setAddForm(f => ({ ...f, content: e.target.value }))} rows={3} className="field-input" style={{ width: '100%', resize: 'vertical', marginBottom: '12px' }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <select value={addForm.category} onChange={e => setAddForm(f => ({ ...f, category: e.target.value }))} className="field-input" style={{ cursor: 'pointer' }}>
-                      {MEMORY_CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-                    </select>
-                    <button onClick={addMemory} disabled={!addForm.content.trim() || memSaving} className="btn-primary" style={{ fontSize: '12px' }}>{memSaving ? 'Saving…' : 'Save'}</button>
-                    <button onClick={() => setAddForm({ show: false, content: '', category: 'insight' })} className="btn-ghost" style={{ fontSize: '12px' }}>Cancel</button>
-                  </div>
-                </div>
-              )}
+              <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: '0 0 14px', maxWidth: '480px' }}>
+                Facts the AI has picked up from Coach conversations — browse what it's learned and remove anything wrong or outdated.{memories.length > 0 && ` ${memories.length} saved.`}
+              </p>
 
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
                 <button onClick={() => setMemFilter('all')} className={`chip${memFilter === 'all' ? ' active' : ''}`}>All {memories.length}</button>

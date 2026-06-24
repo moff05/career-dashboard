@@ -27,10 +27,10 @@ function Header() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <button onClick={() => openCoach()} className="nav-item">
+        <button onClick={() => openCoach()} className="header-btn">
           <MessageSquare size={14} /> Coach
         </button>
-        <button onClick={() => openProfile()} className="nav-item" style={{ gap: '8px' }}>
+        <button onClick={() => openProfile()} className="header-btn" style={{ gap: '8px' }}>
           {initials ? (
             <span style={{ width: '18px', height: '18px', borderRadius: '4px', background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)' }}>{initials}</span>
           ) : <User size={14} />}

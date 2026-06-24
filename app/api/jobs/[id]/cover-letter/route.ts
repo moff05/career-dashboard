@@ -40,7 +40,7 @@ JOB: Company: ${job.company} | Title: ${job.title} | Location: ${job.location ||
 ${job.description ? `JD:\n${String(job.description).slice(0, 6000)}` : '(No JD)'}
 ${angle ? `CANDIDATE'S ANGLE ON WHY THIS ROLE: ${angle}` : ''}
 
-Open the letter with "Dear Hiring Team,". Never use: "I am writing to express my interest", "I believe I would be a great fit", "I am passionate about". Mirror several of the extracted keywords naturally in the letter body — don't force all of them in if it reads unnaturally.
+Open the letter with "Dear Hiring Team,". Never use: "I am writing to express my interest", "I believe I would be a great fit", "I am passionate about". Mirror several of the extracted keywords naturally in the letter body — don't force all of them in if it reads unnaturally. Close with a signature: the candidate's name, and beneath it whichever contact details (email, phone, LinkedIn) are listed in the context above — only the ones actually given, never invented.
 
 Return ONLY valid JSON, no other text:
 {

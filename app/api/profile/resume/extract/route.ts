@@ -15,15 +15,12 @@ interface ParsedProfile {
   gpa?: string; honors?: string; minors?: string; target_roles?: string;
 }
 
-// unpdf's fast text extraction has no concept of line breaks — it just joins every
-// text fragment with a space, so a real resume comes back as one giant run-on
-// paragraph. Detect that and ask Haiku to restore line breaks/structure only —
-// still a plain text completion, much cheaper than the document-vision path.
-function looksFlattened(text: string): boolean {
-  const lines = text.split('\n').filter(l => l.trim()).length;
-  return text.length > 400 && lines <= 3;
-}
-
+// Fast, non-AI text extraction (mammoth, unpdf) has no concept of document
+// layout — unpdf in particular just joins every text fragment with a space,
+// so a real resume often comes back as one giant run-on paragraph; mammoth
+// and raw .txt can come back with column-order or spacing artifacts instead.
+// Always worth a cheap Haiku cleanup pass when the text didn't already go
+// through vision extraction (which preserves structure as part of the call).
 async function restoreFormatting(anthropic: Anthropic, text: string, userId: string): Promise<string> {
   try {
     const res = await anthropic.messages.create({
@@ -31,7 +28,7 @@ async function restoreFormatting(anthropic: Anthropic, text: string, userId: str
       max_tokens: Math.max(2000, Math.ceil(text.length / 2)),
       messages: [{
         role: 'user',
-        content: `This resume text was extracted from a PDF and lost its line breaks — it's one run-on paragraph. Restore line breaks between sections, jobs, and bullet points (use "-" for bullets). Do not change, summarize, paraphrase, reorder, or omit any wording — fix spacing and structure only.
+        content: `This resume text was machine-extracted and may have lost its line breaks or picked up spacing/ordering artifacts from the original layout. Restore clean line breaks between sections, jobs, and bullet points (use "-" for bullets). If the text already looks well-structured, return it unchanged. Do not change, summarize, paraphrase, reorder, or omit any wording — fix spacing and structure only.
 
 ${text}
 
@@ -92,8 +89,16 @@ export async function POST(request: NextRequest) {
     const anthropic = apiKey ? new Anthropic({ apiKey }) : null;
 
     let text = '';
+    // Vision extraction (PDF-scan fallback, photos) already gets an explicit
+    // "preserve structure" instruction as part of the single extraction call.
+    // The fast, non-AI paths (mammoth, unpdf, raw .txt) don't — that's the
+    // text most likely to come back as a structurally messy wall of text,
+    // so it's the text worth spending a cheap Haiku pass to clean up.
+    let usedVision = false;
 
-    if (fileType === DOCX_TYPE || name.endsWith('.docx')) {
+    if (fileType === 'text/plain' || name.endsWith('.txt')) {
+      text = buffer.toString('utf-8').trim();
+    } else if (fileType === DOCX_TYPE || name.endsWith('.docx')) {
       const { value } = await mammoth.extractRawText({ buffer });
       text = value.trim();
     } else if (fileType === 'application/msword' || name.endsWith('.doc')) {
@@ -121,6 +126,7 @@ export async function POST(request: NextRequest) {
         });
         await logUsage(userId, 'resume_extract', 'claude-haiku-4-5-20251001', res.usage);
         text = res.content[0].type === 'text' ? res.content[0].text.trim() : '';
+        usedVision = true;
       }
     } else if (IMAGE_TYPES.includes(fileType as ImageType) || /\.(jpe?g|png|gif|webp)$/.test(name)) {
       if (!anthropic) return NextResponse.json({ error: 'API key required to read a photo of your resume' }, { status: 401 });
@@ -138,6 +144,7 @@ export async function POST(request: NextRequest) {
       });
       await logUsage(userId, 'resume_extract', 'claude-haiku-4-5-20251001', res.usage);
       text = res.content[0].type === 'text' ? res.content[0].text.trim() : '';
+      usedVision = true;
     } else {
       return NextResponse.json({ error: 'Unsupported file type. Upload a PDF, .docx, .txt, or a photo of your resume.' }, { status: 415 });
     }
@@ -146,7 +153,7 @@ export async function POST(request: NextRequest) {
 
     // Run concurrently — field extraction doesn't need the reformatted version.
     const [formattedText, profile] = await Promise.all([
-      anthropic && looksFlattened(text) ? restoreFormatting(anthropic, text, userId) : Promise.resolve(text),
+      anthropic && !usedVision ? restoreFormatting(anthropic, text, userId) : Promise.resolve(text),
       anthropic ? extractProfileFields(anthropic, text, userId) : Promise.resolve(null),
     ]);
     return NextResponse.json({ text: formattedText, profile });

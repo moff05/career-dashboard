@@ -13,7 +13,7 @@ const STEPS = ['apikey', 'resume', 'identity', 'background'] as const;
 type Step = typeof STEPS[number];
 
 const STEP_META: Record<Step, { label: string; hint: string }> = {
-  apikey:     { label: 'Your API key',      hint: 'Stored in your browser only — never sent to our servers.' },
+  apikey:     { label: 'Your API key',      hint: 'Optional — needed for AI features, but you can add it later and use the tracker manually until then.' },
   resume:     { label: 'Add your resume',   hint: 'Upload a PDF, Word doc, or photo of your resume/CV, or paste plain text. We\'ll pull your info from it in the next steps.' },
   identity:   { label: 'Who are you?',      hint: 'Basic info so the AI knows your name and context.' },
   background: { label: 'Career context',    hint: 'Where you are and where you\'re headed.' },
@@ -96,11 +96,18 @@ export default function SetupPage() {
 
   function validate(): string {
     if (step === 'identity' && !form.name.trim()) return 'Name is required.';
-    if (step === 'apikey') {
-      if (!form.api_key.trim()) return 'API key is required.';
-      if (!form.api_key.startsWith('sk-ant-')) return 'That doesn\'t look like an Anthropic API key (should start with sk-ant-).';
+    // API key is optional — only validated if they actually entered something.
+    // Skipping it entirely is handled by skipApiKey() below, not here.
+    if (step === 'apikey' && form.api_key.trim() && !form.api_key.startsWith('sk-ant-')) {
+      return 'That doesn\'t look like an Anthropic API key (should start with sk-ant-).';
     }
     return '';
+  }
+
+  function skipApiKey() {
+    setForm(p => ({ ...p, api_key: '' }));
+    setError('');
+    setStep(STEPS[stepIdx + 1]);
   }
 
   async function advance() {
@@ -222,19 +229,22 @@ export default function SetupPage() {
                   onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
               </div>
               <div>
-                <label style={LABEL}>Email</label>
+                <label style={LABEL}>Email (optional)</label>
                 <input value={form.email} onChange={e => set('email', e.target.value)}
                   placeholder="alex@example.com" type="email" style={INPUT}
                   onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
                   onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
               </div>
               <div>
-                <label style={LABEL}>LinkedIn URL</label>
+                <label style={LABEL}>LinkedIn URL (optional)</label>
                 <input value={form.linkedin} onChange={e => set('linkedin', e.target.value)}
                   placeholder="linkedin.com/in/yourname" style={INPUT}
                   onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
                   onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
               </div>
+              <p style={{ color: 'var(--text-dim)', fontSize: '11px', margin: 0, lineHeight: 1.5 }}>
+                Email and LinkedIn are only used to sign your generated cover letters — skip them if you&apos;d rather add that yourself.
+              </p>
             </div>
           )}
 
@@ -349,7 +359,7 @@ export default function SetupPage() {
           {step === 'apikey' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={LABEL}>Anthropic API key *</label>
+                <label style={LABEL}>Anthropic API key (optional)</label>
                 <input value={form.api_key} onChange={e => set('api_key', e.target.value)}
                   placeholder="sk-ant-api03-..." type="password" style={INPUT} autoFocus
                   onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
@@ -370,6 +380,13 @@ export default function SetupPage() {
                   Typical cost: ~$0.05–0.20/day for normal use. Your key is stored in your browser only.
                 </div>
               </div>
+
+              <button onClick={skipApiKey} style={{
+                background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px',
+                cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', padding: 0, textDecoration: 'underline',
+              }}>
+                Skip for now — you can add this later in Profile. You'll still be able to track jobs manually; AI features (scoring, coach, cover letters) need a key.
+              </button>
             </div>
           )}
 

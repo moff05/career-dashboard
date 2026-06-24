@@ -75,6 +75,10 @@ export function CoachPanel() {
     const text = (forceText ?? input).trim();
     if (!text || loading) return;
     if (!forceText) { setInput(''); if (textareaRef.current) textareaRef.current.style.height = 'auto'; }
+    if (!localStorage.getItem('cid_api_key')) {
+      setMessages(prev => [...prev, { role: 'user', content: text }, { role: 'assistant', content: "I need an API key to respond — add one in Profile, then ask again." }]);
+      return;
+    }
     setMessages(prev => [...prev, { role: 'user', content: text }]);
     setLoading(true);
     setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
@@ -138,8 +142,8 @@ export function CoachPanel() {
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
             <div>
-              <h1 className="prompt" style={{ color: 'var(--text)', fontSize: '14px', fontWeight: 700, margin: 0 }}>coach</h1>
-              <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '2px 0 0' }}>knows your resume, memory, and tracked jobs</p>
+              <h1 style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Coach</h1>
+              <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '2px 0 0' }}>Knows your resume, memory, and tracked jobs</p>
             </div>
             <button onClick={closeCoach} aria-label="Close" style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r)', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}>
               <X size={14} />

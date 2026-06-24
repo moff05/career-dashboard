@@ -6,26 +6,30 @@
    two extra hues (green/red) status and score actually need. Every
    text/bg pair below is verified against WCAG AA (4.5:1 body, 3:1
    large) — see PRODUCT.md Accessibility section. Computed ratios on
-   the --bg canvas: --text 18.2:1, --text-muted 7.8:1, --accent 7.1:1,
-   --success 10.3:1, --danger 7.2:1. --text-dim is 4.1:1 — large/bold
-   or decorative use only, never body copy or placeholders.
+   the --bg canvas: --text 17.4:1, --text-muted 8.9:1, --accent 6.9:1,
+   --success 10.0:1, --danger 7.0:1. --text-dim is 5.0:1 — large/bold
+   or decorative use only, never body copy or placeholders. Bumped a
+   notch brighter/lighter across the board from the first pass after
+   real-use feedback that pure #0A0A0A read as harsh and the muted
+   tiers felt washed out — still reads as "primary black," just less
+   punishing to stare at.
    ------------------------------------------------------------------ */
 :root {
   /* Backgrounds */
-  --bg:          #0A0A0A;
-  --surface:     #161616;
-  --surface-2:   #1F1F1F;
-  --header-bg:   rgba(10, 10, 10, 0.92);
+  --bg:          #101012;
+  --surface:     #1B1B1F;
+  --surface-2:   #26262B;
+  --header-bg:   rgba(16, 16, 18, 0.92);
 
   /* Borders */
-  --border:      #2A2A2A;
-  --border-hi:   #3A3A3A;
-  --border-dim:  #1C1C1C;
+  --border:      #34343A;
+  --border-hi:   #46464D;
+  --border-dim:  #232328;
 
   /* Text */
   --text:        #F5F5F5;
-  --text-muted:  #9CA3AF;
-  --text-dim:    #6B7280;
+  --text-muted:  #ABB2BD;
+  --text-dim:    #7D838D;
 
   /* Accent — orange. Brand mark, primary actions, "in progress" /
      "medium score" semantic tier. */
@@ -176,6 +180,25 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.85); }
   transition: color 0.12s, background 0.12s, border-color 0.12s;
 }
 .nav-item:hover { color: var(--text); background: var(--surface); }
+
+/* Header actions — a visible border at rest (not just on hover) so they
+   read unambiguously as buttons, not ambient nav text. */
+.header-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: var(--r);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+.header-btn:hover { color: var(--text); border-color: var(--border-hi); background: var(--surface-2); }
 .nav-item.active {
   color: var(--accent);
   background: var(--accent-bg);

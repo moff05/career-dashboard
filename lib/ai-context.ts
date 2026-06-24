@@ -4,7 +4,7 @@ interface Memory { content: string; category: string; created_at: string; }
 interface Job { type: string; status: string; company: string; title: string; }
 interface Profile {
   name?: string; graduation_date?: string; target_roles?: string;
-  target_cities?: string; notes?: string;
+  target_cities?: string; notes?: string; email?: string; phone?: string; linkedin?: string;
 }
 
 export async function buildSystemPrompt(userId: string): Promise<string> {
@@ -17,7 +17,7 @@ export async function buildSystemPrompt(userId: string): Promise<string> {
   const resumeText = resumeRow?.raw_text || 'Resume not yet added.';
 
   const profileRow = (await db.execute({
-    sql: 'SELECT name, graduation_date, target_roles, target_cities, notes FROM profile WHERE user_id = ?',
+    sql: 'SELECT name, graduation_date, target_roles, target_cities, notes, email, phone, linkedin FROM profile WHERE user_id = ?',
     args: [userId],
   })).rows[0] as unknown as Profile | undefined;
   const name = profileRow?.name || 'the user';
@@ -25,6 +25,9 @@ export async function buildSystemPrompt(userId: string): Promise<string> {
   const targetRoles = profileRow?.target_roles || '';
   const targetCities = profileRow?.target_cities || '';
   const profileNotes = profileRow?.notes || '';
+  const email = profileRow?.email || '';
+  const phone = profileRow?.phone || '';
+  const linkedin = profileRow?.linkedin || '';
 
   const memoriesRows = (await db.execute({
     sql: 'SELECT content, category, created_at FROM memories WHERE user_id = ? ORDER BY category, created_at DESC',
@@ -71,7 +74,8 @@ CURRENT JOBS IN TRACKER:
 ${jobsSummaryText || 'No jobs tracked yet.'}
 
 PREFERENCES & CONTEXT:
-- Today's date: ${today}${targetRoles ? `\n- Target roles: ${targetRoles}` : ''}${targetCities ? `\n- Target cities: ${targetCities}` : ''}${graduationDate ? `\n- Graduation: ${graduationDate}` : ''}${profileNotes ? `\n- Additional context: ${profileNotes}` : ''}
+- Today's date: ${today}${targetRoles ? `\n- Target roles: ${targetRoles}` : ''}${targetCities ? `\n- Target cities: ${targetCities}` : ''}${graduationDate ? `\n- Graduation: ${graduationDate}` : ''}${profileNotes ? `\n- Additional context: ${profileNotes}` : ''}${email ? `\n- Email: ${email}` : ''}${phone ? `\n- Phone: ${phone}` : ''}${linkedin ? `\n- LinkedIn: ${linkedin}` : ''}
+${email || phone || linkedin ? 'Use the contact info above for a cover letter signature block or outreach drafts when relevant — never invent contact info that isn\'t listed here.' : ''}
 
 Be specific, personalized, and reference their actual background. Be concise but thorough. Format responses with markdown when helpful. Do not use emojis.`;
 }

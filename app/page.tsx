@@ -17,7 +17,7 @@ interface Job {
 
 interface AnalysisCategory { name: string; score: number; max: number; rationale: string; }
 interface AnalysisResult { categories: AnalysisCategory[]; total: number; summary: string; }
-type AnalysisState = AnalysisResult | 'loading' | 'error';
+type AnalysisState = AnalysisResult | 'loading' | 'error' | 'no-key';
 
 interface DetailsResult { company_overview: string; role_summary: string; key_qualifications: string[]; what_to_highlight: string; }
 type DetailsState = DetailsResult | 'loading' | 'error';
@@ -244,7 +244,7 @@ function Field({ label, field, form, setForm, type = 'text' }: {
 // ─── Main ────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { displayName } = useUser();
-  const { openCoach } = useOverlays();
+  const { openCoach, openProfile } = useOverlays();
   const firstName = displayName.split(' ')[0];
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -290,6 +290,11 @@ export default function DashboardPage() {
   const [connAddForm, setConnAddForm] = useState<Record<string, { show: boolean; name: string; relationship: string; notes: string }>>({});
 
   const runAnalysis = useCallback((id: number) => {
+    if (!localStorage.getItem('cid_api_key')) {
+      analysisCacheRef.current[id] = 'no-key';
+      setAnalysisResults(prev => ({ ...prev, [id]: 'no-key' }));
+      return;
+    }
     analysisCacheRef.current[id] = 'loading';
     setAnalysisResults(prev => ({ ...prev, [id]: 'loading' }));
     apiFetch(`/api/jobs/${id}/analyze`, { method: 'POST' })
@@ -434,11 +439,16 @@ export default function DashboardPage() {
   const removeImage = () => { if (importImage?.previewUrl) URL.revokeObjectURL(importImage.previewUrl); setImportImage(null); };
   const openImport = () => { setImportUrl(''); setImportForm(EMPTY_FORM); setImportWarning(''); setImportFetchError(''); setImportExtraText(''); setImportExtraLink(''); removeImage(); setImportStep('input'); };
   const closeImport = () => { removeImage(); setImportStep(null); };
+  const skipToManual = () => { setImportWarning(''); setImportForm({ ...EMPTY_FORM, source: 'Manual' }); setImportStep('review'); };
 
   const fetchImport = async () => {
     const trimmedUrl = importUrl.trim();
     const trimmedText = importExtraText.trim();
     if (!trimmedUrl && !trimmedText) return;
+    if (!localStorage.getItem('cid_api_key')) {
+      setImportFetchError('Add your API key in Profile to auto-fill from a link or description.');
+      return;
+    }
     setImportFetchError(''); setImportStep('loading');
     try {
       const res = await apiFetch('/api/jobs/import', {
@@ -602,14 +612,13 @@ export default function DashboardPage() {
           is the main event so this stays compact. */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 className="prompt" style={{ color: 'var(--text)', fontSize: '16px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>
-            {greeting().toLowerCase()}{firstName ? `, ${firstName}` : ''}
+          <h1 style={{ color: 'var(--text)', fontSize: '17px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>
+            {greeting()}{firstName ? `, ${firstName}` : ''}
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '4px 0 0' }}>{today}</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={openImport} className="btn-primary"><LinkIcon size={13} /> Import a Job</button>
-          <button onClick={() => { setEditingJob(null); setForm(EMPTY_FORM); setShowModal(true); }} className="btn-ghost"><Plus size={12} /> Manual</button>
+          <button onClick={openImport} className="btn-primary"><Plus size={13} /> Add a Job</button>
         </div>
       </div>
 
@@ -710,9 +719,9 @@ export default function DashboardPage() {
         <div style={{ textAlign: 'center', padding: '80px 32px' }}>
           <div style={{ marginBottom: '16px', opacity: 0.5 }}><FoxMark size={32} /></div>
           <div style={{ color: 'var(--text)', fontSize: '14px', marginBottom: '6px' }}>No jobs tracked yet</div>
-          <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '24px' }}>Paste a job posting link, or just the description — get started below</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '24px' }}>Paste a link, paste the description, or just type it in yourself</div>
           <button onClick={openImport} className="btn-primary" style={{ margin: '0 auto' }}>
-            <LinkIcon size={13} /> Import a Job
+            <Plus size={13} /> Add a Job
           </button>
         </div>
       ) : (
@@ -1084,6 +1093,13 @@ export default function DashboardPage() {
                                   <button onClick={() => refreshAnalysis(job.id)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
                                 </div>
                               )}
+                              {analysis === 'no-key' && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-muted)', fontSize: '12px', padding: '12px 0', flexWrap: 'wrap' }}>
+                                  <AlertCircle size={13} color="var(--accent)" />
+                                  Add your API key to get an AI fit score for this job.
+                                  <button onClick={() => openProfile('resume')} className="btn-ghost" style={{ padding: '4px 12px', fontSize: '11px' }}>Add key</button>
+                                </div>
+                              )}
                               {analysis && analysis !== 'loading' && analysis !== 'error' && (() => {
                                 const r = analysis as AnalysisResult;
                                 return (
@@ -1428,10 +1444,10 @@ export default function DashboardPage() {
             {importStep === 'input' && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <h2 style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Import a job</h2>
+                  <h2 style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Add a job</h2>
                   <button onClick={closeImport} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
                 </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: '0 0 16px' }}>Paste a job posting link, or paste the job description below if you don&apos;t have a link.</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: '0 0 16px' }}>Paste a link or the job description and we&apos;ll fill in the details for you to confirm — or <button onClick={skipToManual} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit', textDecoration: 'underline' }}>skip straight to typing it in yourself</button>.</p>
                 <input type="url" value={importUrl} onChange={e => setImportUrl(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') fetchImport(); }}
                   placeholder="https://jobs.company.com/..." autoFocus
                   style={{ width: '100%', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '11px 14px', color: 'var(--text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
@@ -1456,7 +1472,14 @@ export default function DashboardPage() {
                     </div>
                   )}
                 </div>
-                {importFetchError && <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--danger)', fontSize: '12px', marginTop: '12px' }}><AlertCircle size={13} /> {importFetchError}</div>}
+                {importFetchError && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)', fontSize: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+                    <AlertCircle size={13} style={{ flexShrink: 0 }} /> {importFetchError}
+                    {importFetchError.includes('API key') && (
+                      <button onClick={() => { closeImport(); openProfile('resume'); }} className="btn-ghost" style={{ padding: '3px 10px', fontSize: '11px' }}>Add key</button>
+                    )}
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '18px' }}>
                   <button onClick={closeImport} style={{ backgroundColor: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
                   <button onClick={fetchImport} disabled={!importUrl.trim() && !importExtraText.trim()} className="btn-primary">
@@ -1475,7 +1498,7 @@ export default function DashboardPage() {
             {importStep === 'review' && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <h2 style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Review & Add</h2>
+                  <h2 style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 700, margin: 0 }}>{importForm.source === 'Manual' ? 'Enter the details' : 'Review & confirm'}</h2>
                   <button onClick={closeImport} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}>×</button>
                 </div>
                 {importWarning && (
@@ -1491,6 +1514,7 @@ export default function DashboardPage() {
                   <Field label="Salary" field="salary_range" form={importForm} setForm={setImportForm} />
                   <Field label="Date Posted" field="posting_date" form={importForm} setForm={setImportForm} type="date" />
                   <Field label="Deadline" field="deadline" form={importForm} setForm={setImportForm} type="date" />
+                  <Field label="Match Score (1–10)" field="match_score" form={importForm} setForm={setImportForm} type="number" />
                   <div>
                     <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
                     <select value={importForm.type} onChange={e => setImportForm(p => ({ ...p, type: e.target.value }))} style={{ ...formInput }}>
@@ -1529,13 +1553,14 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Add/Edit Modal */}
+      {/* Edit Modal — only reachable via the row's edit icon now; adding a new
+          job always goes through the unified Add-a-Job flow above. */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300 }}
           onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
           <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '24px', width: '580px', maxHeight: '88vh', overflowY: 'auto', boxShadow: '0 12px 32px rgba(0,0,0,0.5)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 700, margin: 0 }}>{editingJob ? 'Edit Job' : 'Add Job'}</h2>
+              <h2 style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Edit Job</h2>
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
