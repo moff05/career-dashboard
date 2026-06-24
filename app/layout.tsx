@@ -2,16 +2,17 @@
 
 import './globals.css';
 import { usePathname } from 'next/navigation';
-import { User, MessageSquare } from 'lucide-react';
+import { User, MessageSquare, Users } from 'lucide-react';
 import { ClientRoot } from './ClientRoot';
 import { useUser } from './hooks/useUser';
 import { OverlayProvider, useOverlays } from './OverlayContext';
 import { CoachPanel } from './components/CoachPanel';
 import { ProfilePanel } from './components/ProfilePanel';
+import { ConnectionsPanel } from './components/ConnectionsPanel';
 
 function Header() {
   const { displayName } = useUser();
-  const { openCoach, openProfile } = useOverlays();
+  const { openCoach, openProfile, openConnections } = useOverlays();
   const initials = displayName
     ? displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
     : '';
@@ -25,6 +26,9 @@ function Header() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button onClick={() => openConnections()} className="header-btn">
+          <Users size={14} /> Connections
+        </button>
         <button onClick={() => openCoach()} className="header-btn">
           <MessageSquare size={14} /> Coach
         </button>
@@ -55,6 +59,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       </main>
       <CoachPanel />
       <ProfilePanel />
+      <ConnectionsPanel />
     </>
   );
 }

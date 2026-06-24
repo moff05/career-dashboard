@@ -11,6 +11,10 @@ interface OverlayState {
   coachPrefill: string;
   openProfile: (tab?: string) => void;
   closeProfile: () => void;
+  connectionsOpen: boolean;
+  connectionsPrefillCompany: string;
+  openConnections: (prefillCompany?: string) => void;
+  closeConnections: () => void;
 }
 
 const OverlayContext = createContext<OverlayState | null>(null);
@@ -20,14 +24,21 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileTab, setProfileTab] = useState('resume');
   const [coachPrefill, setCoachPrefill] = useState('');
+  const [connectionsOpen, setConnectionsOpen] = useState(false);
+  const [connectionsPrefillCompany, setConnectionsPrefillCompany] = useState('');
 
   const openCoach = useCallback((prefill?: string) => { setCoachPrefill(prefill || ''); setCoachOpen(true); }, []);
   const closeCoach = useCallback(() => setCoachOpen(false), []);
   const openProfile = useCallback((tab?: string) => { setProfileTab(tab || 'resume'); setProfileOpen(true); }, []);
   const closeProfile = useCallback(() => setProfileOpen(false), []);
+  const openConnections = useCallback((prefillCompany?: string) => { setConnectionsPrefillCompany(prefillCompany || ''); setConnectionsOpen(true); }, []);
+  const closeConnections = useCallback(() => setConnectionsOpen(false), []);
 
   return (
-    <OverlayContext.Provider value={{ coachOpen, profileOpen, profileTab, openCoach, closeCoach, coachPrefill, openProfile, closeProfile }}>
+    <OverlayContext.Provider value={{
+      coachOpen, profileOpen, profileTab, openCoach, closeCoach, coachPrefill, openProfile, closeProfile,
+      connectionsOpen, connectionsPrefillCompany, openConnections, closeConnections,
+    }}>
       {children}
     </OverlayContext.Provider>
   );

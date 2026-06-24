@@ -8,6 +8,7 @@ async function ensureTable() {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL DEFAULT 'anonymous',
     company TEXT NOT NULL, name TEXT NOT NULL,
+    email TEXT, role TEXT, linkedin TEXT,
     relationship TEXT, notes TEXT,
     status TEXT DEFAULT 'not_reached_out',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -34,11 +35,11 @@ export async function POST(request: NextRequest) {
   try {
     const userId = getUserId(request);
     const db = await ensureTable();
-    const { company, name, relationship, notes } = await request.json();
+    const { company, name, email, role, linkedin, relationship, notes } = await request.json();
     if (!company || !name) return NextResponse.json({ error: 'company and name required' }, { status: 400 });
     const result = await db.execute({
-      sql: 'INSERT INTO connections (user_id, company, name, relationship, notes) VALUES (?, ?, ?, ?, ?)',
-      args: [userId, company, name, relationship || null, notes || null],
+      sql: 'INSERT INTO connections (user_id, company, name, email, role, linkedin, relationship, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      args: [userId, company, name, email || null, role || null, linkedin || null, relationship || null, notes || null],
     });
     const newConn = (await db.execute({ sql: 'SELECT * FROM connections WHERE id = ?', args: [Number(result.lastInsertRowid)] })).rows[0];
     return NextResponse.json(newConn, { status: 201 });

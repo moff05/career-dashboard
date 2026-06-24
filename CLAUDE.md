@@ -44,7 +44,7 @@ Schema lives in `scripts/migrate-multi-user.ts` — `npm run migrate` creates al
 - `chat_messages` — role, content, session_id (UUID per browser session). Coach chat only.
 - `memories` — AI-extracted facts from Coach conversations. Categories: preference, goal, insight, company, role, location, skill, other, story_bank.
 - `resume` — name, raw_text, parsed_at, is_default. Multiple resumes per `user_id` are allowed; a partial unique index (`idx_resume_one_default`) enforces at most one `is_default = 1` row per user. AI features always read whichever resume is currently default.
-- `connections` — company, name, relationship, notes, status (`not_reached_out` → `reached_out` → `responded` → `warm`).
+- `connections` — company, name, email, role, linkedin, relationship, notes, status (`not_reached_out` → `reached_out` → `responded` → `warm`). `company` is free text, not a foreign key to `jobs` — a connection never requires a tracked job to exist.
 - `usage_log` — one row per Claude API call: route, model, input/output/cache tokens, web_search_requests, cost_usd. Written by `lib/usage.ts`, read by the Profile page's Usage & Cost card.
 
 **Legacy/orphaned tables** (still created by the migration for backward compatibility with old data, no longer written by any current feature): `timeline_events`, `leads`, `company_ats_cache` — these backed the cut Timeline, Discover/Hunt Agent, and Discover/leads-liveness features. Not deleted on purpose (no destructive `DROP TABLE` without being asked); if you're touching this schema, don't build new features against them without checking they're really meant to come back.
@@ -53,30 +53,30 @@ There is no hardcoded seed data anymore — a fresh `user_id` starts with empty 
 
 ## Architecture
 
-One page, two overlays (June 2026 redesign — see Design system below). `app/page.tsx` carries the greeting, free Priorities strip, stats, and the full job tracker table — this is the whole app for a logged-in user. Coach and Profile/Memory are summonable panels rendered globally from `layout.tsx`, opened via `useOverlays()` (`app/OverlayContext.tsx`), not routes. There is no sidebar and no per-page nav; the header (`app/layout.tsx`) is a slim, sticky top bar with the `jobs_` wordmark on the left (no icon mark — tried a fox-head logo, cut it, see roadmap) and Coach/Profile triggers on the right.
+One page, three overlays (June 2026 redesign — see Design system below). `app/page.tsx` carries the greeting, free Priorities strip, stats, and the full job tracker table — this is the whole app for a logged-in user. Coach, Profile/Memory, and Connections are summonable panels rendered globally from `layout.tsx`, opened via `useOverlays()` (`app/OverlayContext.tsx`), not routes. There is no sidebar and no per-page nav; the header (`app/layout.tsx`) is a slim, sticky top bar with the `jobs_` wordmark on the left (no icon mark — tried a fox-head logo, cut it, see roadmap) and Connections/Coach/Profile triggers on the right.
 
 ```
 app/
-├── layout.tsx              # Slim sticky header (jobs_ wordmark, no icon mark, Coach/Profile triggers) + OverlayProvider, renders CoachPanel/ProfilePanel globally
-├── OverlayContext.tsx      # useOverlays() — coachOpen/profileOpen state + openCoach(prefill?)/openProfile(tab?), consumed by page.tsx and the header
+├── layout.tsx              # Slim sticky header (jobs_ wordmark, no icon mark, Connections/Coach/Profile triggers) + OverlayProvider, renders all three panels globally
+├── OverlayContext.tsx      # useOverlays() — open/close state for all three overlays: openCoach(prefill?), openProfile(tab?), openConnections(prefillCompany?)
 ├── ClientRoot.tsx          # Redirects to /welcome if cid_user_id missing from localStorage (the API key is optional — see Multi-user model)
 ├── globals.css             # Design tokens (see Design system below)
 ├── page.tsx                # THE app: greeting + Priorities strip + stats + the full job tracker (import, company groups, detail panel) — everything lives here now
 ├── welcome/page.tsx        # Landing page (pre-auth, full-bleed) — Get Started, or restore-from-backup shortcut
 ├── setup/page.tsx          # 4-step onboarding (pre-auth, full-bleed)
 ├── components/
-│   ├── CoachPanel.tsx      # General chat overlay — knows resume/profile/memories/jobs, no job-specific analysis. Slides in from the right.
-│   └── ProfilePanel.tsx    # Profile + Memory merged into one tabbed overlay (Profile / Strength / Usage / Memory). Centered modal.
+│   ├── CoachPanel.tsx        # General chat overlay — knows resume/profile/memories/jobs, no job-specific analysis. Slides in from the right.
+│   ├── ProfilePanel.tsx      # Profile + Memory merged into one tabbed overlay (Profile / Strength / Usage / Memory). Centered modal.
+│   └── ConnectionsPanel.tsx  # All connections, independent of any tracked job. Centered modal. Exports the Connection type + CONN_STATUS/CONN_CYCLE that page.tsx's in-job Network view imports.
 ├── hooks/useUser.ts        # Reads cid_user_id / display name from localStorage
 └── api/
     ├── export/route.ts, import/route.ts # Full data export/restore (no accounts — this is the only recovery path)
     ├── chat/route.ts, chat/history/route.ts, chat/memories/route.ts
-    ├── connections/route.ts, connections/[id]/route.ts
+    ├── connections/route.ts, connections/[id]/route.ts  # not job-scoped — see Networking / connections below
     ├── jobs/route.ts, jobs/[id]/route.ts, jobs/import/route.ts   # import accepts a URL, pasted text, or both
     ├── jobs/[id]/analyze/route.ts       # 5-category fit scorecard — the AI score per imported job
     ├── jobs/[id]/bullets/route.ts       # Resume bullet tailoring
     ├── jobs/[id]/cover-letter/route.ts
-    ├── jobs/[id]/details/route.ts       # AI-enriched job details tab
     ├── jobs/[id]/gaps/route.ts          # Fit gaps + positioning
     ├── memories/route.ts, memories/[id]/route.ts
     ├── profile/route.ts, profile/resume/route.ts, profile/resume/extract/route.ts, profile/summary/route.ts
@@ -127,7 +127,7 @@ Greeting + Priorities strip + stats + the job tracker table, top to bottom, one 
 - **Source detection** — URL hostname mapped to a source label (LinkedIn, Greenhouse, Lever, Workday, Handshake, etc.); pasted-text-only jobs are labeled "Pasted."
 - **Company groups** — jobs grouped by company, collapsible, with aggregate match score.
 - **Inline status change** — click status badge → dropdown → `PATCH` partial update.
-- **Detail slide panel** — location, deadline countdown, source, salary, URL, notes, description, plus AI Score / Gaps / Bullets / Cover Letter / Connections tabs. These are the only per-job AI surfaces — there is no "discuss with Coach" handoff anymore (cut deliberately; Coach is general-only, see below).
+- **Detail slide panel** — location, deadline countdown, source, salary, URL, notes, a collapsible full-description block, plus AI Score / Cover Letter / Fit Gaps / Bullets tabs. These are the only per-job AI surfaces — there is no "discuss with Coach" handoff anymore (cut deliberately; Coach is general-only, see below). The Overview tab's Network section lists connections at that job's company (view/status-cycle/delete in context) but adding/editing one always opens the standalone Connections overlay — see Networking / connections below.
 - **Search + filter, column sorting, smart deadline countdown.**
 - **Empty state** — tracker starts empty; prompts the user to import a job.
 
@@ -142,18 +142,20 @@ Greeting + Priorities strip + stats + the job tracker table, top to bottom, one 
 
 - A centered modal summoned via `useOverlays().openProfile(tab?)`, tabbed: **Profile** (personal/education/targets fields, multi-resume management, backup & restore), **Strength** (the rubric-scored Candidate Strength), **Usage** (cost/token breakdown), **Memory** (the memory CRUD list, merged in from the old standalone `/memory` page).
 
-## Networking / connections
+## Networking / connections (overlay, `app/components/ConnectionsPanel.tsx`)
 
-- Save contacts per company, track outreach status (`not_reached_out` → `reached_out` → `responded` → `warm`).
-- Company-keyed — contacts at a company show up across every job tracked at that company.
-- `app/api/connections/route.ts`, `connections/[id]/route.ts`.
+- **Decoupled from tracked jobs.** A connection is `{company, name, email, role, linkedin, relationship, notes, status}` — `company` is free text, never required to match a job you've actually tracked. You can log a recruiter you met at a career fair from a company you have no job tracked at yet; that was the whole point of pulling this out of the per-job panel. `GET /api/connections` (no `company` param) lists everything for the standalone overlay; passing `?company=X` filters, which is what the in-job Network view still uses.
+- Outreach status cycles `not_reached_out` → `reached_out` → `responded` → `warm` (`CONN_STATUS`/`CONN_CYCLE`, exported from `ConnectionsPanel.tsx`).
+- One add/edit form in the whole app, inside the overlay — the old per-job inline add-form (name/relationship/notes only, no email/role/linkedin) was removed in favor of this. Opening the overlay from a job's Network tab (`openConnections(job.company)`) pre-fills the company field.
+- Company-keyed for display — contacts at a company show up across every job tracked at that company, and in the standalone overlay grouped the same way.
+- `app/api/connections/route.ts` (`GET`/`POST`), `connections/[id]/route.ts` (`PATCH` — general partial update across any editable field, not status-only; `DELETE`).
 
 ## API notes
 
 - `PUT /api/jobs/[id]` — full update, requires all fields. `PATCH` — partial update (e.g. status only). Both scope the response lookup by `user_id`, not just the write — see Multi-user model.
 - `POST /api/jobs/import` — `{ url?, extraText?, imageBase64?, imageMediaType?, extraLink? }`, requires at least one of `url`/`extraText` → Haiku extraction, returns `{ company, title, location, type, deadline, salary_range, description, url, source, warning? }`. `url` in the response is `null` when none was given.
 - `POST /api/jobs/[id]/analyze` — 5-category fit scorecard, each category constrained to an enum of anchored values, weighted to a total out of 100: Explicit Requirements Met (0-25), Skills Match (0-20), Role Alignment (0-20), Industry Fit (0-20), Logistics/Location Fit (0-15). `claude-sonnet-4-6`, `temperature: 0`. Scores *fit for this specific posting*, not general candidate strength — scored against what's literally on the resume today, with explicit-requirement misses capped low regardless of overall strength. Color coding on the total: 80+ green, 60–79 amber, <60 red; per-category bars are colored by percent-of-that-category's-max, not the raw score. This is the per-job AI score the whole tracker is built around.
-- `POST /api/jobs/[id]/gaps`, `POST /api/jobs/[id]/bullets`, `POST /api/jobs/[id]/cover-letter`, `GET /api/jobs/[id]/details` — per-job AI panels, all read from `buildSystemPrompt(userId)` + the job record.
+- `POST /api/jobs/[id]/gaps`, `POST /api/jobs/[id]/bullets`, `POST /api/jobs/[id]/cover-letter` — per-job AI panels, all read from `buildSystemPrompt(userId)` + the job record.
 - `POST /api/profile/summary` — the rubric-scored Candidate Strength. Returns `{strengths, gaps, score_breakdown, readiness_score, summary}`; `readiness_score` is computed server-side as the sum of `score_breakdown`'s sub-scores using Anthropic structured outputs (each sub-score constrained to an enum of anchored values), not read directly from free-form model output.
 - `GET /api/export` — full data dump for the current user across all active tables. `POST /api/import` — restores from that dump into the current user (upserts profile, appends everything else including resumes). Used by Profile's Backup & Restore card, and by `/welcome`'s restore shortcut for a fresh browser/device; the only recovery path since there are no accounts.
 - `GET /api/resumes` — list the user's resumes (default first). `POST /api/resumes` — create one (`{name, raw_text}`); the first resume for a user is auto-marked default. `PUT /api/resumes/[id]` — update `name`/`raw_text`, or pass `{set_default: true}` to make it the one AI features read (clears the previous default first to respect the partial unique index). `DELETE /api/resumes/[id]` — deletes it; if it was the default, the oldest remaining resume is auto-promoted.
@@ -178,8 +180,8 @@ Tokens defined in `app/globals.css`, all verified against WCAG AA on the `--bg` 
 ## AI model usage
 
 - Coach chat: `claude-sonnet-4-6`, streaming via `anthropic.messages.stream()`
-- Memory extraction, fit scorecard, fit gaps, resume bullets, cover letter, job details, job import parsing: `claude-haiku-4-5-20251001`, non-streaming
-- Candidate Strength (`/api/profile/summary`): `claude-sonnet-4-6`, `temperature: 0`, structured outputs (`output_config.format` with an enum-constrained JSON schema) so each rubric sub-score can only land on one of its anchored values — see API notes above
+- Memory extraction, fit gaps, resume bullets, cover letter, job import parsing: `claude-haiku-4-5-20251001`, non-streaming
+- Candidate Strength (`/api/profile/summary`) and the per-job fit scorecard (`/api/jobs/[id]/analyze`): both `claude-sonnet-4-6`, `temperature: 0`, structured outputs (`output_config.format` with an enum-constrained JSON schema) so each rubric sub-score can only land on one of its anchored values — see API notes above
 
 Each call uses the requesting user's own API key (from `x-api-key`, via `lib/user.ts`). The `ANTHROPIC_API_KEY` env var is only a fallback for local dev, gated out of production entirely (see Multi-user model).
 
@@ -217,6 +219,7 @@ Each call uses the requesting user's own API key (from `x-api-key`, via `lib/use
     - **Softened the palette** — `--bg`/`--surface`/`--surface-2`/`--border`/`--text-muted`/`--text-dim` all bumped a notch lighter/brighter (still primary black, just less harsh); see the updated ratios in the `globals.css` comment.
     - **Merged Import + Manual into one "Add a Job" flow** — the two separate buttons/modals were confusing ("which one do I use?"). Now one button opens one modal: paste a link/description for AI auto-fill, or click "skip straight to typing it in yourself" to jump straight to the same review form blank. The standalone Add/Edit modal now only handles editing an already-tracked job (via the row's edit icon); it never opens for new-job creation anymore.
     - **Cut the manual "Add Memory" form** from Profile's Memory tab — kept view/delete (transparency into what the AI has learned), removed the add-it-yourself form since manually feeding the AI facts about yourself isn't a real usage pattern. Added a one-line clarification to the Strength tab explaining it answers a different question than the per-job AI Score (general resume quality vs. fit for one specific posting), since the two looked redundant without that context.
+25. **Decoupled Connections from tracked jobs** — `connections.company` was always free text at the DB level, but the only UI to add or view one lived inside a tracked job's detail panel, keyed to that job's company; you couldn't log a contact unless you already had a job tracked at their company. Added a standalone overlay (`ConnectionsPanel.tsx`, third header trigger alongside Coach/Profile) with one add/edit form covering name, company, email, role, LinkedIn, relationship, and notes — `GET /api/connections` already supported listing everything with no `company` filter, that capability just wasn't surfaced anywhere. The in-job Network tab still shows that company's connections in context (view/status-cycle/delete), but its "+ Add" now opens the standalone overlay pre-filled with the company instead of using its own narrower inline form — one add form in the app, not two with diverging field sets. Schema gained `email`/`role`/`linkedin` columns via the existing idempotent `addColumn` migration pattern.
 
 ### Cut
 - **The fox-head brand mark** (`app/components/FoxMark.tsx`, `app/icon.svg`) — built and iterated on twice (the first pass didn't read as a fox at all; the second pass fixed that but still looked like a jack-o-lantern), then removed entirely on "get rid of the logo everywhere" rather than attempting a third pass. The `jobs_` wordmark alone carries the brand now. Favicon falls back to the pre-existing `app/favicon.ico`.
@@ -229,6 +232,7 @@ Each call uses the requesting user's own API key (from `x-api-key`, via `lib/use
 - **Mock interview mode on Coach** (`/api/interview`) — "pointless if you can't speak it"; a text Q&A loop doesn't simulate a real interview closely enough to be worth keeping.
 - **Job-specific entry points into Coach** — the cover-letter-via-Coach shortcut icon on the tracker (redundant with the dedicated Cover Letter tab, which has tone/angle controls Coach's prompt didn't) and the "Discuss with Coach" score-handoff button (redundant once the fit scorecard is in-depth enough to stand on its own). Coach is now general-chat-only; per-job analysis lives entirely in the tracker's detail panel.
 - **"Analyze a JD" Coach quick action** — the gap it covered (a JD with no link) is now handled by Import itself accepting pasted-text-only, which produces a tracked, scored job instead of an ephemeral chat answer.
+- **Job Details tab** (`jobs/[id]/details` route + its tab in the detail panel) — the weakest of the per-job AI panels on review: company overview and role summary were the same "ask Google" territory already used to justify cutting Discover, and its "Your Angle" blurb outright duplicated Fit Gaps' `positioning` field. The one non-AI thing it provided — viewing the full stored job description — moved to a plain collapsible block in the Overview tab (no API call, just rendering `job.description`).
 
 ### Not yet done
 - Chrome extension for one-click save from any tab.

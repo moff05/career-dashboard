@@ -133,6 +133,7 @@ async function migrate() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT NOT NULL DEFAULT 'anonymous',
       company TEXT NOT NULL, name TEXT NOT NULL,
+      email TEXT, role TEXT, linkedin TEXT,
       relationship TEXT, notes TEXT,
       status TEXT DEFAULT 'not_reached_out',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -184,6 +185,9 @@ async function migrate() {
   await addColumn('timeline_events', 'user_id', "TEXT NOT NULL DEFAULT 'anonymous'");
   await addColumn('resume', 'user_id', "TEXT");
   await addColumn('connections', 'user_id', "TEXT NOT NULL DEFAULT 'anonymous'");
+  await addColumn('connections', 'email', 'TEXT');
+  await addColumn('connections', 'role', 'TEXT');
+  await addColumn('connections', 'linkedin', 'TEXT');
   await addColumn('leads', 'user_id', "TEXT NOT NULL DEFAULT 'anonymous'");
   await addColumn('leads', 'liveness_status', "TEXT NOT NULL DEFAULT 'unverified'");
   await addColumn('leads', 'liveness_checked_at', 'TEXT');

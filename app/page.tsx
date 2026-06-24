@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/apiFetch';
 import { Star, Trash2, ExternalLink, ChevronDown, ChevronRight, Plus, LinkIcon, Loader, AlertCircle, ArrowLeft, ImageIcon, Edit2, RotateCcw, X, Check, AlertTriangle, Clock, Bell, Zap } from 'lucide-react';
 import { useUser } from '@/app/hooks/useUser';
 import { useOverlays } from '@/app/OverlayContext';
+import { type Connection, CONN_STATUS, CONN_CYCLE } from '@/app/components/ConnectionsPanel';
 
 interface Job {
   id: number; company: string; title: string; type: string; status: string;
@@ -18,9 +19,6 @@ interface AnalysisCategory { name: string; score: number; max: number; rationale
 interface AnalysisResult { categories: AnalysisCategory[]; total: number; summary: string; }
 type AnalysisState = AnalysisResult | 'loading' | 'error' | 'no-key';
 
-interface DetailsResult { company_overview: string; role_summary: string; key_qualifications: string[]; what_to_highlight: string; }
-type DetailsState = DetailsResult | 'loading' | 'error';
-
 interface GapsResult { gaps: { skill: string; severity: string; how_to_address: string }[]; positioning: string; quick_wins: string[]; should_apply: boolean; apply_reasoning: string; }
 type GapsState = GapsResult | 'loading' | 'error';
 
@@ -30,14 +28,10 @@ type BulletsState = BulletsResult | 'loading' | 'error';
 interface CoverLetterResult { letter: string; tone: string; keywords?: string[]; }
 type CoverLetterState = CoverLetterResult | 'loading' | 'error';
 
-interface Connection { id: number; company: string; name: string; relationship: string | null; notes: string | null; status: string; created_at: string; }
-const CONN_STATUS: Record<string, { label: string; color: string; bg: string }> = {
-  not_reached_out: { label: 'Not reached out', color: 'var(--text-muted)', bg: 'rgba(148,163,184,0.1)' },
-  reached_out:     { label: 'Reached out',     color: 'var(--accent)', bg: 'var(--accent-bg)' },
-  responded:       { label: 'Responded',        color: 'var(--success)', bg: 'var(--success-bg)'  },
-  warm:            { label: 'Warm',             color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
-};
-const CONN_CYCLE = ['not_reached_out', 'reached_out', 'responded', 'warm'];
+// CONN_STATUS/CONN_CYCLE now live in ConnectionsPanel.tsx — that overlay is
+// the single source of truth for adding/editing connections, this page only
+// views/cycles/deletes within a job's company, so it imports rather than
+// redefines them.
 
 // ─── Colors ──────────────────────────────────────────────────────────────────
 const BADGE_PALETTE: [string, string][] = [
@@ -240,7 +234,7 @@ function Field({ label, field, form, setForm, type = 'text' }: {
 // ─── Main ────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { displayName } = useUser();
-  const { openCoach, openProfile } = useOverlays();
+  const { openCoach, openProfile, openConnections, connectionsOpen, connectionsPrefillCompany } = useOverlays();
   const firstName = displayName.split(' ')[0];
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -262,12 +256,10 @@ export default function DashboardPage() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [sortClicks, setSortClicks] = useState<Record<string, number>>({});
 
-  // Analysis + Details cache: per job id, persists for session
+  // Analysis cache: per job id, persists for session
   const analysisCacheRef = useRef<Record<number, AnalysisState>>({});
   const [analysisResults, setAnalysisResults] = useState<Record<number, AnalysisState>>({});
-  const detailsCacheRef = useRef<Record<number, DetailsState>>({});
-  const [detailsResults, setDetailsResults] = useState<Record<number, DetailsState>>({});
-  const [showRawJd, setShowRawJd] = useState<Record<number, boolean>>({});
+  const [showDescription, setShowDescription] = useState<Record<number, boolean>>({});
 
   const gapsCacheRef = useRef<Record<number, GapsState>>({});
   const [gapsResults, setGapsResults] = useState<Record<number, GapsState>>({});
@@ -283,7 +275,6 @@ export default function DashboardPage() {
 
   const connectionsCacheRef = useRef<Record<string, Connection[]>>({});
   const [connectionsMap, setConnectionsMap] = useState<Record<string, Connection[]>>({});
-  const [connAddForm, setConnAddForm] = useState<Record<string, { show: boolean; name: string; relationship: string; notes: string }>>({});
 
   const runAnalysis = useCallback((id: number) => {
     if (!localStorage.getItem('cid_api_key')) {
@@ -316,26 +307,6 @@ export default function DashboardPage() {
     runAnalysis(id);
   }, [runAnalysis]);
 
-  const runDetails = useCallback((id: number) => {
-    detailsCacheRef.current[id] = 'loading';
-    setDetailsResults(prev => ({ ...prev, [id]: 'loading' }));
-    apiFetch(`/api/jobs/${id}/details`, { method: 'POST' })
-      .then(r => r.json())
-      .then(data => {
-        const result: DetailsState = data.error ? 'error' : data;
-        detailsCacheRef.current[id] = result;
-        setDetailsResults(prev => ({ ...prev, [id]: result }));
-      })
-      .catch(() => {
-        detailsCacheRef.current[id] = 'error';
-        setDetailsResults(prev => ({ ...prev, [id]: 'error' }));
-      });
-  }, []);
-
-  const refreshDetails = useCallback((id: number) => {
-    delete detailsCacheRef.current[id];
-    runDetails(id);
-  }, [runDetails]);
 
   const runGaps = useCallback((id: number) => {
     gapsCacheRef.current[id] = 'loading';
@@ -384,15 +355,19 @@ export default function DashboardPage() {
     setConnectionsMap(prev => ({ ...prev, [company]: data }));
   }, []);
 
-  const addConnection = async (company: string) => {
-    const f = connAddForm[company];
-    if (!f?.name.trim()) return;
-    const data = await apiFetch('/api/connections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company, name: f.name.trim(), relationship: f.relationship.trim() || null, notes: f.notes.trim() || null }) }).then(r => r.json());
-    const updated = [...(connectionsCacheRef.current[company] || []), data];
-    connectionsCacheRef.current[company] = updated;
-    setConnectionsMap(prev => ({ ...prev, [company]: updated }));
-    setConnAddForm(prev => ({ ...prev, [company]: { show: false, name: '', relationship: '', notes: '' } }));
-  };
+  // Adding/editing a connection always happens in the standalone Connections
+  // overlay now, which keeps its own state — so when it closes, force a
+  // re-fetch of whatever company was in context here, otherwise a contact
+  // added mid-session wouldn't show up in an already-expanded job's Network
+  // tab until a full page reload.
+  const wasConnectionsOpen = useRef(false);
+  useEffect(() => {
+    if (wasConnectionsOpen.current && !connectionsOpen && connectionsPrefillCompany) {
+      delete connectionsCacheRef.current[connectionsPrefillCompany];
+      fetchConnections(connectionsPrefillCompany);
+    }
+    wasConnectionsOpen.current = connectionsOpen;
+  }, [connectionsOpen, connectionsPrefillCompany, fetchConnections]);
 
   const cycleConnStatus = async (company: string, connId: number, current: string) => {
     const next = CONN_CYCLE[(CONN_CYCLE.indexOf(current) + 1) % CONN_CYCLE.length];
@@ -528,7 +503,6 @@ export default function DashboardPage() {
       const thisJob = jobs.find(j => j.id === id);
       if (!thisJob?.match_score) runAnalysis(id);
     }
-    if (tab === 'description' && !detailsCacheRef.current[id]) runDetails(id);
     if (tab === 'gaps' && !gapsCacheRef.current[id]) runGaps(id);
     if (tab === 'bullets' && !bulletsCacheRef.current[id]) runBullets(id);
   };
@@ -848,7 +822,6 @@ export default function DashboardPage() {
                           <div style={{ display: 'flex', gap: '0px', borderBottom: '1px solid var(--border)', marginBottom: '20px', paddingTop: '14px', flexWrap: 'nowrap', overflowX: 'auto' }}>
                             {[
                               { id: 'overview',      label: 'Overview' },
-                              { id: 'description',   label: 'Job Details' },
                               { id: 'score',         label: 'AI Score' },
                               { id: 'cover-letter',  label: 'Cover Letter' },
                               { id: 'gaps',          label: 'Fit Gaps' },
@@ -897,6 +870,19 @@ export default function DashboardPage() {
                                   ) : null
                                 ))}
                               </div>
+                              {job.description && (
+                                <div style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '12px 14px', marginBottom: '14px' }}>
+                                  <button onClick={() => setShowDescription(p => ({ ...p, [job.id]: !p[job.id] }))} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Full description</span>
+                                    {showDescription[job.id] ? <ChevronDown size={12} color="var(--text-muted)" /> : <ChevronRight size={12} color="var(--text-muted)" />}
+                                  </button>
+                                  {showDescription[job.id] && (
+                                    <pre style={{ color: 'var(--text-muted)', fontSize: '11px', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: '10px 0 0', fontFamily: 'inherit', maxHeight: '280px', overflowY: 'auto' }}>
+                                      {job.description}
+                                    </pre>
+                                  )}
+                                </div>
+                              )}
                               {job.notes && (
                                 <div style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '12px 14px' }}>
                                   <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '6px' }}>Notes</div>
@@ -904,37 +890,36 @@ export default function DashboardPage() {
                                 </div>
                               )}
 
-                              {/* Network / Connections */}
+                              {/* Network / Connections — view + status-cycle + delete in context;
+                                  adding/editing always goes through the standalone Connections
+                                  overlay now, so there's one add form in the whole app, not two. */}
                               {(() => {
                                 const conns = connectionsMap[job.company] || [];
-                                const form = connAddForm[job.company] || { show: false, name: '', relationship: '', notes: '' };
                                 return (
                                   <div style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '12px 14px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: conns.length > 0 || form.show ? '10px' : 0 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: conns.length > 0 ? '10px' : 0 }}>
                                       <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                         Network
                                         {conns.length > 0 && <span style={{ backgroundColor: 'transparent', color: 'var(--text-muted)', borderRadius: '20px', padding: '0 5px', fontSize: '9px', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>{conns.length}</span>}
                                       </div>
-                                      <button onClick={() => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, show: !form.show } }))} style={{ background: 'none', border: 'none', color: form.show ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, padding: '1px 4px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '3px', borderRadius: 'var(--r-sm)' }}
-                                        onMouseEnter={e => { if (!form.show) e.currentTarget.style.color = 'var(--text-muted)'; }}
-                                        onMouseLeave={e => { if (!form.show) e.currentTarget.style.color = 'var(--text-muted)'; }}>
+                                      <button onClick={() => openConnections(job.company)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', fontWeight: 600, padding: '1px 4px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '3px', borderRadius: 'var(--r-sm)' }}>
                                         <Plus size={11} /> Add
                                       </button>
                                     </div>
 
-                                    {conns.length === 0 && !form.show && (
+                                    {conns.length === 0 && (
                                       <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontStyle: 'italic' }}>No connections at {job.company} yet.</div>
                                     )}
 
                                     {conns.length > 0 && (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: form.show ? '10px' : 0 }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                                         {conns.map(conn => {
                                           const cs = CONN_STATUS[conn.status] || CONN_STATUS.not_reached_out;
                                           return (
                                             <div key={conn.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--bg)', borderRadius: 'var(--r)', padding: '7px 10px' }}>
                                               <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: cs.color, flexShrink: 0 }} />
                                               <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ color: 'var(--text)', fontSize: '12px', fontWeight: 600 }}>{conn.name}</div>
+                                                <div style={{ color: 'var(--text)', fontSize: '12px', fontWeight: 600 }}>{conn.name}{conn.role ? ` — ${conn.role}` : ''}</div>
                                                 {conn.relationship && <div style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{conn.relationship}</div>}
                                               </div>
                                               <button onClick={() => cycleConnStatus(job.company, conn.id, conn.status)} style={{ backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '3px 9px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap' }}
@@ -951,107 +936,11 @@ export default function DashboardPage() {
                                         })}
                                       </div>
                                     )}
-
-                                    {form.show && (
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px' }}>
-                                          <input placeholder="Name *" value={form.name} onChange={e => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, name: e.target.value } }))} onKeyDown={e => { if (e.key === 'Enter') addConnection(job.company); if (e.key === 'Escape') setConnAddForm(prev => ({ ...prev, [job.company]: { show: false, name: '', relationship: '', notes: '' } })); }} autoFocus style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '7px 10px', color: 'var(--text)', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }} onFocus={e => (e.target.style.borderColor = 'var(--accent)')} onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
-                                          <input placeholder="How you know them" value={form.relationship} onChange={e => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, relationship: e.target.value } }))} style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '7px 10px', color: 'var(--text)', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }} onFocus={e => (e.target.style.borderColor = 'var(--accent)')} onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
-                                        </div>
-                                        <input placeholder="Notes (optional)" value={form.notes} onChange={e => setConnAddForm(prev => ({ ...prev, [job.company]: { ...form, notes: e.target.value } }))} style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '7px 10px', color: 'var(--text)', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }} onFocus={e => (e.target.style.borderColor = 'var(--accent)')} onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
-                                        <div style={{ display: 'flex', gap: '6px' }}>
-                                          <button onClick={() => addConnection(job.company)} disabled={!form.name.trim()} className="btn-primary" style={{ padding: '6px 14px', fontSize: '12px' }}>Save</button>
-                                          <button onClick={() => setConnAddForm(prev => ({ ...prev, [job.company]: { show: false, name: '', relationship: '', notes: '' } }))} style={{ backgroundColor: 'transparent', color: 'var(--text-muted)', border: 'none', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
-                                        </div>
-                                      </div>
-                                    )}
                                   </div>
                                 );
                               })()}
                             </div>
                           )}
-
-                          {/* Job Details tab */}
-                          {activeTab === 'description' && (() => {
-                            const details = detailsResults[job.id];
-                            const rawVisible = showRawJd[job.id];
-                            return (
-                              <div>
-                                {(!details || details === 'loading') && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '20px 0' }}>
-                                    <Loader size={14} color="var(--accent)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
-                                    Generating job breakdown...
-                                  </div>
-                                )}
-                                {details === 'error' && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '12px 0' }}>
-                                    <AlertCircle size={13} color="var(--danger)" />
-                                    Failed to generate.{' '}
-                                    <button onClick={() => refreshDetails(job.id)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
-                                  </div>
-                                )}
-                                {details && details !== 'loading' && details !== 'error' && (() => {
-                                  const d = details as DetailsResult;
-                                  return (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-
-                                      {/* Company + Role row */}
-                                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                                        <div style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '14px 16px' }}>
-                                          <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Company</div>
-                                          <p style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.company_overview}</p>
-                                        </div>
-                                        <div style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '14px 16px' }}>
-                                          <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>The Role</div>
-                                          <p style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.role_summary}</p>
-                                        </div>
-                                      </div>
-
-                                      {/* Qualifications */}
-                                      <div style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '14px 16px' }}>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>What They&apos;re Looking For</div>
-                                        <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                          {d.key_qualifications.map((q, i) => (
-                                            <li key={i} style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5 }}>{q}</li>
-                                          ))}
-                                        </ul>
-                                      </div>
-
-                                      {/* Your Angle — highlighted */}
-                                      <div style={{ backgroundColor: 'var(--accent-bg)', border: '1px solid var(--accent-dim)', borderRadius: 'var(--r-lg)', padding: '14px 16px' }}>
-                                        <div style={{ color: 'var(--accent-hi)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Your Angle</div>
-                                        <p style={{ color: 'var(--accent-hi)', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{d.what_to_highlight}</p>
-                                      </div>
-
-                                      {/* Footer: refresh + raw JD toggle */}
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <button onClick={() => refreshDetails(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
-                                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-                                          <RotateCcw size={10} /> Regenerate
-                                        </button>
-                                        {job.description && (
-                                          <button onClick={() => setShowRawJd(p => ({ ...p, [job.id]: !p[job.id] }))} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
-                                            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-                                            {rawVisible ? 'Hide raw JD' : 'View raw JD'}
-                                          </button>
-                                        )}
-                                      </div>
-
-                                      {/* Raw JD */}
-                                      {rawVisible && job.description && (
-                                        <div style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '14px 16px', maxHeight: '280px', overflowY: 'auto' }}>
-                                          <pre style={{ color: 'var(--text-muted)', fontSize: '11px', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit' }}>
-                                            {job.description}
-                                          </pre>
-                                        </div>
-                                      )}
-
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            );
-                          })()}
 
                           {/* Score tab */}
                           {activeTab === 'score' && (

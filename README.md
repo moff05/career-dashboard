@@ -22,8 +22,13 @@ One page, plus two summonable overlays — no sidebar, no separate nav destinati
 - **AI Score** — the 5-category fit scorecard above, in depth
 - **Gaps & positioning** — what is missing for this role and how to frame your background against it
 - **Tailored resume bullets** — which bullets to lead with and how to rephrase them
-- **Cover letter generator** — full draft in seconds, with tone and angle controls, prefilled from the job record
-- **Network section** — save contacts at each company, track outreach status (not reached out → reached out → responded → warm), company-keyed so contacts appear across all jobs at that company
+- **Cover letter generator** — full draft in seconds, with tone and angle controls, prefilled from the job record, signed with your real contact info if it's on file
+- **Network section** — view connections at that job's company, cycle outreach status, in context. Adding or editing one opens the standalone Connections overlay (see below) — there's one add form in the whole app, not a second one buried here
+
+### Connections (overlay)
+- Independent of any tracked job — log a recruiter, alum, or anyone else worth following up with the moment you meet them, even if you have no job tracked at their company yet
+- Name, company, email, role, LinkedIn, how you know them, notes — grouped by company, outreach status cycles the same way as the in-job view
+- The one place in the app you add or edit a connection; every other surface just views into the same data
 
 ### Coach (overlay)
 - A right-side panel summoned from the header — not a page. General streaming chat that knows your resume, profile, memories, and tracked jobs; no job-specific analysis, which lives entirely in the detail panel above
@@ -48,6 +53,7 @@ This app went through a reshape (June 2026) to cut everything that wasn't pullin
 - **No mock interview mode** — a text Q&A loop doesn't simulate a real interview closely enough to be worth it.
 - **No separate "weekly brief" or "application strategy" AI digest** — both were a second and third AI surface restating what the free Priorities card already shows for nothing.
 - **No analytics or timeline pages** — low value for the data most users actually have tracked.
+- **No separate "Job Details" AI panel** — its company overview and role summary were "ask Google" content, and its positioning blurb duplicated the Fit Gaps tab outright. The one real thing it offered — reading the full job description — is a plain collapsible block on the Overview tab now, no AI call needed.
 
 ---
 
@@ -93,9 +99,10 @@ app/
 ├── welcome/            # Landing page — get started, or restore from backup
 ├── setup/              # 4-step onboarding
 ├── components/
-│   ├── CoachPanel.tsx  # Coach overlay (general chat)
-│   └── ProfilePanel.tsx# Profile + Strength + Usage + Memory, tabbed overlay
-├── OverlayContext.tsx  # useOverlays() — opens/closes the two overlays from anywhere
+│   ├── CoachPanel.tsx       # Coach overlay (general chat)
+│   ├── ProfilePanel.tsx     # Profile + Strength + Usage + Memory, tabbed overlay
+│   └── ConnectionsPanel.tsx # All connections, independent of any tracked job
+├── OverlayContext.tsx  # useOverlays() — opens/closes all three overlays from anywhere
 └── api/                # All backend routes (jobs, connections, chat, usage, …)
 
 lib/
