@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, FileText } from 'lucide-react';
 import { saveUser } from '@/app/hooks/useUser';
@@ -60,16 +60,19 @@ export default function SetupPage() {
     setError('');
   }
 
-  async function handleResumeFile(file: File | undefined) {
-    if (!file) return;
+  // Shared by both the file-upload and paste-text paths so pasting gets the
+  // same "pull my info from it" prefill the resume step's hint text promises
+  // — `overwriteText` is off for paste, since the user can already see their
+  // typed text and a silent rewrite after blur would feel like a mutation;
+  // for an uploaded file there's no "original visible text" to preserve.
+  async function extractAndApply(file: File, overwriteText: boolean): Promise<boolean> {
     setError('');
     setParsingFile(true);
-    setResumeFileName(file.name);
     setPrefilledFields([]);
     try {
       const { text, profile } = await extractResumeText(file, form.api_key.trim());
       const filled: string[] = [];
-      const merged: Partial<typeof form> = { resume_text: text };
+      const merged: Partial<typeof form> = overwriteText ? { resume_text: text } : {};
       const apply = (key: keyof typeof form, label: string, value?: string) => {
         if (value?.trim() && !form[key].trim()) { merged[key] = value.trim(); filled.push(label); }
       };
@@ -86,11 +89,28 @@ export default function SetupPage() {
       apply('target_roles', 'Target roles', profile?.target_roles);
       setForm(p => ({ ...p, ...merged }));
       setPrefilledFields(filled);
+      setParsingFile(false);
+      return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not read that file.');
-      setResumeFileName('');
+      setError(err instanceof Error ? err.message : 'Could not read that.');
+      setParsingFile(false);
+      return false;
     }
-    setParsingFile(false);
+  }
+
+  async function handleResumeFile(file: File | undefined) {
+    if (!file) return;
+    setResumeFileName(file.name);
+    const ok = await extractAndApply(file, true);
+    if (!ok) setResumeFileName('');
+  }
+
+  const lastExtractedPasteRef = useRef('');
+  async function handlePastedTextBlur() {
+    const text = form.resume_text.trim();
+    if (text.length < 40 || text === lastExtractedPasteRef.current) return;
+    lastExtractedPasteRef.current = text;
+    await extractAndApply(new File([text], 'pasted-resume.txt', { type: 'text/plain' }), false);
   }
 
   function validate(): string {
@@ -344,7 +364,12 @@ export default function SetupPage() {
                 placeholder={`Paste your resume as plain text here...\n\nEXAMPLE:\n\nAlex Johnson\nalexj@email.com | linkedin.com/in/alexj\n\nEDUCATION\nUniversity of Miami — BS Computer Science, May 2027\nGPA: 3.8/4.0\n\nEXPERIENCE\nSoftware Engineering Intern — Acme Corp (Summer 2024)\n- Built REST APIs serving 10k+ daily users\n- Reduced query latency by 40% via index optimization\n\nSKILLS\nPython, TypeScript, React, PostgreSQL, AWS`}
                 rows={12} style={{ ...INPUT, resize: 'vertical', fontSize: '12px', lineHeight: 1.6 }}
                 onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
-                onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
+                onBlur={e => { e.target.style.borderColor = 'var(--border)'; handlePastedTextBlur(); }} />
+              {parsingFile && !resumeFileName && (
+                <div style={{ color: 'var(--text-muted)', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FileText size={12} /> Pulling your info from this…
+                </div>
+              )}
               <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: 0 }}>
                 Optional but strongly recommended — enables tailored cover letters, gap analysis, and personalized coaching. We&apos;ll use it to pre-fill the next two steps; you can always adjust afterward.
               </p>
