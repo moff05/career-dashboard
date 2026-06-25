@@ -587,9 +587,11 @@ export default function DashboardPage() {
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '4px 0 0' }}>{today}</p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={openImport} className="btn-primary"><Plus size={13} /> Add a Job</button>
-        </div>
+        {jobs.length > 0 && (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={openImport} className="btn-primary"><Plus size={13} /> Add a Job</button>
+          </div>
+        )}
       </div>
 
       {priorities.length > 0 && (
