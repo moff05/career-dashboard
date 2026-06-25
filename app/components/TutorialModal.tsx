@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
 import { createPortal } from 'react-dom';
@@ -187,11 +187,17 @@ export function TutorialModal() {
   const { tutorialOpen, closeTutorial, profileOpen, closeProfile } = useOverlays();
   const [step, setStep] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const prevRectRef = useRef<DOMRect | null>(null);
 
   useEffect(() => { setMounted(true); }, []);
 
   const current = STEPS[step];
   const rect = useTargetRect(current.target, step);
+
+  // Keep last-known rect so spotlight fades in/out without jumping to 0,0
+  if (rect) prevRectRef.current = rect;
+  const displayRect = rect ?? prevRectRef.current;
+  const hasTarget = !!current.target;
 
   // Auto-advance based on Profile open/close state
   useEffect(() => {
@@ -279,22 +285,26 @@ export function TutorialModal() {
         }} />
       )}
 
-      {/* Spotlight — single persisted element; CSS transition animates movement between steps */}
-      {rect && (
+      {/* Spotlight — stays in DOM while displayRect exists so opacity can transition smoothly.
+          Fades in when a target step is entered, fades out when leaving. Position transitions
+          handle the slide between two targeted steps (e.g. Profile btn → ? btn). */}
+      {displayRect && (
         <div style={{
           position: 'fixed',
-          top: rect.top - SPAD, left: rect.left - SPAD,
-          width: rect.width + SPAD * 2, height: rect.height + SPAD * 2,
+          top: displayRect.top - SPAD, left: displayRect.left - SPAD,
+          width: displayRect.width + SPAD * 2, height: displayRect.height + SPAD * 2,
           borderRadius: '8px',
+          opacity: hasTarget ? 1 : 0,
           boxShadow: `0 0 0 9999px rgba(0,0,0,${inModal ? 0.5 : 0.72}), inset 0 0 0 2px var(--accent)`,
           zIndex: inModal ? 601 : 599,
           pointerEvents: 'none',
-          transition: 'top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease',
+          transition: 'opacity 0.22s ease, top 0.28s cubic-bezier(0.4,0,0.2,1), left 0.28s cubic-bezier(0.4,0,0.2,1), width 0.28s cubic-bezier(0.4,0,0.2,1), height 0.28s cubic-bezier(0.4,0,0.2,1)',
         }} />
       )}
 
-      {/* Card — key forces remount on step change, triggering fade-in */}
-      <div key={step} style={{ ...cardStyle, animation: 'fade-in 0.18s ease-out' }}>
+      {/* Card — key remounts on step change. Tooltip cards use page-enter (slide up + fade);
+          centered/bottom-bar cards use fade-in only (transform would break their centering). */}
+      <div key={step} style={{ ...cardStyle, animation: `${isCenter || (inModal && !rect) ? 'fade-in' : 'page-enter'} 0.2s cubic-bezier(0.16,1,0.3,1)` }}>
         {closeBtn}
         {arrowNode}
         <CardContent current={current} step={step} total={STEPS.length}
