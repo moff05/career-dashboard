@@ -5,141 +5,47 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      width: 272px;
+      width: 240px;
       background: #101012;
       color: #F5F5F5;
       font-family: 'JetBrains Mono', 'Courier New', monospace;
       font-size: 12px;
-      padding: 16px;
+      padding: 14px;
     }
-    .brand {
-      font-size: 14px;
-      font-weight: 700;
-      color: #F5F5F5;
-      margin-bottom: 14px;
-      letter-spacing: -0.01em;
-    }
+    .brand { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
     .brand-accent { color: #F97316; }
 
-    .state { display: none; }
-    .state.active { display: block; }
-
-    .muted { color: #7D838D; line-height: 1.55; }
-    .accent { color: #F97316; }
-    .success-text { color: #34D399; font-weight: 700; margin-bottom: 10px; }
-    .danger-text { color: #F87171; font-weight: 700; margin-bottom: 6px; }
-
-    .job-domain { color: #7D838D; font-size: 11px; margin-bottom: 3px; }
-    .job-title {
+    .domain { color: #7D838D; font-size: 11px; margin-bottom: 3px; }
+    .title {
       color: #F5F5F5; font-size: 12px; font-weight: 600;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       margin-bottom: 12px;
     }
-
-    .warn {
-      background: rgba(249,115,22,0.08);
-      border: 1px solid rgba(249,115,22,0.2);
-      border-radius: 5px;
-      padding: 7px 10px;
-      color: #FB923C;
-      font-size: 11px;
-      line-height: 1.5;
-      margin-bottom: 10px;
-    }
+    .muted { color: #7D838D; line-height: 1.55; }
 
     .btn {
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      width: 100%; padding: 8px 12px;
+      display: block; width: 100%; padding: 8px 12px;
       font-family: inherit; font-size: 12px; font-weight: 700;
-      border-radius: 6px; cursor: pointer; border: none;
-      transition: background 0.12s, border-color 0.12s, color 0.12s;
+      border-radius: 6px; cursor: pointer; border: none; text-align: center;
+      background: #F97316; color: #101012;
+      transition: background 0.12s;
     }
-    .btn + .btn { margin-top: 7px; }
-    .btn-primary { background: #F97316; color: #101012; }
-    .btn-primary:hover:not(:disabled) { background: #FB923C; }
-    .btn-primary:disabled { background: #26262B; color: #7D838D; cursor: not-allowed; }
-    .btn-ghost {
-      background: transparent; color: #ABB2BD;
-      border: 1px solid #34343A;
-    }
-    .btn-ghost:hover { color: #F5F5F5; border-color: #46464D; }
+    .btn:hover { background: #FB923C; }
 
-    .row { display: flex; gap: 7px; }
-    .row .btn { flex: 1; margin: 0; }
-
-    .loading-row { display: flex; align-items: center; gap: 10px; }
-    .spinner {
-      width: 14px; height: 14px; flex-shrink: 0;
-      border: 2px solid #26262B; border-top-color: #F97316;
-      border-radius: 50%; animation: spin 0.7s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .saved-name { font-weight: 700; font-size: 13px; margin-bottom: 2px; }
-    .saved-role { color: #ABB2BD; font-size: 11px; margin-bottom: 12px; }
-
-    .link {
-      color: #F97316; text-decoration: none; font-size: 11px;
-      display: inline-block;
-    }
-    .link:hover { text-decoration: underline; }
-
-    .error-msg { color: #7D838D; font-size: 11px; line-height: 1.5; margin-bottom: 12px; }
+    #s-dashboard { display: none; }
   </style>
 </head>
 <body>
   <div class="brand">jobs<span class="brand-accent">_</span></div>
 
-  <!-- not connected -->
-  <div id="s-disconnected" class="state">
-    <p class="muted" style="margin-bottom:12px">
-      Visit your tracker once to connect automatically.
-    </p>
-    <button class="btn btn-primary" id="btn-open">Open jobs_ dashboard</button>
+  <div id="s-clip">
+    <div class="domain" id="job-domain"></div>
+    <div class="title" id="job-title"></div>
+    <button class="btn" id="btn-clip">Add to tracker</button>
   </div>
 
-  <!-- on the dashboard itself -->
-  <div id="s-on-dashboard" class="state">
+  <div id="s-dashboard">
     <p class="muted">You're on the dashboard.</p>
-  </div>
-
-  <!-- ready to save -->
-  <div id="s-ready" class="state">
-    <div class="job-domain" id="job-domain"></div>
-    <div class="job-title" id="job-title"></div>
-    <div id="no-key-warn" class="warn" style="display:none">
-      No API key set — saving requires one.<br>
-      Add it in Profile, then come back.
-    </div>
-    <button class="btn btn-primary" id="btn-save">Save to Tracker</button>
-  </div>
-
-  <!-- saving -->
-  <div id="s-loading" class="state">
-    <div class="loading-row">
-      <div class="spinner"></div>
-      <span class="muted">Saving…</span>
-    </div>
-  </div>
-
-  <!-- success -->
-  <div id="s-success" class="state">
-    <div class="success-text">Saved.</div>
-    <div class="saved-name" id="saved-company"></div>
-    <div class="saved-role" id="saved-title"></div>
-    <a class="link" id="link-view" href="https://career-dashboard-ten.vercel.app" target="_blank">
-      View in tracker →
-    </a>
-  </div>
-
-  <!-- error -->
-  <div id="s-error" class="state">
-    <div class="danger-text">Couldn't save.</div>
-    <div class="error-msg" id="error-msg"></div>
-    <div class="row">
-      <button class="btn btn-primary" id="btn-retry">Retry</button>
-      <button class="btn btn-ghost" id="btn-open-err">Open Dashboard</button>
-    </div>
   </div>
 
   <script src="popup.js"></script>

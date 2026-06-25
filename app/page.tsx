@@ -293,6 +293,13 @@ export default function DashboardPage() {
   useEffect(() => {
     setMounted(true);
     if (!localStorage.getItem('cid_tutorial_done')) openTutorial();
+    const params = new URLSearchParams(window.location.search);
+    const importParam = params.get('import');
+    if (importParam) {
+      window.history.replaceState({}, '', window.location.pathname);
+      openImport();
+      setImportUrl(importParam);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [isMobile, setIsMobile] = useState(false);
@@ -771,7 +778,7 @@ export default function DashboardPage() {
         <div style={{ textAlign: 'center', padding: '80px 32px' }}>
           <div style={{ color: 'var(--text)', fontSize: '14px', marginBottom: '6px' }}>No jobs tracked yet</div>
           <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '24px' }}>Paste a link, paste the description, or just type it in yourself</div>
-          <button onClick={openImport} className="btn-primary" style={{ margin: '0 auto' }}>
+          <button id="tutorial-add-job" onClick={openImport} className="btn-primary" style={{ margin: '0 auto' }}>
             <Plus size={13} /> Add a Job
           </button>
         </div>
