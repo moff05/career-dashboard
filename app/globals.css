@@ -365,3 +365,11 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.85); }
 @media (max-width: 768px) {
   .page-container { padding: 16px; }
 }
+
+/* Three full-text header buttons (Connections/Coach/Profile) overflow the
+   header at narrow phone widths — drop to icon-only rather than wrap/scroll
+   a sticky bar. */
+@media (max-width: 480px) {
+  .app-header { padding: 0 14px; }
+  .header-btn-label { display: none; }
+}

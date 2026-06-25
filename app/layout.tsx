@@ -9,6 +9,7 @@ import { OverlayProvider, useOverlays } from './OverlayContext';
 import { CoachPanel } from './components/CoachPanel';
 import { ProfilePanel } from './components/ProfilePanel';
 import { ConnectionsPanel } from './components/ConnectionsPanel';
+import { FeedbackWidget } from './components/FeedbackWidget';
 
 function Header() {
   const { displayName } = useUser();
@@ -26,17 +27,17 @@ function Header() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <button onClick={() => openConnections()} className="header-btn">
-          <Users size={14} /> Connections
+        <button onClick={() => openConnections()} className="header-btn" aria-label="Connections">
+          <Users size={14} /> <span className="header-btn-label">Connections</span>
         </button>
-        <button onClick={() => openCoach()} className="header-btn">
-          <MessageSquare size={14} /> Coach
+        <button onClick={() => openCoach()} className="header-btn" aria-label="Coach">
+          <MessageSquare size={14} /> <span className="header-btn-label">Coach</span>
         </button>
-        <button onClick={() => openProfile()} className="header-btn" style={{ gap: '8px' }}>
+        <button onClick={() => openProfile()} className="header-btn" style={{ gap: '8px' }} aria-label="Profile">
           {initials ? (
             <span style={{ width: '18px', height: '18px', borderRadius: '4px', background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)' }}>{initials}</span>
           ) : <User size={14} />}
-          Profile
+          <span className="header-btn-label">Profile</span>
         </button>
       </div>
     </header>
@@ -60,6 +61,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <CoachPanel />
       <ProfilePanel />
       <ConnectionsPanel />
+      <FeedbackWidget />
     </>
   );
 }

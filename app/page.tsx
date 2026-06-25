@@ -244,6 +244,14 @@ export default function DashboardPage() {
   // and the real value lands a tick later as an ordinary state update.
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    setIsMobile(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
   const today = mounted ? new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '';
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -650,7 +658,7 @@ export default function DashboardPage() {
             value={searchText} onChange={e => setSearchText(e.target.value)}
             style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '6px 12px', color: 'var(--text)', fontSize: '12px', outline: 'none', width: '160px', flexShrink: 0 }}
           />
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             {['all','saved','applied','interviewing','offer','rejected'].map(s => (
               <button key={s} onClick={() => setStatusFilter(s)} style={{
                 backgroundColor: statusFilter === s ? 'var(--accent-bg)' : 'var(--surface)',
@@ -705,21 +713,25 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflowX: 'auto', overflowY: 'hidden' }}>
-          {/* Column headers */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: GRID, gap: GAP, minWidth: '720px',
-            padding: '9px 16px', borderBottom: '1px solid var(--border)',
-            fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
-          }}>
-            <div />
-            <div style={colHdr('title')} onClick={() => handleSort('title')}>Title <SortIcon col="title" /></div>
-            <div style={colHdr('type')} onClick={() => handleSort('type')}>Type <SortIcon col="type" /></div>
-            <div style={colHdr('status')} onClick={() => handleSort('status')}>Status <SortIcon col="status" /></div>
-            <div style={colHdr('match_score')} onClick={() => handleSort('match_score')}>Score <SortIcon col="match_score" /></div>
-            <div style={colHdr('deadline')} onClick={() => handleSort('deadline')}>Deadline <SortIcon col="deadline" /></div>
-            <div style={colHdr('posting_date')} onClick={() => handleSort('posting_date')}>Posted <SortIcon col="posting_date" /></div>
-            <div style={{ color: 'var(--text-muted)' }}>Actions</div>
-          </div>
+          {/* Column headers — the stacked mobile row layout below doesn't have
+              fixed columns to label, so this is desktop-only. Sorting still
+              works on mobile via the filter pills above the table. */}
+          {!isMobile && (
+            <div style={{
+              display: 'grid', gridTemplateColumns: GRID, gap: GAP, minWidth: '720px',
+              padding: '9px 16px', borderBottom: '1px solid var(--border)',
+              fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+            }}>
+              <div />
+              <div style={colHdr('title')} onClick={() => handleSort('title')}>Title <SortIcon col="title" /></div>
+              <div style={colHdr('type')} onClick={() => handleSort('type')}>Type <SortIcon col="type" /></div>
+              <div style={colHdr('status')} onClick={() => handleSort('status')}>Status <SortIcon col="status" /></div>
+              <div style={colHdr('match_score')} onClick={() => handleSort('match_score')}>Score <SortIcon col="match_score" /></div>
+              <div style={colHdr('deadline')} onClick={() => handleSort('deadline')}>Deadline <SortIcon col="deadline" /></div>
+              <div style={colHdr('posting_date')} onClick={() => handleSort('posting_date')}>Posted <SortIcon col="posting_date" /></div>
+              <div style={{ color: 'var(--text-muted)' }}>Actions</div>
+            </div>
+          )}
 
           {Object.entries(grouped).map(([company, companyJobs], groupIdx) => {
             const isExpanded = expandedCompanies.has(company);
@@ -730,7 +742,7 @@ export default function DashboardPage() {
                 {/* Company header */}
                 <div onClick={() => setExpandedCompanies(prev => { const n = new Set(prev); n.has(company) ? n.delete(company) : n.add(company); return n; })}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', minWidth: '720px',
+                    display: 'flex', alignItems: 'center', gap: '10px', minWidth: isMobile ? undefined : '720px',
                     padding: '11px 16px', backgroundColor: 'var(--surface)',
                     borderTop: groupIdx > 0 ? '1px solid var(--border)' : undefined,
                     borderBottom: isExpanded ? '1px solid var(--border)' : (!isLast ? '1px solid var(--border)' : undefined),
@@ -738,11 +750,11 @@ export default function DashboardPage() {
                   }}>
                   {isExpanded ? <ChevronDown size={11} color="var(--text-muted)" /> : <ChevronRight size={11} color="var(--text-muted)" />}
                   <CompanyBadge company={company} size={22} />
-                  <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: '13px' }}>{company}</span>
-                  <span style={{ backgroundColor: 'var(--border-dim)', color: 'var(--text-muted)', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: 500 }}>
+                  <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{company}</span>
+                  <span style={{ backgroundColor: 'var(--border-dim)', color: 'var(--text-muted)', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: 500, flexShrink: 0 }}>
                     {companyJobs.length} {companyJobs.length === 1 ? 'role' : 'roles'}
                   </span>
-                  {companyJobs.some(j => j.starred) && <Star size={11} color="var(--accent)" fill="var(--accent)" />}
+                  {companyJobs.some(j => j.starred) && <Star size={11} color="var(--accent)" fill="var(--accent)" style={{ flexShrink: 0 }} />}
                 </div>
 
                 {isExpanded && companyJobs.map((job, idx) => {
@@ -752,78 +764,145 @@ export default function DashboardPage() {
                   const isLastInGroup = idx === companyJobs.length - 1;
                   return (
                     <div key={job.id}>
-                      {/* Job row */}
-                      <div
-                        id={`job-row-${job.id}`}
-                        onClick={() => toggleJob(job.id)}
-                        style={{
-                          display: 'grid', gridTemplateColumns: GRID, gap: GAP, alignItems: 'center', minWidth: '720px',
-                          padding: '12px 16px',
-                          borderBottom: (isJobExpanded || !isLastInGroup) ? '1px solid var(--border)' : undefined,
-                          cursor: 'pointer', transition: 'background 0.1s',
-                          backgroundColor: isJobExpanded ? 'var(--surface)' : 'transparent',
-                        }}
-                        onMouseEnter={e => !isJobExpanded && (e.currentTarget.style.backgroundColor = 'var(--surface)')}
-                        onMouseLeave={e => !isJobExpanded && (e.currentTarget.style.backgroundColor = 'transparent')}
-                      >
-                        {/* Star */}
-                        <div onClick={e => { e.stopPropagation(); handleStarToggle(job.id, job.starred); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                          <Star size={13} color={job.starred ? 'var(--accent-hi)' : 'var(--text-dim)'} fill={job.starred ? 'var(--accent)' : 'none'}
-                            style={{ transition: 'all 0.15s' }} />
-                        </div>
-
-                        {/* Title */}
-                        <div>
-                          <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {job.title}
-                          </div>
-                          {isStale(job) && (
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '3px', backgroundColor: 'rgba(168,85,247,0.08)', borderRadius: '20px', padding: '1px 6px' }}>
-                              <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#a855f7' }} />
-                              <span style={{ color: '#a855f7', fontSize: '10px', fontWeight: 600 }}>Follow up</span>
+                      {/* Job row — a stacked flex layout under 768px, the
+                          fixed-column grid (GRID) above it. Different enough
+                          (1 row vs 2, columns vs wrap) that branching here
+                          beats contorting one grid to do both. */}
+                      {isMobile ? (
+                        <div
+                          id={`job-row-${job.id}`}
+                          onClick={() => toggleJob(job.id)}
+                          style={{
+                            padding: '12px 16px',
+                            borderBottom: (isJobExpanded || !isLastInGroup) ? '1px solid var(--border)' : undefined,
+                            cursor: 'pointer', transition: 'background 0.1s',
+                            backgroundColor: isJobExpanded ? 'var(--surface)' : 'transparent',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                            <div onClick={e => { e.stopPropagation(); handleStarToggle(job.id, job.starred); }} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', paddingTop: '2px', flexShrink: 0 }}>
+                              <Star size={13} color={job.starred ? 'var(--accent-hi)' : 'var(--text-dim)'} fill={job.starred ? 'var(--accent)' : 'none'} />
                             </div>
-                          )}
-                        </div>
 
-                        {/* Type */}
-                        <div>
-                          <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em' }}>
-                            {TYPE_OPTIONS.find(t => t.value === job.type)?.label || job.type}
-                          </span>
-                        </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {job.title}
+                              </div>
+                              {isStale(job) && (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '3px', backgroundColor: 'rgba(168,85,247,0.08)', borderRadius: '20px', padding: '1px 6px' }}>
+                                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#a855f7' }} />
+                                  <span style={{ color: '#a855f7', fontSize: '10px', fontWeight: 600 }}>Follow up</span>
+                                </div>
+                              )}
+                            </div>
 
-                        {/* Status */}
-                        <div onClick={e => e.stopPropagation()}>
-                          <StatusBadge job={job} onStatusChange={handleStatusChange} />
-                        </div>
+                            <div style={{ display: 'flex', gap: '2px', alignItems: 'center', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                              <button onClick={() => openEdit(job)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '5px', borderRadius: '20px', display: 'flex' }}>
+                                <Edit2 size={11} />
+                              </button>
+                              <button onClick={() => handleDelete(job.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '5px', borderRadius: '20px', display: 'flex' }}>
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+                          </div>
 
-                        {/* Score */}
-                        <div>
-                          {job.match_score ? (
-                            <span style={{ color: job.match_score >= 8 ? 'var(--success)' : job.match_score >= 6 ? 'var(--accent)' : 'var(--danger)', fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
-                              {job.match_score}/10
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '8px', paddingLeft: '21px' }}>
+                            <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em' }}>
+                              {TYPE_OPTIONS.find(t => t.value === job.type)?.label || job.type}
                             </span>
-                          ) : <span style={{ color: 'var(--text-dim)' }}>—</span>}
+                            <div onClick={e => e.stopPropagation()}>
+                              <StatusBadge job={job} onStatusChange={handleStatusChange} />
+                            </div>
+                            {job.match_score != null && (
+                              <span style={{ color: job.match_score >= 8 ? 'var(--success)' : job.match_score >= 6 ? 'var(--accent)' : 'var(--danger)', fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
+                                {job.match_score}/10
+                              </span>
+                            )}
+                            {job.deadline && (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{ color: 'var(--text-dim)', fontSize: '10px' }}>Due</span>
+                                <DeadlineDisplay deadline={job.deadline} />
+                              </span>
+                            )}
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ color: 'var(--text-dim)', fontSize: '10px' }}>Posted</span>
+                              <PostedDisplay date={job.posting_date} />
+                            </span>
+                          </div>
                         </div>
+                      ) : (
+                        <div
+                          id={`job-row-${job.id}`}
+                          onClick={() => toggleJob(job.id)}
+                          style={{
+                            display: 'grid', gridTemplateColumns: GRID, gap: GAP, alignItems: 'center', minWidth: '720px',
+                            padding: '12px 16px',
+                            borderBottom: (isJobExpanded || !isLastInGroup) ? '1px solid var(--border)' : undefined,
+                            cursor: 'pointer', transition: 'background 0.1s',
+                            backgroundColor: isJobExpanded ? 'var(--surface)' : 'transparent',
+                          }}
+                          onMouseEnter={e => !isJobExpanded && (e.currentTarget.style.backgroundColor = 'var(--surface)')}
+                          onMouseLeave={e => !isJobExpanded && (e.currentTarget.style.backgroundColor = 'transparent')}
+                        >
+                          {/* Star */}
+                          <div onClick={e => { e.stopPropagation(); handleStarToggle(job.id, job.starred); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                            <Star size={13} color={job.starred ? 'var(--accent-hi)' : 'var(--text-dim)'} fill={job.starred ? 'var(--accent)' : 'none'}
+                              style={{ transition: 'all 0.15s' }} />
+                          </div>
 
-                        {/* Deadline */}
-                        <div><DeadlineDisplay deadline={job.deadline} /></div>
+                          {/* Title */}
+                          <div>
+                            <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {job.title}
+                            </div>
+                            {isStale(job) && (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '3px', backgroundColor: 'rgba(168,85,247,0.08)', borderRadius: '20px', padding: '1px 6px' }}>
+                                <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#a855f7' }} />
+                                <span style={{ color: '#a855f7', fontSize: '10px', fontWeight: 600 }}>Follow up</span>
+                              </div>
+                            )}
+                          </div>
 
-                        {/* Posted date */}
-                        <div><PostedDisplay date={job.posting_date} /></div>
+                          {/* Type */}
+                          <div>
+                            <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em' }}>
+                              {TYPE_OPTIONS.find(t => t.value === job.type)?.label || job.type}
+                            </span>
+                          </div>
 
-                        {/* Actions */}
-                        <div style={{ display: 'flex', gap: '2px', alignItems: 'center', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
-                          <button onClick={() => openEdit(job)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '5px', borderRadius: '20px', display: 'flex' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
-                            <Edit2 size={11} />
-                          </button>
-                          <button onClick={() => handleDelete(job.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '5px', borderRadius: '20px', display: 'flex' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
-                            <Trash2 size={11} />
-                          </button>
+                          {/* Status */}
+                          <div onClick={e => e.stopPropagation()}>
+                            <StatusBadge job={job} onStatusChange={handleStatusChange} />
+                          </div>
+
+                          {/* Score */}
+                          <div>
+                            {job.match_score ? (
+                              <span style={{ color: job.match_score >= 8 ? 'var(--success)' : job.match_score >= 6 ? 'var(--accent)' : 'var(--danger)', fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
+                                {job.match_score}/10
+                              </span>
+                            ) : <span style={{ color: 'var(--text-dim)' }}>—</span>}
+                          </div>
+
+                          {/* Deadline */}
+                          <div><DeadlineDisplay deadline={job.deadline} /></div>
+
+                          {/* Posted date */}
+                          <div><PostedDisplay date={job.posting_date} /></div>
+
+                          {/* Actions */}
+                          <div style={{ display: 'flex', gap: '2px', alignItems: 'center', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
+                            <button onClick={() => openEdit(job)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '5px', borderRadius: '20px', display: 'flex' }}
+                              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
+                              <Edit2 size={11} />
+                            </button>
+                            <button onClick={() => handleDelete(job.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '5px', borderRadius: '20px', display: 'flex' }}
+                              onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Expanded panel */}
                       {isJobExpanded && (
