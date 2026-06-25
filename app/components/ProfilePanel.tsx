@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
-import { Edit2, ExternalLink, RefreshCw, Loader, FileText, Check, Download, Upload, Plus, DollarSign, X, Trash2, Brain } from 'lucide-react';
+import { Edit2, ExternalLink, Loader, FileText, Check, Download, Upload, Plus, DollarSign, X, Trash2, Brain } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
 
 interface ProfileData {
@@ -11,16 +11,6 @@ interface ProfileData {
   university?: string; degree?: string; graduation_date?: string; gpa?: string;
   honors?: string; minors?: string; target_roles?: string; target_cities?: string; notes?: string;
 }
-interface ScoreCategory { score: number; max: number; rationale: string; }
-interface Summary {
-  strengths: string[]; gaps: string[]; readiness_score: number; summary: string;
-  score_breakdown: Record<string, ScoreCategory>;
-}
-const CATEGORY_LABELS: Record<string, string> = {
-  relevant_experience: 'Relevant Experience', quantified_impact: 'Quantified Impact',
-  technical_depth: 'Technical Depth', academic_credibility: 'Academic Credibility',
-  differentiation: 'Differentiation',
-};
 interface Resume { id: number; name: string; raw_text: string | null; parsed_at: string | null; is_default: number; }
 interface UsageByRoute { route: string; calls: number; input_tokens: number; output_tokens: number; web_search_requests: number; cost_usd: number; }
 interface Usage {
@@ -39,7 +29,6 @@ const MEMORY_CATEGORIES = ['preference', 'goal', 'insight', 'company', 'role', '
 
 const TABS = [
   { id: 'resume', label: 'Profile' },
-  { id: 'strength', label: 'Strength' },
   { id: 'usage', label: 'Usage' },
   { id: 'memory', label: 'Memory' },
 ];
@@ -63,9 +52,6 @@ export function ProfilePanel() {
   const [editField, setEditField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [loadingSummary, setLoadingSummary] = useState(false);
-  const [summaryNoKey, setSummaryNoKey] = useState(false);
 
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [activeResumeId, setActiveResumeId] = useState<number | null>(null);
@@ -237,14 +223,6 @@ export function ProfilePanel() {
     const res = await apiFetch('/api/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
     setProfile(await res.json()); setEditField(null); setSaving(false);
   };
-  const generateSummary = async () => {
-    if (!localStorage.getItem('cid_api_key')) { setSummaryNoKey(true); return; }
-    setSummaryNoKey(false);
-    setLoadingSummary(true);
-    try { const res = await apiFetch('/api/profile/summary', { method: 'POST' }); setSummary(await res.json()); }
-    catch { setSummary(null); }
-    setLoadingSummary(false);
-  };
 
   async function deleteMemory(id: number) {
     await apiFetch(`/api/memories/${id}`, { method: 'DELETE' });
@@ -284,8 +262,7 @@ export function ProfilePanel() {
     );
   };
 
-  const readinessColor = (s: number) => s >= 8 ? 'var(--success)' : s >= 6 ? 'var(--accent)' : 'var(--danger)';
-  const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px' };
+  const card: React.CSSProperties ={ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px' };
 
   if (!profileOpen) return null;
 
@@ -416,85 +393,6 @@ export function ProfilePanel() {
                 {backupMsg && <div style={{ color: 'var(--success)', fontSize: '11px', marginTop: '10px' }}>{backupMsg}</div>}
                 {backupErr && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '10px' }}>{backupErr}</div>}
               </div>
-            </div>
-          )}
-
-          {tab === 'strength' && (
-            <div style={card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '12px' }}>
-                <div>
-                  <h3 style={{ color: 'var(--text)', fontSize: '14px', fontWeight: 700, margin: 0 }}>Candidate Strength</h3>
-                  <p style={{ color: 'var(--text-dim)', fontSize: '11px', margin: '4px 0 0', lineHeight: 1.4, maxWidth: '380px' }}>
-                    General resume quality, independent of any specific job — different question from the AI Score on each job, which is about fit for that exact posting.
-                  </p>
-                </div>
-                <button onClick={generateSummary} disabled={loadingSummary} className="btn-ghost" style={{ flexShrink: 0 }}>
-                  {loadingSummary ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <RefreshCw size={12} />} {loadingSummary ? 'Generating…' : 'Generate'}
-                </button>
-              </div>
-
-              {!summary && !loadingSummary && !summaryNoKey && (
-                <div style={{ textAlign: 'center', padding: '40px 24px' }}>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '0 0 8px' }}>Click &quot;Generate&quot; for a brutally honest assessment of your candidacy.</p>
-                  <p style={{ color: 'var(--text-dim)', fontSize: '12px', margin: 0 }}>Analyzes your resume, experiences, and saved context.</p>
-                </div>
-              )}
-              {summaryNoKey && (
-                <div style={{ textAlign: 'center', padding: '40px 24px' }}>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '0 0 12px' }}>Add your API key to generate this.</p>
-                  <button onClick={() => setTab('resume')} className="btn-ghost">Add key</button>
-                </div>
-              )}
-              {loadingSummary && (
-                <div style={{ textAlign: 'center', padding: '40px' }}>
-                  <Loader size={22} color="var(--accent)" style={{ animation: 'spin 1s linear infinite', margin: '0 auto 12px', display: 'block' }} />
-                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>Analyzing your background…</p>
-                </div>
-              )}
-              {summary && !loadingSummary && (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px', padding: '14px 16px', background: 'var(--bg)', borderRadius: 'var(--r)', border: '1px solid var(--border)' }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '30px', fontWeight: 800, color: readinessColor(summary.readiness_score), lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{summary.readiness_score}</div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '10px', marginTop: '3px' }}>/10</div>
-                    </div>
-                    <div>
-                      <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: '13px' }}>Readiness Score</div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '3px' }}>For internship &amp; entry-level roles</div>
-                    </div>
-                  </div>
-                  <p style={{ color: 'var(--text)', fontSize: '13px', lineHeight: '1.65', margin: '0 0 16px' }}>{summary.summary}</p>
-
-                  {summary.score_breakdown && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-                      {Object.entries(summary.score_breakdown).map(([key, cat]) => {
-                        const pct = cat.max > 0 ? (cat.score / cat.max) * 100 : 0;
-                        return (
-                          <div key={key}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '3px' }}>
-                              <span style={{ color: 'var(--text)', fontWeight: 600 }}>{CATEGORY_LABELS[key] || key}</span>
-                              <span style={{ color: 'var(--text-muted)' }}>{cat.score}/{cat.max}</span>
-                            </div>
-                            <div style={{ height: '4px', borderRadius: '2px', background: 'var(--surface-2)', overflow: 'hidden', marginBottom: '4px' }}>
-                              <div style={{ height: '100%', width: `${Math.max(pct, 2)}%`, background: pct >= 80 ? 'var(--success)' : pct >= 60 ? 'var(--accent)' : 'var(--danger)', borderRadius: '2px' }} />
-                            </div>
-                            {cat.rationale && <div style={{ color: 'var(--text-muted)', fontSize: '11px', lineHeight: 1.5 }}>{cat.rationale}</div>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <div style={{ marginBottom: '14px' }}>
-                    <h4 style={{ color: 'var(--success)', fontSize: '11px', fontWeight: 700, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Strengths</h4>
-                    <ul style={{ margin: 0, paddingLeft: '16px' }}>{summary.strengths.map((s, i) => <li key={i} style={{ color: 'var(--text)', fontSize: '13px', marginBottom: '5px' }}>{s}</li>)}</ul>
-                  </div>
-                  <div>
-                    <h4 style={{ color: 'var(--accent)', fontSize: '11px', fontWeight: 700, margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Areas to Develop</h4>
-                    <ul style={{ margin: 0, paddingLeft: '16px' }}>{summary.gaps.map((g, i) => <li key={i} style={{ color: 'var(--text)', fontSize: '13px', marginBottom: '5px' }}>{g}</li>)}</ul>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
