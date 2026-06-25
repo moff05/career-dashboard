@@ -1,6 +1,7 @@
 const DASHBOARD = 'https://career-dashboard-ten.vercel.app';
 
 let currentUrl = '';
+let currentTabId = 0;
 let userId = '';
 let apiKey = '';
 
@@ -16,6 +17,19 @@ function getDomain(url) {
 async function saveJob() {
   show('s-loading');
   try {
+    // Read the page text directly from the tab — bypasses bot protection on
+    // LinkedIn, Workday, Greenhouse, etc. since the content is already loaded.
+    let pageText = '';
+    try {
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: currentTabId },
+        func: () => document.body.innerText,
+      });
+      pageText = result?.result || '';
+    } catch (_) {
+      // scripting blocked on this tab (e.g. chrome:// pages) — fall back to URL only
+    }
+
     // Step 1: parse the job posting
     const importRes = await fetch(`${DASHBOARD}/api/jobs/import`, {
       method: 'POST',
@@ -24,7 +38,7 @@ async function saveJob() {
         'x-user-id': userId,
         'x-api-key': apiKey,
       },
-      body: JSON.stringify({ url: currentUrl }),
+      body: JSON.stringify({ url: currentUrl, extraText: pageText }),
     });
     const importData = await importRes.json().catch(() => ({}));
     if (!importRes.ok) {
@@ -83,6 +97,7 @@ chrome.storage.local.get(['cid_user_id', 'cid_api_key'], ({ cid_user_id, cid_api
 
   chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
     currentUrl = tab?.url || '';
+    currentTabId = tab?.id || 0;
 
     if (!currentUrl || currentUrl.startsWith(DASHBOARD)) {
       show('s-on-dashboard');

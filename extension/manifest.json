@@ -3,7 +3,7 @@
   "name": "jobs_",
   "version": "1.0.0",
   "description": "Save any job posting to your jobs_ tracker in one click.",
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
     "https://career-dashboard-ten.vercel.app/*"
   ],
