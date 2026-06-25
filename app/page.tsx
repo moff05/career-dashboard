@@ -292,13 +292,14 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
     setMounted(true);
-    if (!localStorage.getItem('cid_tutorial_done')) openTutorial();
     const params = new URLSearchParams(window.location.search);
     const importParam = params.get('import');
     if (importParam) {
       window.history.replaceState({}, '', window.location.pathname);
       openImport();
       setImportUrl(importParam);
+    } else if (!localStorage.getItem('cid_tutorial_done')) {
+      openTutorial();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
