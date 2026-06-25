@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { apiFetch } from '@/lib/apiFetch';
 import { Star, Trash2, ExternalLink, ChevronDown, ChevronRight, Plus, LinkIcon, Loader, AlertCircle, ArrowLeft, ImageIcon, Edit2, RotateCcw, X, Check, AlertTriangle, Clock, Bell, Zap } from 'lucide-react';
 import { useUser } from '@/app/hooks/useUser';
@@ -34,16 +35,6 @@ type CoverLetterState = CoverLetterResult | 'loading' | 'error';
 // redefines them.
 
 // ─── Colors ──────────────────────────────────────────────────────────────────
-const BADGE_PALETTE: [string, string][] = [
-  ['#7c3aed','#fff'],['var(--accent-hi)','#fff'],['var(--success)','#fff'],['var(--accent-hi)','#fff'],
-  ['var(--danger)','#fff'],['#0891b2','#fff'],['#db2777','#fff'],['#ea580c','#fff'],
-  ['#65a30d','#fff'],['#0f766e','#fff'],['#9333ea','#fff'],['#be185d','#fff'],
-];
-function getCompanyColor(name: string): [string, string] {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h << 5) - h + name.charCodeAt(i);
-  return BADGE_PALETTE[Math.abs(h) % BADGE_PALETTE.length];
-}
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; border: string }> = {
   saved:        { bg: 'rgba(122,143,168,0.1)', text: 'var(--text-muted)', border: 'rgba(122,143,168,0.2)' },
@@ -119,19 +110,6 @@ const TYPE_COLORS: Record<string, string> = {
 const STATUS_OPTIONS = ['saved', 'applied', 'interviewing', 'offer', 'rejected'];
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
-function CompanyBadge({ company, size = 26 }: { company: string; size?: number }) {
-  const initials = company.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  const [bg, text] = getCompanyColor(company);
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: Math.round(size * 0.28) + 'px',
-      backgroundColor: bg, color: text,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: Math.round(size * 0.38) + 'px', fontWeight: 800,
-      flexShrink: 0, letterSpacing: '-0.5px', userSelect: 'none',
-    }}>{initials}</div>
-  );
-}
 
 function PostedDisplay({ date }: { date: string | null }) {
   if (!date) return <span style={{ color: 'var(--text-dim)' }}>—</span>;
@@ -160,25 +138,35 @@ function DeadlineDisplay({ deadline }: { deadline: string | null }) {
 
 function StatusBadge({ job, onStatusChange }: { job: Job; onStatusChange: (id: number, status: string) => void }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const badgeRef = useRef<HTMLSpanElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const h = (e: MouseEvent) => { if (dropRef.current && !dropRef.current.contains(e.target as Node) && e.target !== badgeRef.current) setOpen(false); };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, [open]);
   const s = STATUS_STYLE[job.status] || STATUS_STYLE.saved;
+  function handleOpen(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (badgeRef.current) {
+      const r = badgeRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: r.left });
+    }
+    setOpen(o => !o);
+  }
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
-      <span onClick={e => { e.stopPropagation(); setOpen(o => !o); }} style={{
+    <div style={{ display: 'inline-block' }}>
+      <span ref={badgeRef} onClick={handleOpen} style={{
         backgroundColor: s.bg, color: s.text, border: `1px solid ${s.border}`,
         borderRadius: 'var(--r-sm)', padding: '3px 8px', fontSize: '10px', fontWeight: 700,
         textTransform: 'capitalize', cursor: 'pointer', userSelect: 'none', display: 'inline-block',
         letterSpacing: '0.02em',
       }}>{job.status}</span>
-      {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 100,
+      {open && typeof document !== 'undefined' && createPortal(
+        <div ref={dropRef} style={{
+          position: 'fixed', top: pos.top, left: pos.left, zIndex: 600,
           backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
           overflow: 'hidden', minWidth: '120px',
         }}>
@@ -195,8 +183,67 @@ function StatusBadge({ job, onStatusChange }: { job: Job; onStatusChange: (id: n
               >{st}</div>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
+    </div>
+  );
+}
+
+function ConnStatusRow({ conn, cs, onSet, onDelete }: {
+  conn: Connection;
+  cs: { label: string; color: string; bg: string };
+  onSet: (status: string) => void;
+  onDelete: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (dropRef.current && !dropRef.current.contains(e.target as Node) && e.target !== btnRef.current) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+  function handleOpen(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: r.left });
+    }
+    setOpen(o => !o);
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--bg)', borderRadius: 'var(--r)', padding: '7px 10px' }}>
+      <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: cs.color, flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ color: 'var(--text)', fontSize: '12px', fontWeight: 600 }}>{conn.name}{conn.role ? ` — ${conn.role}` : ''}</div>
+        {conn.relationship && <div style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{conn.relationship}</div>}
+      </div>
+      <button ref={btnRef} onClick={handleOpen} style={{ backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '3px 9px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap' }}>
+        {cs.label}
+      </button>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div ref={dropRef} style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 600, backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflow: 'hidden', minWidth: '140px' }}>
+          {CONN_CYCLE.map(st => {
+            const s = CONN_STATUS[st];
+            return (
+              <div key={st} onClick={e => { e.stopPropagation(); onSet(st); setOpen(false); }} style={{ padding: '8px 14px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', color: s.color, backgroundColor: conn.status === st ? 'var(--border)' : 'transparent' }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--border)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = conn.status === st ? 'var(--border)' : 'transparent')}>
+                {s.label}
+              </div>
+            );
+          })}
+        </div>,
+        document.body
+      )}
+      <button onClick={e => { e.stopPropagation(); onDelete(); }} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '2px', display: 'flex', flexShrink: 0 }}
+        onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
+        <Trash2 size={11} />
+      </button>
     </div>
   );
 }
@@ -389,6 +436,12 @@ export default function DashboardPage() {
     const next = CONN_CYCLE[(CONN_CYCLE.indexOf(current) + 1) % CONN_CYCLE.length];
     await apiFetch(`/api/connections/${connId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
     const updated = (connectionsMap[company] || []).map(c => c.id === connId ? { ...c, status: next } : c);
+    connectionsCacheRef.current[company] = updated;
+    setConnectionsMap(prev => ({ ...prev, [company]: updated }));
+  };
+  const setConnStatus = async (company: string, connId: number, status: string) => {
+    await apiFetch(`/api/connections/${connId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+    const updated = (connectionsMap[company] || []).map(c => c.id === connId ? { ...c, status } : c);
     connectionsCacheRef.current[company] = updated;
     setConnectionsMap(prev => ({ ...prev, [company]: updated }));
   };
@@ -736,7 +789,6 @@ export default function DashboardPage() {
           {Object.entries(grouped).map(([company, companyJobs], groupIdx) => {
             const isExpanded = expandedCompanies.has(company);
             const isLast = groupIdx === Object.entries(grouped).length - 1;
-            const [badgeBg] = getCompanyColor(company);
             return (
               <div key={company}>
                 {/* Company header */}
@@ -749,7 +801,6 @@ export default function DashboardPage() {
                     cursor: 'pointer', userSelect: 'none',
                   }}>
                   {isExpanded ? <ChevronDown size={11} color="var(--text-muted)" /> : <ChevronRight size={11} color="var(--text-muted)" />}
-                  <CompanyBadge company={company} size={22} />
                   <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{company}</span>
                   <span style={{ backgroundColor: 'var(--border-dim)', color: 'var(--text-muted)', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: 500, flexShrink: 0 }}>
                     {companyJobs.length} {companyJobs.length === 1 ? 'role' : 'roles'}
@@ -1005,22 +1056,13 @@ export default function DashboardPage() {
                                         {conns.map(conn => {
                                           const cs = CONN_STATUS[conn.status] || CONN_STATUS.not_reached_out;
                                           return (
-                                            <div key={conn.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--bg)', borderRadius: 'var(--r)', padding: '7px 10px' }}>
-                                              <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: cs.color, flexShrink: 0 }} />
-                                              <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ color: 'var(--text)', fontSize: '12px', fontWeight: 600 }}>{conn.name}{conn.role ? ` — ${conn.role}` : ''}</div>
-                                                {conn.relationship && <div style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{conn.relationship}</div>}
-                                              </div>
-                                              <button onClick={() => cycleConnStatus(job.company, conn.id, conn.status)} style={{ backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '3px 9px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap' }}
-                                                title="Click to update status">
-                                                {cs.label}
-                                              </button>
-                                              <button onClick={() => deleteConnection(job.company, conn.id)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '2px', display: 'flex', flexShrink: 0 }}
-                                                onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')}
-                                                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
-                                                <Trash2 size={11} />
-                                              </button>
-                                            </div>
+                                            <ConnStatusRow
+                                              key={conn.id}
+                                              conn={conn}
+                                              cs={cs}
+                                              onSet={(status) => setConnStatus(job.company, conn.id, status)}
+                                              onDelete={() => deleteConnection(job.company, conn.id)}
+                                            />
                                           );
                                         })}
                                       </div>

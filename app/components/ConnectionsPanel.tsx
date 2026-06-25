@@ -155,23 +155,23 @@ export function ConnectionsPanel() {
       <div className="overlay-panel center-modal" style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 'min(640px, 94vw)', maxHeight: '88vh', borderRadius: 'var(--r-lg)', display: 'flex', flexDirection: 'column' }}>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <h1 style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Connections</h1>
-          <button onClick={closeConnections} aria-label="Close" style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r)', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}>
-            <X size={14} />
-          </button>
-        </div>
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: 0, maxWidth: '420px' }}>
-              People you know at companies you're targeting — recruiters, alumni, anyone worth following up with. Not tied to a tracked job.
-            </p>
+          <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text)' }}>
+            <span style={{ color: 'var(--accent)' }}>{'>'}</span> connections
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {!showAddForm && (
-              <button onClick={() => { setAddForm(EMPTY_FORM); setShowAddForm(true); }} className="btn-primary" style={{ fontSize: '12px', padding: '7px 14px', flexShrink: 0 }}>
+              <button onClick={() => { setAddForm(EMPTY_FORM); setShowAddForm(true); }} className="btn-primary" style={{ fontSize: '12px', padding: '6px 12px' }}>
                 <Plus size={13} /> Add
               </button>
             )}
+            <button onClick={closeConnections} aria-label="Close" style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r)', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}>
+              <X size={14} />
+            </button>
           </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px 24px' }}>
+          {showAddForm && <div style={{ marginBottom: '4px' }} />}
 
           {showAddForm && (
             <ConnectionForm form={addForm} setForm={setAddForm} onSave={saveAdd} onCancel={() => setShowAddForm(false)} saving={saving} />
@@ -182,13 +182,17 @@ export function ConnectionsPanel() {
           ) : companies.length === 0 ? (
             <div style={{ ...card, padding: '40px 24px', textAlign: 'center' }}>
               <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '6px' }}>No connections yet.</div>
-              <div style={{ color: 'var(--text-dim)', fontSize: '12px' }}>Add anyone you know at a company you're targeting — you don't need a tracked job there first.</div>
+              <div style={{ color: 'var(--text-dim)', fontSize: '12px' }}>Add recruiters, alumni, or anyone at a company you're targeting.</div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {companies.map(company => (
                 <div key={company}>
-                  <div className="section-label" style={{ marginBottom: '8px' }}>{company}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid var(--border-dim)' }}>
+                    <span style={{ color: 'var(--accent)', fontWeight: 700, fontSize: '12px' }}>{'>'}</span>
+                    <span className="section-label">{company}</span>
+                    <span style={{ color: 'var(--text-dim)', fontSize: '10px', fontWeight: 600 }}>{grouped[company].length}</span>
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {grouped[company].map(conn => {
                       const cs = CONN_STATUS[conn.status] || CONN_STATUS.not_reached_out;
@@ -199,29 +203,29 @@ export function ConnectionsPanel() {
                         <div key={conn.id} style={card}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 <span style={{ color: 'var(--text)', fontSize: '13px', fontWeight: 700 }}>{conn.name}</span>
                                 {conn.role && <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{conn.role}</span>}
+                                <button onClick={() => cycleStatus(conn)} style={{ backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '2px 9px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', lineHeight: '16px' }} title="Click to update status">
+                                  {cs.label}
+                                </button>
                               </div>
-                              {conn.relationship && <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '2px' }}>{conn.relationship}</div>}
+                              {conn.relationship && <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '3px' }}>{conn.relationship}</div>}
                               <div style={{ display: 'flex', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
                                 {conn.email && <a href={`mailto:${conn.email}`} style={{ color: 'var(--text-muted)', fontSize: '11px', textDecoration: 'none' }}>{conn.email}</a>}
                                 {conn.linkedin && (
-                                  <a href={conn.linkedin.startsWith('http') ? conn.linkedin : `https://${conn.linkedin}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-muted)', fontSize: '11px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                  <a href={conn.linkedin.startsWith('http') ? conn.linkedin : `https://${conn.linkedin}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', fontSize: '11px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                                     LinkedIn <ExternalLink size={10} />
                                   </a>
                                 )}
                               </div>
                               {conn.notes && <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '6px', lineHeight: 1.5 }}>{conn.notes}</div>}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                              <button onClick={() => startEdit(conn)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Edit2 size={12} /></button>
-                              <button onClick={() => remove(conn.id)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px', display: 'flex' }}><Trash2 size={12} /></button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                              <button onClick={() => startEdit(conn)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '5px', display: 'flex', borderRadius: 'var(--r-sm)' }}><Edit2 size={12} /></button>
+                              <button onClick={() => remove(conn.id)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '5px', display: 'flex', borderRadius: 'var(--r-sm)' }}><Trash2 size={12} /></button>
                             </div>
                           </div>
-                          <button onClick={() => cycleStatus(conn)} style={{ marginTop: '10px', backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '3px 10px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }} title="Click to update status">
-                            {cs.label}
-                          </button>
                         </div>
                       );
                     })}
