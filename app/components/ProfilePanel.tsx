@@ -78,6 +78,10 @@ export function ProfilePanel() {
   const [deviceCodeLoading, setDeviceCodeLoading] = useState(false);
   const [deviceCodeSecondsLeft, setDeviceCodeSecondsLeft] = useState(0);
   const deviceCodeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [deviceCodeMode, setDeviceCodeMode] = useState<'generate' | 'redeem'>('generate');
+  const [redeemCode, setRedeemCode] = useState('');
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [redeemError, setRedeemError] = useState('');
 
   const [currentApiKey, setCurrentApiKey] = useState('');
   const [apiKeyDraft, setApiKeyDraft] = useState('');
@@ -151,6 +155,29 @@ export function ProfilePanel() {
     } finally {
       setDeviceCodeLoading(false);
     }
+  }
+
+  async function handleRedeemCode() {
+    setRedeemError('');
+    const clean = redeemCode.replace(/\D/g, '');
+    if (clean.length !== 6) { setRedeemError('Enter the full 6-digit code.'); return; }
+    setRedeemLoading(true);
+    try {
+      const res = await fetch('/api/device-code/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: clean }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Code not found.');
+      localStorage.setItem('cid_user_id', data.user_id);
+      if (data.api_key) localStorage.setItem('cid_api_key', data.api_key);
+      if (data.display_name) localStorage.setItem('cid_display_name', data.display_name);
+      window.location.reload();
+    } catch (err) {
+      setRedeemError(err instanceof Error ? err.message : 'Could not redeem code.');
+    }
+    setRedeemLoading(false);
   }
 
   async function handleExport() {
@@ -447,33 +474,75 @@ export function ProfilePanel() {
                   <Smartphone size={12} color="var(--text-muted)" />
                   <h3 className="section-label" style={{ margin: 0 }}>Connect another device</h3>
                 </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 14px', lineHeight: 1.5 }}>
-                  Generate a 6-digit code, then enter it on your other device to sync instantly. Code expires in 10 minutes and is single-use.
-                </p>
-                {deviceCode && deviceCodeSecondsLeft > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'var(--bg)', border: '1px solid var(--border-hi)',
-                      borderRadius: 'var(--r)', padding: '14px',
-                      fontSize: '28px', fontWeight: 700, letterSpacing: '0.18em', color: 'var(--accent)',
+
+                <div style={{ display: 'flex', gap: '0', marginBottom: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
+                  {(['generate', 'redeem'] as const).map(mode => (
+                    <button key={mode} onClick={() => { setDeviceCodeMode(mode); setRedeemError(''); setRedeemCode(''); }} style={{
+                      flex: 1, padding: '6px', fontSize: '11px', fontWeight: 600, fontFamily: 'inherit',
+                      border: 'none', cursor: 'pointer', transition: 'background 0.12s, color 0.12s',
+                      background: deviceCodeMode === mode ? 'var(--border-hi)' : 'transparent',
+                      color: deviceCodeMode === mode ? 'var(--text)' : 'var(--text-dim)',
                     }}>
-                      {deviceCode.slice(0, 3)}-{deviceCode.slice(3)}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>
-                        Expires in {Math.floor(deviceCodeSecondsLeft / 60)}:{String(deviceCodeSecondsLeft % 60).padStart(2, '0')}
-                      </span>
-                      <button onClick={generateDeviceCode} disabled={deviceCodeLoading} className="btn-ghost" style={{ fontSize: '11px', padding: '4px 10px' }}>
-                        New code
+                      {mode === 'generate' ? 'Get a code' : 'Enter a code'}
+                    </button>
+                  ))}
+                </div>
+
+                {deviceCodeMode === 'generate' ? (
+                  <>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 12px', lineHeight: 1.5 }}>
+                      Generate a code on this device, then enter it on your other device.
+                    </p>
+                    {deviceCode && deviceCodeSecondsLeft > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'var(--bg)', border: '1px solid var(--border-hi)',
+                          borderRadius: 'var(--r)', padding: '14px',
+                          fontSize: '28px', fontWeight: 700, letterSpacing: '0.18em', color: 'var(--accent)',
+                        }}>
+                          {deviceCode.slice(0, 3)}-{deviceCode.slice(3)}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>
+                            Expires in {Math.floor(deviceCodeSecondsLeft / 60)}:{String(deviceCodeSecondsLeft % 60).padStart(2, '0')}
+                          </span>
+                          <button onClick={generateDeviceCode} disabled={deviceCodeLoading} className="btn-ghost" style={{ fontSize: '11px', padding: '4px 10px' }}>
+                            New code
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={generateDeviceCode} disabled={deviceCodeLoading} className="btn-ghost">
+                        {deviceCodeLoading ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Smartphone size={12} />}
+                        Get sync code
                       </button>
-                    </div>
-                  </div>
+                    )}
+                  </>
                 ) : (
-                  <button onClick={generateDeviceCode} disabled={deviceCodeLoading} className="btn-ghost">
-                    {deviceCodeLoading ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Smartphone size={12} />}
-                    Get sync code
-                  </button>
+                  <>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 12px', lineHeight: 1.5 }}>
+                      Enter the code from your other device. This will switch this device to that account.
+                    </p>
+                    <input
+                      value={redeemCode}
+                      onChange={e => { setRedeemCode(e.target.value); setRedeemError(''); }}
+                      placeholder="000-000"
+                      maxLength={7}
+                      style={{
+                        width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
+                        borderRadius: 'var(--r)', padding: '10px', color: 'var(--accent)',
+                        fontSize: '22px', fontWeight: 700, letterSpacing: '0.12em', textAlign: 'center',
+                        outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '10px',
+                      }}
+                      onKeyDown={e => { if (e.key === 'Enter') handleRedeemCode(); }}
+                    />
+                    {redeemError && <div style={{ color: 'var(--danger)', fontSize: '11px', marginBottom: '10px' }}>{redeemError}</div>}
+                    <button onClick={handleRedeemCode} disabled={redeemLoading} className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                      {redeemLoading ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : null}
+                      {redeemLoading ? 'Connecting…' : 'Connect'}
+                    </button>
+                  </>
                 )}
               </div>
 
