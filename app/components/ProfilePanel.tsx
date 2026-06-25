@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
-import { Edit2, ExternalLink, Loader, FileText, Check, Download, Upload, Plus, DollarSign, X, Trash2, Brain } from 'lucide-react';
+import { Edit2, ExternalLink, Loader, FileText, Check, Download, Upload, Plus, DollarSign, X, Trash2, Brain, HelpCircle } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
 
 interface ProfileData {
@@ -75,6 +75,7 @@ export function ProfilePanel() {
   const [apiKeyDraft, setApiKeyDraft] = useState('');
   const [apiKeyEditing, setApiKeyEditing] = useState(false);
   const [apiKeySaved, setApiKeySaved] = useState(false);
+  const [apiKeyHelpOpen, setApiKeyHelpOpen] = useState(false);
   function saveApiKey() {
     const trimmed = apiKeyDraft.trim();
     localStorage.setItem('cid_api_key', trimmed);
@@ -289,9 +290,26 @@ export function ProfilePanel() {
           {tab === 'resume' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={card}>
-                <h3 className="section-label" style={{ margin: '0 0 6px' }}>API Key</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                  <h3 className="section-label" style={{ margin: 0 }}>API Key</h3>
+                  <button onClick={() => setApiKeyHelpOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '2px', display: 'flex', lineHeight: 1 }} aria-label="How to get an API key">
+                    <HelpCircle size={13} />
+                  </button>
+                </div>
+                {apiKeyHelpOpen && (
+                  <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '12px 14px', marginBottom: '12px', fontSize: '12px', lineHeight: 1.7 }}>
+                    <div style={{ color: 'var(--text)', fontWeight: 700, marginBottom: '8px' }}>How to get an API key (5 min)</div>
+                    <ol style={{ margin: 0, paddingLeft: '18px', color: 'var(--text-muted)' }}>
+                      <li>Go to <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>console.anthropic.com</a> and create a free account</li>
+                      <li>Click <strong style={{ color: 'var(--text)' }}>Billing</strong> → <strong style={{ color: 'var(--text)' }}>Add credit</strong> — start with <strong style={{ color: 'var(--text)' }}>$1</strong>, that's plenty to start</li>
+                      <li>Click <strong style={{ color: 'var(--text)' }}>API Keys</strong> → <strong style={{ color: 'var(--text)' }}>Create Key</strong>, give it any name</li>
+                      <li>Copy the key (starts with <code style={{ color: 'var(--accent)', fontSize: '11px' }}>sk-ant-</code>) and paste it below</li>
+                    </ol>
+                    <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '8px' }}>$1 covers roughly 50–100 AI actions. Add more if you use it a lot.</div>
+                  </div>
+                )}
                 <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 12px', lineHeight: 1.5 }}>
-                  Needed for AI features (scoring, coach, cover letters) — tracking jobs manually works without one. Stored in your browser only.
+                  Needed for AI features (scoring, coach, cover letters) — tracking jobs manually works without one. Stored in your browser only, never sent to our servers.
                 </p>
                 {apiKeyEditing ? (
                   <div>

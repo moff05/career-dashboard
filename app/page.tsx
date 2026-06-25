@@ -354,7 +354,7 @@ export default function DashboardPage() {
         analysisCacheRef.current[id] = result;
         setAnalysisResults(prev => ({ ...prev, [id]: result }));
         if (!data.error && typeof data.total === 'number') {
-          const score = Math.round(data.total / 10);
+          const score = Math.round(data.total);
           apiFetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_score: score }) });
           setJobs(prev => prev.map(j => j.id === id ? { ...j, match_score: score } : j));
         }
@@ -572,8 +572,8 @@ export default function DashboardPage() {
       const thisJob = jobs.find(j => j.id === id);
       if (!thisJob?.match_score) runAnalysis(id);
     }
-    if (tab === 'gaps' && !gapsCacheRef.current[id]) runGaps(id);
-    if (tab === 'bullets' && !bulletsCacheRef.current[id]) runBullets(id);
+    if (tab === 'gaps' && gapsCacheRef.current[id] === 'loading') { /* already running */ }
+    if (tab === 'bullets' && bulletsCacheRef.current[id] === 'loading') { /* already running */ }
   };
 
   const openEdit = (job: Job) => {
@@ -639,7 +639,7 @@ export default function DashboardPage() {
   const SortIcon = ({ col }: { col: string }) => sortBy !== col ? null : <span style={{ marginLeft: '3px', fontSize: '9px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
   const colHdr = (col: string): React.CSSProperties => ({ cursor: 'pointer', userSelect: 'none', color: sortBy === col ? 'var(--accent-hi)' : 'var(--text-muted)', display: 'flex', alignItems: 'center' });
 
-  const GRID = '28px 1fr 90px 95px 46px 90px 90px 72px';
+  const GRID = '28px 1fr 90px 95px 68px 90px 90px 72px';
   const GAP = '0 8px';
 
   const isStale = (job: Job) => job.status === 'applied' && !!job.status_updated_at && (Date.now() - new Date(job.status_updated_at).getTime()) / 86400000 >= 14;
@@ -865,8 +865,8 @@ export default function DashboardPage() {
                               <StatusBadge job={job} onStatusChange={handleStatusChange} />
                             </div>
                             {job.match_score != null && (
-                              <span style={{ color: job.match_score >= 8 ? 'var(--success)' : job.match_score >= 6 ? 'var(--accent)' : 'var(--danger)', fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
-                                {job.match_score}/10
+                              <span style={{ color: job.match_score >= 80 ? 'var(--success)' : job.match_score >= 60 ? 'var(--accent)' : 'var(--danger)', fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
+                                {job.match_score}/100
                               </span>
                             )}
                             {job.deadline && (
@@ -929,8 +929,8 @@ export default function DashboardPage() {
                           {/* Score */}
                           <div>
                             {job.match_score ? (
-                              <span style={{ color: job.match_score >= 8 ? 'var(--success)' : job.match_score >= 6 ? 'var(--accent)' : 'var(--danger)', fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
-                                {job.match_score}/10
+                              <span style={{ color: job.match_score >= 80 ? 'var(--success)' : job.match_score >= 60 ? 'var(--accent)' : 'var(--danger)', fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
+                                {job.match_score}/100
                               </span>
                             ) : <span style={{ color: 'var(--text-dim)' }}>—</span>}
                           </div>
@@ -1086,10 +1086,10 @@ export default function DashboardPage() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '8px 0' }}>
                                   <div style={{
                                     width: '82px', height: '82px', borderRadius: '50%', flexShrink: 0,
-                                    border: `3px solid ${scoreColor(job.match_score * 10)}`,
+                                    border: `3px solid ${scoreColor(job.match_score)}`,
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                   }}>
-                                    <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(job.match_score * 10), lineHeight: 1 }}>{job.match_score * 10}</span>
+                                    <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(job.match_score), lineHeight: 1 }}>{job.match_score}</span>
                                     <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>/100</span>
                                   </div>
                                   <div>
@@ -1268,7 +1268,14 @@ export default function DashboardPage() {
                             const gaps = gapsResults[job.id];
                             return (
                               <div>
-                                {(!gaps || gaps === 'loading') && (
+                                {!gaps && (
+                                  <div style={{ padding: '20px 0' }}>
+                                    <button onClick={() => runGaps(job.id)} className="btn-primary" style={{ fontSize: '12px', padding: '7px 16px' }}>
+                                      Generate Fit Gaps
+                                    </button>
+                                  </div>
+                                )}
+                                {gaps === 'loading' && (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '20px 0' }}>
                                     <Loader size={14} color="var(--accent)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                     Analyzing fit gaps...
@@ -1349,7 +1356,14 @@ export default function DashboardPage() {
                             const bl = bulletsResults[job.id];
                             return (
                               <div>
-                                {(!bl || bl === 'loading') && (
+                                {!bl && (
+                                  <div style={{ padding: '20px 0' }}>
+                                    <button onClick={() => runBullets(job.id)} className="btn-primary" style={{ fontSize: '12px', padding: '7px 16px' }}>
+                                      Generate Bullets
+                                    </button>
+                                  </div>
+                                )}
+                                {bl === 'loading' && (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '20px 0' }}>
                                     <Loader size={14} color="var(--accent)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                     Tailoring resume bullets...
