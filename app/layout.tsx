@@ -73,6 +73,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>jobs_</title>
+        <meta name="description" content="A job tracker that feels like a spreadsheet, with AI that actually earns its place." />
+        <meta property="og:title" content="jobs_" />
+        <meta property="og:description" content="A job tracker that feels like a spreadsheet, with AI that actually earns its place." />
+        <meta property="og:url" content="https://career-dashboard-ten.vercel.app" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="jobs_" />
+        <meta name="twitter:description" content="A job tracker that feels like a spreadsheet, with AI that actually earns its place." />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
