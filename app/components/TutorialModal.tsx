@@ -226,6 +226,39 @@ export function TutorialModal() {
 
   const isLast = step === STEPS.length - 1;
   const showPrimary = current.advance === 'manual';
+  const inModal = current.type === 'in-modal';
+  const isCenter = current.type === 'center' || (!rect && !inModal);
+
+  // Card position
+  let cardStyle: React.CSSProperties;
+  let arrowNode: React.ReactNode = null;
+
+  if (isCenter) {
+    cardStyle = {
+      position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+      width: `min(${CARD_W + 24}px, calc(100vw - 32px))`,
+      borderRadius: 'var(--r-lg)', padding: '28px 24px 20px',
+      background: 'var(--bg)', border: '1px solid var(--border)', zIndex: 600,
+    };
+  } else if (inModal && !rect) {
+    cardStyle = {
+      position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+      width: `min(${CARD_W + 24}px, calc(100vw - 32px))`,
+      background: 'var(--bg)', border: '1px solid var(--border)',
+      borderRadius: 'var(--r-lg)', padding: '18px 18px 14px', zIndex: 602,
+    };
+  } else if (rect) {
+    const { placeBelow, cardTop, cardLeft, arrowLeft } = tooltipPos(rect);
+    cardStyle = {
+      position: 'fixed', top: cardTop, left: cardLeft, width: CARD_W,
+      background: 'var(--bg)', border: '1px solid var(--border)',
+      borderRadius: 'var(--r-lg)', padding: '18px 18px 14px',
+      zIndex: inModal ? 602 : 600,
+    };
+    arrowNode = <Arrow placeBelow={placeBelow} arrowLeft={arrowLeft} />;
+  } else {
+    cardStyle = { display: 'none' };
+  }
 
   const closeBtn = (
     <button
@@ -236,100 +269,38 @@ export function TutorialModal() {
     </button>
   );
 
-  const centeredCard = (
+  return createPortal(
     <>
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 598, pointerEvents: 'none' }} />
-      <div style={{
-        position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
-        width: `min(${CARD_W + 24}px, calc(100vw - 32px))`,
-        borderRadius: 'var(--r-lg)', padding: '28px 24px 20px',
-        background: 'var(--bg)', border: '1px solid var(--border)', zIndex: 600,
-      }}>
-        {closeBtn}
-        <CardContent current={current} step={step} total={STEPS.length}
-          showPrimary={showPrimary} isLast={isLast} onNext={handleNext} onSkip={handleSkip} />
-      </div>
-    </>
-  );
+      {/* Dim backdrop for center steps */}
+      {isCenter && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 598,
+          pointerEvents: 'none', animation: 'fade-in 0.2s ease-out',
+        }} />
+      )}
 
-  if (current.type === 'center') {
-    return createPortal(centeredCard, document.body);
-  }
-
-  // SPOTLIGHT — pointer-events: none on the cutout so user can click the target
-  if (current.type === 'spotlight') {
-    if (!rect) return createPortal(centeredCard, document.body);
-
-    const { placeBelow, cardTop, cardLeft, arrowLeft } = tooltipPos(rect);
-    return createPortal(
-      <>
+      {/* Spotlight — single persisted element; CSS transition animates movement between steps */}
+      {rect && (
         <div style={{
           position: 'fixed',
           top: rect.top - SPAD, left: rect.left - SPAD,
           width: rect.width + SPAD * 2, height: rect.height + SPAD * 2,
           borderRadius: '8px',
-          boxShadow: '0 0 0 9999px rgba(0,0,0,0.72), inset 0 0 0 2px var(--accent)',
-          zIndex: 599, pointerEvents: 'none',
+          boxShadow: `0 0 0 9999px rgba(0,0,0,${inModal ? 0.5 : 0.72}), inset 0 0 0 2px var(--accent)`,
+          zIndex: inModal ? 601 : 599,
+          pointerEvents: 'none',
+          transition: 'top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease',
         }} />
-        <div style={{
-          position: 'fixed', top: cardTop, left: cardLeft, width: CARD_W,
-          background: 'var(--bg)', border: '1px solid var(--border)',
-          borderRadius: 'var(--r-lg)', padding: '18px 18px 14px', zIndex: 600,
-        }}>
-          {closeBtn}
-          <Arrow placeBelow={placeBelow} arrowLeft={arrowLeft} />
-          <CardContent current={current} step={step} total={STEPS.length}
-            showPrimary={showPrimary} isLast={isLast} onNext={handleNext} onSkip={handleSkip} />
-        </div>
-      </>,
-      document.body
-    );
-  }
+      )}
 
-  // IN-MODAL — higher z-index tier to sit above the Profile panel (z-500)
-  if (current.type === 'in-modal') {
-    if (rect) {
-      const { placeBelow, cardTop, cardLeft, arrowLeft } = tooltipPos(rect);
-      return createPortal(
-        <>
-          <div style={{
-            position: 'fixed',
-            top: rect.top - SPAD, left: rect.left - SPAD,
-            width: rect.width + SPAD * 2, height: rect.height + SPAD * 2,
-            borderRadius: '8px',
-            boxShadow: '0 0 0 9999px rgba(0,0,0,0.5), inset 0 0 0 2px var(--accent)',
-            zIndex: 601, pointerEvents: 'none',
-          }} />
-          <div style={{
-            position: 'fixed', top: cardTop, left: cardLeft, width: CARD_W,
-            background: 'var(--bg)', border: '1px solid var(--border)',
-            borderRadius: 'var(--r-lg)', padding: '18px 18px 14px', zIndex: 602,
-          }}>
-            {closeBtn}
-            <Arrow placeBelow={placeBelow} arrowLeft={arrowLeft} />
-            <CardContent current={current} step={step} total={STEPS.length}
-              showPrimary={showPrimary} isLast={isLast} onNext={handleNext} onSkip={handleSkip} />
-          </div>
-        </>,
-        document.body
-      );
-    }
-
-    // No target (step 3 — "add your key") — floating bar at bottom of screen
-    return createPortal(
-      <div style={{
-        position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-        width: `min(${CARD_W + 24}px, calc(100vw - 32px))`,
-        background: 'var(--bg)', border: '1px solid var(--border)',
-        borderRadius: 'var(--r-lg)', padding: '18px 18px 14px', zIndex: 602,
-      }}>
+      {/* Card — key forces remount on step change, triggering fade-in */}
+      <div key={step} style={{ ...cardStyle, animation: 'fade-in 0.18s ease-out' }}>
         {closeBtn}
+        {arrowNode}
         <CardContent current={current} step={step} total={STEPS.length}
           showPrimary={showPrimary} isLast={isLast} onNext={handleNext} onSkip={handleSkip} />
-      </div>,
-      document.body
-    );
-  }
-
-  return null;
+      </div>
+    </>,
+    document.body
+  );
 }
