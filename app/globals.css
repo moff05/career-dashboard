@@ -357,6 +357,9 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.85); }
 .overlay-backdrop { animation: fade-in 0.15s ease-out; }
 .overlay-panel.from-bottom { animation: slide-up 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
 .overlay-panel.from-right { animation: slide-in-right 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+/* Center-positioned modals use translate(-50%,-50%) for centering — slide-up
+   overrides that transform and causes a snap. Use fade-in instead. */
+.overlay-panel.center-modal { animation: fade-in 0.15s ease-out; }
 @media (prefers-reduced-motion: reduce) {
   .overlay-backdrop, .overlay-panel.from-bottom, .overlay-panel.from-right { animation: none; }
 }
