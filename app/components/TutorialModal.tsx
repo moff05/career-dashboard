@@ -48,8 +48,9 @@ const STEPS: TourStep[] = [
   {
     type: 'in-modal',
     title: 'Add your key and close',
-    body: 'Paste your key (starts with sk-ant-) into the API Key field and tap Save. Then close Profile to continue.',
-    advance: 'profileClosed',
+    body: 'Paste your key (starts with sk-ant-) into the API Key field and tap Save. When you\'re done, click the button below.',
+    advance: 'manual',
+    primaryLabel: 'Done, close Profile',
     skipLabel: 'Skip for now',
     skipToStep: 4,
   },
@@ -183,7 +184,7 @@ function tooltipPos(r: DOMRect) {
 }
 
 export function TutorialModal() {
-  const { tutorialOpen, closeTutorial, profileOpen } = useOverlays();
+  const { tutorialOpen, closeTutorial, profileOpen, closeProfile } = useOverlays();
   const [step, setStep] = useState(0);
   const [mounted, setMounted] = useState(false);
 
@@ -207,8 +208,13 @@ export function TutorialModal() {
   }
 
   function handleNext() {
-    if (step < STEPS.length - 1) setStep(s => s + 1);
-    else handleClose();
+    if (step === 3 && profileOpen) {
+      closeProfile(); // useEffect watches profileClosed and advances to step 4
+    } else if (step < STEPS.length - 1) {
+      setStep(s => s + 1);
+    } else {
+      handleClose();
+    }
   }
 
   function handleSkip(toStep?: number) {
