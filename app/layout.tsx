@@ -10,6 +10,7 @@ import { CoachPanel } from './components/CoachPanel';
 import { ProfilePanel } from './components/ProfilePanel';
 import { ConnectionsPanel } from './components/ConnectionsPanel';
 import { FeedbackWidget } from './components/FeedbackWidget';
+import { TutorialModal } from './components/TutorialModal';
 
 function Header() {
   const { displayName } = useUser();
@@ -62,6 +63,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <ProfilePanel />
       <ConnectionsPanel />
       <FeedbackWidget />
+      <TutorialModal />
     </>
   );
 }

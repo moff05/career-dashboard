@@ -281,7 +281,7 @@ function Field({ label, field, form, setForm, type = 'text' }: {
 // ─── Main ────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { displayName } = useUser();
-  const { openCoach, openProfile, openConnections, connectionsOpen, connectionsPrefillCompany } = useOverlays();
+  const { openCoach, openProfile, openConnections, openTutorial, connectionsOpen, connectionsPrefillCompany } = useOverlays();
   const firstName = displayName.split(' ')[0];
   // greeting()/today both read the local clock — computing them during the
   // initial render lets the server's clock (often a different timezone, or
@@ -290,7 +290,11 @@ export default function DashboardPage() {
   // the very first client render matches the server's placeholder exactly,
   // and the real value lands a tick later as an ordinary state update.
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    if (!localStorage.getItem('cid_tutorial_done')) openTutorial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -554,26 +558,25 @@ export default function DashboardPage() {
       if (n.has(id)) { n.delete(id); }
       else {
         n.add(id);
-        // Only auto-score if this job has never been scored — avoids re-calling on every page load
         const thisJob = jobs.find(j => j.id === id);
-        if (!analysisCacheRef.current[id] && !thisJob?.match_score) runAnalysis(id);
+        const hasKey = !!localStorage.getItem('cid_api_key');
+        const neverRun = !analysisCacheRef.current[id] && !thisJob?.match_score;
+        if (neverRun) {
+          runAnalysis(id);
+          if (hasKey) {
+            if (!gapsCacheRef.current[id]) runGaps(id);
+            if (!bulletsCacheRef.current[id]) runBullets(id);
+          }
+        }
         fetchConnections(thisJob?.company || '');
-        // Details load on-demand when the tab is clicked (see setTab)
       }
       return n;
     });
     setJobTabs(prev => prev[id] ? prev : { ...prev, [id]: 'overview' });
-  }, [runAnalysis, fetchConnections, jobs]);
+  }, [runAnalysis, runGaps, runBullets, fetchConnections, jobs]);
 
   const setTab = (id: number, tab: string) => {
     setJobTabs(prev => ({ ...prev, [id]: tab }));
-    if (tab === 'score' && !analysisCacheRef.current[id]) {
-      // Only auto-run if this job has never been scored in the DB
-      const thisJob = jobs.find(j => j.id === id);
-      if (!thisJob?.match_score) runAnalysis(id);
-    }
-    if (tab === 'gaps' && gapsCacheRef.current[id] === 'loading') { /* already running */ }
-    if (tab === 'bullets' && bulletsCacheRef.current[id] === 'loading') { /* already running */ }
   };
 
   const openEdit = (job: Job) => {
@@ -631,7 +634,15 @@ export default function DashboardPage() {
     setExpandedCompanies(prev => new Set(prev).add(job.company));
     setExpandedJobs(prev => new Set(prev).add(jobId));
     setJobTabs(prev => prev[jobId] ? prev : { ...prev, [jobId]: 'overview' });
-    if (!analysisCacheRef.current[jobId] && !job.match_score) runAnalysis(jobId);
+    const hasKey = !!localStorage.getItem('cid_api_key');
+    const neverRun = !analysisCacheRef.current[jobId] && !job.match_score;
+    if (neverRun) {
+      runAnalysis(jobId);
+      if (hasKey) {
+        if (!gapsCacheRef.current[jobId]) runGaps(jobId);
+        if (!bulletsCacheRef.current[jobId]) runBullets(jobId);
+      }
+    }
     fetchConnections(job.company);
     setTimeout(() => document.getElementById(`job-row-${jobId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
   };

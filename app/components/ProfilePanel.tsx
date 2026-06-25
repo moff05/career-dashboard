@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/apiFetch';
 import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
 import { Edit2, ExternalLink, Loader, FileText, Check, Download, Upload, Plus, DollarSign, X, Trash2, Brain, HelpCircle } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
+import { BookOpen } from 'lucide-react';
 
 interface ProfileData {
   id?: number; name?: string; email?: string; phone?: string; linkedin?: string;
@@ -44,7 +45,7 @@ function timeAgo(ts: string) {
 const fieldLabelStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '10px', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 };
 
 export function ProfilePanel() {
-  const { profileOpen, closeProfile, profileTab } = useOverlays();
+  const { profileOpen, closeProfile, profileTab, openTutorial } = useOverlays();
   const [tab, setTab] = useState('resume');
   useEffect(() => { if (profileOpen) setTab(profileTab || 'resume'); }, [profileOpen, profileTab]);
 
@@ -411,6 +412,14 @@ export function ProfilePanel() {
                 {backupMsg && <div style={{ color: 'var(--success)', fontSize: '11px', marginTop: '10px' }}>{backupMsg}</div>}
                 {backupErr && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '10px' }}>{backupErr}</div>}
               </div>
+
+              <button
+                onClick={() => { closeProfile(); openTutorial(); }}
+                className="btn-ghost"
+                style={{ alignSelf: 'flex-start', fontSize: '12px', gap: '6px' }}
+              >
+                <BookOpen size={12} /> Replay tutorial
+              </button>
             </div>
           )}
 
