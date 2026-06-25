@@ -669,7 +669,7 @@ export default function DashboardPage() {
         </div>
         {jobs.length > 0 && (
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={openImport} className="btn-primary"><Plus size={13} /> Add a Job</button>
+            <button id="tutorial-add-job" onClick={openImport} className="btn-primary"><Plus size={13} /> Add a Job</button>
           </div>
         )}
       </div>
