@@ -3,61 +3,202 @@
 import { useState, useEffect } from 'react';
 import { X, ChevronRight } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
+import { createPortal } from 'react-dom';
 
-interface Step {
+interface TourStep {
   title: string;
   body: string;
-  targetSelector?: string;
+  target?: string;
+  type: 'center' | 'spotlight' | 'in-modal';
+  advance: 'manual' | 'profileOpen' | 'profileClosed';
+  primaryLabel?: string;
+  skipLabel?: string;
+  skipToStep?: number;
 }
 
-const STEPS: Step[] = [
+const STEPS: TourStep[] = [
   {
+    type: 'center',
     title: 'Welcome to jobs_',
-    body: 'Your job tracker with AI built in. Track every application, get an AI fit score for each job, and get personalized coaching — all in one place.',
+    body: 'Your job tracker with AI built in. This takes 2 minutes and gets you fully set up. You can skip at any point.',
+    advance: 'manual',
+    primaryLabel: 'Take the tour',
+    skipLabel: 'Skip',
+    skipToStep: 5,
   },
   {
-    title: 'Set up your API key first',
-    body: "All AI features run on your own Anthropic API key. New accounts get $5 free credit — no payment needed to start. Tap Profile, then tap the ? next to \"API Key\" for step-by-step instructions.",
-    targetSelector: 'button[aria-label="Profile"]',
+    type: 'spotlight',
+    title: 'Open Profile',
+    body: 'First, set up your AI key. Click the Profile button in the top right — the tour will move forward automatically.',
+    target: 'button[aria-label="Profile"]',
+    advance: 'profileOpen',
+    skipLabel: 'Skip setup',
+    skipToStep: 4,
   },
   {
+    type: 'in-modal',
+    title: 'Tap the ?',
+    body: 'This shows how to get a free API key. New Anthropic accounts start with $5 free — no card needed to get started.',
+    target: 'button[aria-label="How to get an API key"]',
+    advance: 'manual',
+    primaryLabel: 'Got it, next',
+    skipLabel: 'Skip API setup',
+    skipToStep: 4,
+  },
+  {
+    type: 'in-modal',
+    title: 'Add your key and close',
+    body: 'Paste your key (starts with sk-ant-) into the API Key field and tap Save. Then close Profile to continue.',
+    advance: 'profileClosed',
+    skipLabel: 'Skip for now',
+    skipToStep: 4,
+  },
+  {
+    type: 'spotlight',
     title: 'Add your first job',
-    body: 'Paste a job URL or description and the AI scores your fit, finds your gaps, and tailors your resume bullets — all at once, automatically the first time you open the job.',
-    targetSelector: '#tutorial-add-job',
+    body: 'Paste a job URL or description. The AI scores your fit, finds your gaps, and tailors your resume bullets — all automatically the first time you open the job.',
+    target: '#tutorial-add-job',
+    advance: 'manual',
+    primaryLabel: 'Got it',
   },
   {
+    type: 'center',
     title: "You're all set",
-    body: 'Open any job to expand it and see your AI score, fit gaps, and tailored bullets. The Coach button gives personalized advice anytime. Replay this tutorial from Profile whenever you need it.',
+    body: 'Expand any job to see your AI score, fit gaps, and tailored bullets. Use Coach for personalized advice. Replay this tour from Profile whenever you need it.',
+    advance: 'manual',
+    primaryLabel: 'Start tracking',
   },
 ];
 
-const TOOLTIP_W = 300;
-const PAD = 10;
+const CARD_W = 300;
+const SPAD = 8;
 
 function useTargetRect(selector: string | undefined, step: number) {
   const [rect, setRect] = useState<DOMRect | null>(null);
-
   useEffect(() => {
     if (!selector) { setRect(null); return; }
     const measure = () => {
-      const el = document.querySelector(selector);
-      setRect(el ? el.getBoundingClientRect() : null);
+      requestAnimationFrame(() => {
+        const el = document.querySelector(selector);
+        setRect(el ? el.getBoundingClientRect() : null);
+      });
     };
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, [selector, step]);
-
   return rect;
 }
 
+function Arrow({ placeBelow, arrowLeft }: { placeBelow: boolean; arrowLeft: number }) {
+  return (
+    <>
+      <div style={{
+        position: 'absolute', left: arrowLeft,
+        [placeBelow ? 'top' : 'bottom']: -7,
+        width: 0, height: 0,
+        borderLeft: '7px solid transparent', borderRight: '7px solid transparent',
+        [placeBelow ? 'borderBottom' : 'borderTop']: '7px solid var(--border)',
+      }} />
+      <div style={{
+        position: 'absolute', left: arrowLeft + 1,
+        [placeBelow ? 'top' : 'bottom']: -6,
+        width: 0, height: 0,
+        borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
+        [placeBelow ? 'borderBottom' : 'borderTop']: '6px solid var(--bg)',
+      }} />
+    </>
+  );
+}
+
+function CardContent({ current, step, total, showPrimary, isLast, onNext, onSkip }: {
+  current: TourStep; step: number; total: number;
+  showPrimary: boolean; isLast: boolean;
+  onNext: () => void; onSkip: (to?: number) => void;
+}) {
+  return (
+    <>
+      <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: '14px', marginBottom: '8px', paddingRight: '20px' }}>
+        {current.title}
+      </div>
+      <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.65, marginBottom: '16px' }}>
+        {current.body}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '14px' }}>
+        {Array.from({ length: total }).map((_, i) => (
+          <div key={i} style={{
+            width: i === step ? '14px' : '5px', height: '5px', borderRadius: '3px',
+            backgroundColor: i === step ? 'var(--accent)' : 'var(--border-hi)',
+            transition: 'width 0.2s, background-color 0.2s',
+          }} />
+        ))}
+        <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', fontSize: '10px' }}>{step + 1}/{total}</span>
+      </div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {current.skipLabel && (
+          <button
+            onClick={() => onSkip(current.skipToStep)}
+            className="btn-ghost"
+            style={{
+              flex: showPrimary ? 1 : undefined,
+              width: !showPrimary ? '100%' : undefined,
+              justifyContent: 'center', fontSize: '12px', padding: '6px 10px',
+            }}
+          >
+            {current.skipLabel}
+          </button>
+        )}
+        {showPrimary && (
+          <button
+            onClick={onNext}
+            className="btn-primary"
+            style={{
+              flex: current.skipLabel ? 2 : undefined,
+              width: !current.skipLabel ? '100%' : undefined,
+              justifyContent: 'center', fontSize: '12px', padding: '6px 12px',
+            }}
+          >
+            {isLast
+              ? (current.primaryLabel || "Let's go")
+              : <>{current.primaryLabel || 'Next'} <ChevronRight size={12} /></>
+            }
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
+function tooltipPos(r: DOMRect) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const placeBelow = r.bottom < vh * 0.6;
+  const cardTop = placeBelow
+    ? Math.min(r.bottom + SPAD + 10, vh - 240)
+    : Math.max(16, r.top - SPAD - 10 - 220);
+  const idealLeft = r.left + r.width / 2 - CARD_W / 2;
+  const cardLeft = Math.max(16, Math.min(idealLeft, vw - CARD_W - 16));
+  const arrowLeft = Math.max(12, Math.min(r.left + r.width / 2 - cardLeft, CARD_W - 12));
+  return { placeBelow, cardTop, cardLeft, arrowLeft };
+}
+
 export function TutorialModal() {
-  const { tutorialOpen, closeTutorial } = useOverlays();
+  const { tutorialOpen, closeTutorial, profileOpen } = useOverlays();
   const [step, setStep] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const current = STEPS[step];
-  const rect = useTargetRect(current.targetSelector, step);
-  const isLast = step === STEPS.length - 1;
+  const rect = useTargetRect(current.target, step);
+
+  // Auto-advance based on Profile open/close state
+  useEffect(() => {
+    if (!tutorialOpen) return;
+    if (step === 1 && profileOpen) { setStep(2); return; }
+    if (step === 2 && !profileOpen) { setStep(4); return; } // closed before tapping ?
+    if (step === 3 && !profileOpen) { setStep(4); return; }
+  }, [profileOpen, tutorialOpen, step]);
 
   function handleClose() {
     localStorage.setItem('cid_tutorial_done', '1');
@@ -66,138 +207,123 @@ export function TutorialModal() {
   }
 
   function handleNext() {
-    if (!isLast) setStep(s => s + 1);
+    if (step < STEPS.length - 1) setStep(s => s + 1);
     else handleClose();
   }
 
-  if (!tutorialOpen) return null;
+  function handleSkip(toStep?: number) {
+    if (toStep !== undefined && toStep < STEPS.length) setStep(toStep);
+    else handleClose();
+  }
 
-  // Centered card (no target)
-  if (!rect || !current.targetSelector) {
-    return (
+  if (!tutorialOpen || !mounted) return null;
+
+  const isLast = step === STEPS.length - 1;
+  const showPrimary = current.advance === 'manual';
+
+  const closeBtn = (
+    <button
+      onClick={handleClose}
+      style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '4px', lineHeight: 1 }}
+    >
+      <X size={13} />
+    </button>
+  );
+
+  const centeredCard = (
+    <>
+      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 598, pointerEvents: 'none' }} />
+      <div style={{
+        position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+        width: `min(${CARD_W + 24}px, calc(100vw - 32px))`,
+        borderRadius: 'var(--r-lg)', padding: '28px 24px 20px',
+        background: 'var(--bg)', border: '1px solid var(--border)', zIndex: 600,
+      }}>
+        {closeBtn}
+        <CardContent current={current} step={step} total={STEPS.length}
+          showPrimary={showPrimary} isLast={isLast} onNext={handleNext} onSkip={handleSkip} />
+      </div>
+    </>
+  );
+
+  if (current.type === 'center') {
+    return createPortal(centeredCard, document.body);
+  }
+
+  // SPOTLIGHT — pointer-events: none on the cutout so user can click the target
+  if (current.type === 'spotlight') {
+    if (!rect) return createPortal(centeredCard, document.body);
+
+    const { placeBelow, cardTop, cardLeft, arrowLeft } = tooltipPos(rect);
+    return createPortal(
       <>
-        <div className="overlay-backdrop" onClick={handleClose} />
-        <div
-          className="overlay-panel center-modal"
-          style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: `${TOOLTIP_W + 24}px`, borderRadius: 'var(--r-lg)', padding: '28px 24px 20px' }}
-        >
-          <button onClick={handleClose} style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '4px', lineHeight: 1 }}>
-            <X size={14} />
-          </button>
-          <CardContent current={current} step={step} isLast={isLast} onNext={handleNext} onClose={handleClose} />
+        <div style={{
+          position: 'fixed',
+          top: rect.top - SPAD, left: rect.left - SPAD,
+          width: rect.width + SPAD * 2, height: rect.height + SPAD * 2,
+          borderRadius: '8px',
+          boxShadow: '0 0 0 9999px rgba(0,0,0,0.72), inset 0 0 0 2px var(--accent)',
+          zIndex: 599, pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'fixed', top: cardTop, left: cardLeft, width: CARD_W,
+          background: 'var(--bg)', border: '1px solid var(--border)',
+          borderRadius: 'var(--r-lg)', padding: '18px 18px 14px', zIndex: 600,
+        }}>
+          {closeBtn}
+          <Arrow placeBelow={placeBelow} arrowLeft={arrowLeft} />
+          <CardContent current={current} step={step} total={STEPS.length}
+            showPrimary={showPrimary} isLast={isLast} onNext={handleNext} onSkip={handleSkip} />
         </div>
-      </>
+      </>,
+      document.body
     );
   }
 
-  // Determine tooltip position: below target if target is in upper 60% of screen, else above
-  const viewH = window.innerHeight;
-  const placeBelow = rect.bottom < viewH * 0.6;
-
-  const tooltipTop = placeBelow
-    ? rect.bottom + PAD + 10
-    : rect.top - PAD - 10 - 200; // approximate height
-
-  // Center tooltip over target, clamped to viewport
-  const idealLeft = rect.left + rect.width / 2 - TOOLTIP_W / 2;
-  const tooltipLeft = Math.max(16, Math.min(idealLeft, window.innerWidth - TOOLTIP_W - 16));
-
-  // Arrow horizontal offset relative to tooltip
-  const arrowCenter = rect.left + rect.width / 2;
-  const arrowLeft = Math.max(16, Math.min(arrowCenter - tooltipLeft, TOOLTIP_W - 16));
-
-  return (
-    <>
-      {/* Dimmed backdrop — rendered behind the spotlight cutout */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 398, pointerEvents: 'none' }} />
-      {/* Spotlight cutout using box-shadow trick */}
-      <div style={{
-        position: 'fixed',
-        top: rect.top - PAD,
-        left: rect.left - PAD,
-        width: rect.width + PAD * 2,
-        height: rect.height + PAD * 2,
-        borderRadius: '8px',
-        boxShadow: '0 0 0 9999px rgba(0,0,0,0.72), inset 0 0 0 2px var(--accent)',
-        zIndex: 499,
-        pointerEvents: 'none',
-      }} />
-      {/* Backdrop click-to-close layer */}
-      <div onClick={handleClose} style={{ position: 'fixed', inset: 0, zIndex: 498, cursor: 'pointer' }} />
-
-      {/* Tooltip card */}
-      <div style={{
-        position: 'fixed',
-        top: tooltipTop,
-        left: tooltipLeft,
-        width: TOOLTIP_W,
-        zIndex: 500,
-        background: 'var(--bg)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--r-lg)',
-        padding: '18px 18px 14px',
-      }}>
-        {/* Arrow */}
-        <div style={{
-          position: 'absolute',
-          left: arrowLeft,
-          [placeBelow ? 'top' : 'bottom']: -7,
-          width: 0, height: 0,
-          borderLeft: '7px solid transparent',
-          borderRight: '7px solid transparent',
-          [placeBelow ? 'borderBottom' : 'borderTop']: '7px solid var(--border)',
-        }} />
-        <div style={{
-          position: 'absolute',
-          left: arrowLeft + 1,
-          [placeBelow ? 'top' : 'bottom']: -6,
-          width: 0, height: 0,
-          borderLeft: '6px solid transparent',
-          borderRight: '6px solid transparent',
-          [placeBelow ? 'borderBottom' : 'borderTop']: '6px solid var(--bg)',
-        }} />
-
-        <button onClick={handleClose} style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '2px', lineHeight: 1 }}>
-          <X size={13} />
-        </button>
-
-        <CardContent current={current} step={step} isLast={isLast} onNext={handleNext} onClose={handleClose} />
-      </div>
-    </>
-  );
-}
-
-function CardContent({ current, step, isLast, onNext, onClose }: {
-  current: Step; step: number; isLast: boolean; onNext: () => void; onClose: () => void;
-}) {
-  return (
-    <>
-      <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: '14px', marginBottom: '8px', paddingRight: '20px' }}>{current.title}</div>
-      <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.65, marginBottom: '16px' }}>{current.body}</div>
-
-      {/* Progress dots */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '14px' }}>
-        {STEPS.map((_, i) => (
-          <div key={i} style={{
-            width: i === step ? '14px' : '5px', height: '5px',
-            borderRadius: '3px',
-            backgroundColor: i === step ? 'var(--accent)' : 'var(--border-hi)',
-            transition: 'width 0.2s, background-color 0.2s',
+  // IN-MODAL — higher z-index tier to sit above the Profile panel (z-500)
+  if (current.type === 'in-modal') {
+    if (rect) {
+      const { placeBelow, cardTop, cardLeft, arrowLeft } = tooltipPos(rect);
+      return createPortal(
+        <>
+          <div style={{
+            position: 'fixed',
+            top: rect.top - SPAD, left: rect.left - SPAD,
+            width: rect.width + SPAD * 2, height: rect.height + SPAD * 2,
+            borderRadius: '8px',
+            boxShadow: '0 0 0 9999px rgba(0,0,0,0.5), inset 0 0 0 2px var(--accent)',
+            zIndex: 601, pointerEvents: 'none',
           }} />
-        ))}
-        <span style={{ marginLeft: 'auto', color: 'var(--text-dim)', fontSize: '10px' }}>{step + 1}/{STEPS.length}</span>
-      </div>
+          <div style={{
+            position: 'fixed', top: cardTop, left: cardLeft, width: CARD_W,
+            background: 'var(--bg)', border: '1px solid var(--border)',
+            borderRadius: 'var(--r-lg)', padding: '18px 18px 14px', zIndex: 602,
+          }}>
+            {closeBtn}
+            <Arrow placeBelow={placeBelow} arrowLeft={arrowLeft} />
+            <CardContent current={current} step={step} total={STEPS.length}
+              showPrimary={showPrimary} isLast={isLast} onNext={handleNext} onSkip={handleSkip} />
+          </div>
+        </>,
+        document.body
+      );
+    }
 
-      <div style={{ display: 'flex', gap: '8px' }}>
-        {!isLast && (
-          <button onClick={onClose} className="btn-ghost" style={{ flex: 1, justifyContent: 'center', fontSize: '12px', padding: '6px 10px' }}>
-            Skip
-          </button>
-        )}
-        <button onClick={onNext} className="btn-primary" style={{ flex: isLast ? undefined : 2, width: isLast ? '100%' : undefined, justifyContent: 'center', fontSize: '12px', padding: '6px 12px' }}>
-          {isLast ? "Let's go" : <>Next <ChevronRight size={12} /></>}
-        </button>
-      </div>
-    </>
-  );
+    // No target (step 3 — "add your key") — floating bar at bottom of screen
+    return createPortal(
+      <div style={{
+        position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+        width: `min(${CARD_W + 24}px, calc(100vw - 32px))`,
+        background: 'var(--bg)', border: '1px solid var(--border)',
+        borderRadius: 'var(--r-lg)', padding: '18px 18px 14px', zIndex: 602,
+      }}>
+        {closeBtn}
+        <CardContent current={current} step={step} total={STEPS.length}
+          showPrimary={showPrimary} isLast={isLast} onNext={handleNext} onSkip={handleSkip} />
+      </div>,
+      document.body
+    );
+  }
+
+  return null;
 }
