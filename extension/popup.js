@@ -16,7 +16,8 @@ function getDomain(url) {
 async function saveJob() {
   show('s-loading');
   try {
-    const res = await fetch(`${DASHBOARD}/api/jobs/import`, {
+    // Step 1: parse the job posting
+    const importRes = await fetch(`${DASHBOARD}/api/jobs/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -25,15 +26,39 @@ async function saveJob() {
       },
       body: JSON.stringify({ url: currentUrl }),
     });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      throw new Error(data?.error || data?.message || `Server error (${res.status})`);
+    const importData = await importRes.json().catch(() => ({}));
+    if (!importRes.ok) {
+      throw new Error(importData?.error || importData?.message || `Parse error (${importRes.status})`);
     }
 
-    document.getElementById('saved-company').textContent = data.company || '';
-    document.getElementById('saved-title').textContent = data.title || '';
+    // Step 2: save the parsed job to the tracker
+    const saveRes = await fetch(`${DASHBOARD}/api/jobs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': userId,
+        'x-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        company: importData.company || 'Unknown',
+        title: importData.title || 'Unknown',
+        type: importData.type || 'fall-2026-internship',
+        status: 'saved',
+        url: importData.url || currentUrl,
+        description: importData.description || '',
+        location: importData.location || '',
+        deadline: importData.deadline || null,
+        salary_range: importData.salary_range || '',
+        source: importData.source || getDomain(currentUrl),
+      }),
+    });
+    const saveData = await saveRes.json().catch(() => ({}));
+    if (!saveRes.ok) {
+      throw new Error(saveData?.error || `Save error (${saveRes.status})`);
+    }
+
+    document.getElementById('saved-company').textContent = saveData.company || '';
+    document.getElementById('saved-title').textContent = saveData.title || '';
     show('s-success');
   } catch (err) {
     document.getElementById('error-msg').textContent = err.message || 'Something went wrong.';
@@ -69,6 +94,7 @@ chrome.storage.local.get(['cid_user_id', 'cid_api_key'], ({ cid_user_id, cid_api
 
     if (!apiKey) {
       document.getElementById('no-key-warn').style.display = 'block';
+      document.getElementById('btn-save').disabled = true;
     }
 
     show('s-ready');
