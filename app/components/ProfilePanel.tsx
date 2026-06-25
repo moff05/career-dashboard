@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
-import { Edit2, ExternalLink, Loader, FileText, Check, Download, Upload, Plus, DollarSign, X, Trash2, Brain, HelpCircle } from 'lucide-react';
+import { Edit2, ExternalLink, Loader, FileText, Check, Download, Upload, Plus, DollarSign, X, Trash2, Brain, HelpCircle, Smartphone } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
 import { BookOpen } from 'lucide-react';
+import { useRef } from 'react';
 
 interface ProfileData {
   id?: number; name?: string; email?: string; phone?: string; linkedin?: string;
@@ -72,6 +73,12 @@ export function ProfilePanel() {
   const [backupMsg, setBackupMsg] = useState('');
   const [backupErr, setBackupErr] = useState('');
 
+  const [deviceCode, setDeviceCode] = useState('');
+  const [deviceCodeExpiry, setDeviceCodeExpiry] = useState<Date | null>(null);
+  const [deviceCodeLoading, setDeviceCodeLoading] = useState(false);
+  const [deviceCodeSecondsLeft, setDeviceCodeSecondsLeft] = useState(0);
+  const deviceCodeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const [currentApiKey, setCurrentApiKey] = useState('');
   const [apiKeyDraft, setApiKeyDraft] = useState('');
   const [apiKeyEditing, setApiKeyEditing] = useState(false);
@@ -123,6 +130,28 @@ export function ProfilePanel() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [profileOpen, closeProfile]);
+
+  async function generateDeviceCode() {
+    setDeviceCodeLoading(true);
+    try {
+      const res = await apiFetch('/api/device-code', { method: 'POST' });
+      const data = await res.json();
+      if (data.error) return;
+      setDeviceCode(data.code);
+      const expiry = new Date(data.expires_at);
+      setDeviceCodeExpiry(expiry);
+      const tick = () => {
+        const left = Math.max(0, Math.round((expiry.getTime() - Date.now()) / 1000));
+        setDeviceCodeSecondsLeft(left);
+        if (left === 0) { setDeviceCode(''); setDeviceCodeExpiry(null); }
+      };
+      tick();
+      if (deviceCodeTimerRef.current) clearInterval(deviceCodeTimerRef.current);
+      deviceCodeTimerRef.current = setInterval(tick, 1000);
+    } finally {
+      setDeviceCodeLoading(false);
+    }
+  }
 
   async function handleExport() {
     setExporting(true); setBackupErr('');
@@ -411,6 +440,41 @@ export function ProfilePanel() {
                 </div>
                 {backupMsg && <div style={{ color: 'var(--success)', fontSize: '11px', marginTop: '10px' }}>{backupMsg}</div>}
                 {backupErr && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '10px' }}>{backupErr}</div>}
+              </div>
+
+              <div style={card}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                  <Smartphone size={12} color="var(--text-muted)" />
+                  <h3 className="section-label" style={{ margin: 0 }}>Connect another device</h3>
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 14px', lineHeight: 1.5 }}>
+                  Generate a 6-digit code, then enter it on your other device to sync instantly. Code expires in 10 minutes and is single-use.
+                </p>
+                {deviceCode && deviceCodeSecondsLeft > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'var(--bg)', border: '1px solid var(--border-hi)',
+                      borderRadius: 'var(--r)', padding: '14px',
+                      fontSize: '28px', fontWeight: 700, letterSpacing: '0.18em', color: 'var(--accent)',
+                    }}>
+                      {deviceCode.slice(0, 3)}-{deviceCode.slice(3)}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>
+                        Expires in {Math.floor(deviceCodeSecondsLeft / 60)}:{String(deviceCodeSecondsLeft % 60).padStart(2, '0')}
+                      </span>
+                      <button onClick={generateDeviceCode} disabled={deviceCodeLoading} className="btn-ghost" style={{ fontSize: '11px', padding: '4px 10px' }}>
+                        New code
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={generateDeviceCode} disabled={deviceCodeLoading} className="btn-ghost">
+                    {deviceCodeLoading ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Smartphone size={12} />}
+                    Get sync code
+                  </button>
+                )}
               </div>
 
               <button

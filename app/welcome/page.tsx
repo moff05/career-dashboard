@@ -32,17 +32,42 @@ function generateUserId(): string {
 export default function WelcomePage() {
   const router = useRouter();
   const [showRestore, setShowRestore] = useState(false);
+  const [showCode, setShowCode] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [fileName, setFileName] = useState('');
   const [fileText, setFileText] = useState('');
   const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState('');
+  const [syncCode, setSyncCode] = useState('');
+  const [syncing, setSyncing] = useState(false);
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
     setError('');
     setFileName(file.name);
     setFileText(await file.text());
+  }
+
+  async function handleSync() {
+    setError('');
+    const clean = syncCode.replace(/\D/g, '');
+    if (clean.length !== 6) return setError('Enter the full 6-digit code.');
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/device-code/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: clean }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Code not found.');
+      saveUser(data.user_id, data.api_key || '');
+      localStorage.setItem('cid_display_name', data.display_name || '');
+      router.push('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not redeem code.');
+    }
+    setSyncing(false);
   }
 
   async function handleRestore() {
@@ -130,7 +155,7 @@ export default function WelcomePage() {
           No accounts, no signup. You bring your own free Anthropic API key (typical cost: a few cents a day), and everything stays in your browser — nothing is stored on a server you don&apos;t control.
         </div>
 
-        {!showRestore ? (
+        {!showRestore && !showCode ? (
           <>
             <Link href="/setup" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -141,16 +166,67 @@ export default function WelcomePage() {
               Get Started <ArrowRight size={15} />
             </Link>
 
-            <button onClick={() => setShowRestore(true)} style={{
+            <button onClick={() => { setShowCode(true); setError(''); }} style={{
               display: 'block', width: '100%', textAlign: 'center', marginTop: '16px',
               background: 'none', border: 'none', color: 'var(--text-muted)',
               fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', padding: '4px',
             }}
               onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
+              Have a sync code? Enter it here
+            </button>
+
+            <button onClick={() => { setShowRestore(true); setError(''); }} style={{
+              display: 'block', width: '100%', textAlign: 'center', marginTop: '8px',
+              background: 'none', border: 'none', color: 'var(--text-dim)',
+              fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', padding: '4px',
+            }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
               Already have a backup? Restore it instead
             </button>
           </>
+        ) : showCode ? (
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
+            padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px',
+          }}>
+            <div>
+              <label style={LABEL}>Sync code</label>
+              <input
+                value={syncCode}
+                onChange={e => { setSyncCode(e.target.value); setError(''); }}
+                placeholder="000-000"
+                maxLength={7}
+                style={{ ...INPUT, fontSize: '22px', letterSpacing: '0.12em', textAlign: 'center' }}
+                autoFocus
+                onKeyDown={e => { if (e.key === 'Enter') handleSync(); }}
+              />
+            </div>
+
+            {error && (
+              <div style={{ padding: '10px 14px', borderRadius: 'var(--r)', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', color: 'var(--danger)', fontSize: '12px' }}>{error}</div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={handleSync} disabled={syncing} style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                background: 'var(--accent)', color: '#0A0A0A',
+                border: 'none', borderRadius: 'var(--r-lg)',
+                padding: '12px 20px', fontSize: '13px', fontWeight: 700,
+                cursor: syncing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: syncing ? 0.7 : 1,
+              }}>
+                {syncing ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : null}
+                {syncing ? 'Syncing…' : 'Connect'}
+              </button>
+              <button onClick={() => { setShowCode(false); setError(''); setSyncCode(''); }} disabled={syncing} style={{
+                background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)',
+                borderRadius: 'var(--r-lg)', padding: '12px 18px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
+              }}>Cancel</button>
+            </div>
+          </div>
+
         ) : (
           <div style={{
             background: 'var(--surface)',
