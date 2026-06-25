@@ -236,7 +236,15 @@ export default function DashboardPage() {
   const { displayName } = useUser();
   const { openCoach, openProfile, openConnections, connectionsOpen, connectionsPrefillCompany } = useOverlays();
   const firstName = displayName.split(' ')[0];
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  // greeting()/today both read the local clock — computing them during the
+  // initial render lets the server's clock (often a different timezone, or
+  // just a different instant) disagree with the browser's, which is a
+  // hydration mismatch (React error #418). Deferring to after mount means
+  // the very first client render matches the server's placeholder exactly,
+  // and the real value lands a tick later as an ordinary state update.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const today = mounted ? new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '';
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -583,7 +591,7 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ color: 'var(--text)', fontSize: '17px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>
-            {greeting()}{firstName ? `, ${firstName}` : ''}
+            {mounted ? greeting() : 'Welcome'}{firstName ? `, ${firstName}` : ''}
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '4px 0 0' }}>{today}</p>
         </div>
