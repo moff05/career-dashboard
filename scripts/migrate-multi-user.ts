@@ -198,6 +198,7 @@ async function migrate() {
   // Add starred/status_updated_at to jobs if not present
   await addColumn('jobs', 'starred', 'INTEGER NOT NULL DEFAULT 0');
   await addColumn('jobs', 'status_updated_at', 'TEXT');
+  await addColumn('jobs', 'score_data', 'TEXT');
 
   await migrateResumeTable();
 

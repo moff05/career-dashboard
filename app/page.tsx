@@ -14,6 +14,7 @@ interface Job {
   url: string | null; description: string | null; salary_range: string | null;
   location: string | null; source: string | null; notes: string | null;
   created_at: string; status_updated_at: string | null; starred: number;
+  score_data?: string | null;
 }
 
 interface AnalysisCategory { name: string; score: number; max: number; rationale: string; }
@@ -367,8 +368,8 @@ export default function DashboardPage() {
         setAnalysisResults(prev => ({ ...prev, [id]: result }));
         if (!data.error && typeof data.total === 'number') {
           const score = Math.round(data.total);
-          apiFetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ match_score: score }) });
-          setJobs(prev => prev.map(j => j.id === id ? { ...j, match_score: score } : j));
+          const scoreData = JSON.stringify({ categories: data.categories, total: data.total, summary: data.summary });
+          setJobs(prev => prev.map(j => j.id === id ? { ...j, match_score: score, score_data: scoreData } : j));
         }
       })
       .catch(() => {
@@ -568,6 +569,14 @@ export default function DashboardPage() {
         n.add(id);
         const thisJob = jobs.find(j => j.id === id);
         const hasKey = !!localStorage.getItem('cid_api_key');
+        // Hydrate full scorecard from DB-persisted score_data on first expand this session
+        if (thisJob?.score_data && !analysisCacheRef.current[id]) {
+          try {
+            const parsed = JSON.parse(thisJob.score_data) as AnalysisResult;
+            analysisCacheRef.current[id] = parsed;
+            setAnalysisResults(prev => ({ ...prev, [id]: parsed }));
+          } catch { /* ignore corrupt data */ }
+        }
         const neverRun = !analysisCacheRef.current[id] && !thisJob?.match_score;
         if (neverRun) {
           runAnalysis(id);
@@ -1114,7 +1123,7 @@ export default function DashboardPage() {
                                   <div>
                                     <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '8px' }}>Score from last analysis.</div>
                                     <button onClick={() => runAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'var(--surface)', color: 'var(--accent)', border: '1px solid var(--accent-dim)', borderRadius: 'var(--r-lg)', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                                      Load full breakdown →
+                                      Refresh Score →
                                     </button>
                                   </div>
                                 </div>

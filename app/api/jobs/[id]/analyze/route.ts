@@ -103,10 +103,10 @@ Score these 5 categories. Each score must be EXACTLY one of the listed values �
 20 = exactly the right level and function for this candidate's actual stage
 
 4. INDUSTRY FIT — one of 0, 8, 14, 20
-0 = no prior exposure to this industry at all (no coursework, internships, or projects connecting to it)
-8 = adjacent exposure only — a related but different industry or sector
-14 = some direct exposure — at least one internship or project in this exact industry
-20 = clear, repeated exposure to this exact industry or sector
+0 = no exposure to this industry — background is in a clearly unrelated sector. Transferable skills do NOT count: if the only link is that some skills happen to be useful everywhere, score 0.
+8 = the candidate has worked in a genuinely neighboring sector that shares customers, workflows, or regulatory context with this one (e.g., real estate → construction; fintech → banking; logistics → supply chain). A different but structurally related industry — not just "skills transfer."
+14 = at least one internship, job, or sustained real project in this exact industry or a recognized sub-sector of it
+20 = repeated, direct experience in this exact industry across multiple roles or projects
 
 5. LOGISTICS / LOCATION FIT — one of 0, 7, 15
 0 = the posting states a location/remote/visa requirement that conflicts with something stated in the candidate's profile, with no stated flexibility
@@ -131,6 +131,11 @@ The summary must be direct and unsentimental: state plainly whether this is a re
       const score = Math.min(Math.max(Number(entry?.score) || 0, 0), c.max);
       total += score;
       return { name: c.label, score, max: c.max, rationale: entry?.rationale || '' };
+    });
+
+    await db.execute({
+      sql: 'UPDATE jobs SET match_score = ?, score_data = ? WHERE id = ? AND user_id = ?',
+      args: [total, JSON.stringify({ categories, total, summary: parsed.summary }), parseInt(id), userId],
     });
 
     return NextResponse.json({ categories, total, summary: parsed.summary });
