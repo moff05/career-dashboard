@@ -79,7 +79,7 @@ app/
     ├── jobs/[id]/cover-letter/route.ts
     ├── jobs/[id]/gaps/route.ts          # Fit gaps + positioning
     ├── memories/route.ts, memories/[id]/route.ts
-    ├── profile/route.ts, profile/resume/route.ts, profile/resume/extract/route.ts, profile/summary/route.ts
+    ├── profile/route.ts, profile/resume/route.ts, profile/resume/extract/route.ts
     ├── resumes/route.ts, resumes/[id]/route.ts  # Multi-resume CRUD — list/create/rename/set-default/delete
     └── usage/route.ts                   # Aggregated cost/token totals for the current user, consumed by Profile
 
@@ -88,8 +88,7 @@ lib/
 ├── user.ts            # getUserId / getApiKey from request headers — see Multi-user model for the fail-closed behavior
 ├── apiFetch.ts         # Client fetch wrapper — injects x-user-id / x-api-key
 ├── ai-context.ts       # buildSystemPrompt(userId) — resume + profile + dated memories + jobs, scoped per user
-├── usage.ts            # computeCost() + logUsage() — every Claude call site awaits this after the response comes back
-└── resume-parser.ts    # getResumeText(userId) — reads the resume table, no hardcoded fallback
+└── usage.ts            # computeCost() + logUsage() — every Claude call site awaits this after the response comes back
 
 scripts/
 └── migrate-multi-user.ts   # current schema — `npm run migrate`
@@ -140,7 +139,7 @@ Greeting + Priorities strip + stats + the job tracker table, top to bottom, one 
 
 ## Profile + Memory (overlay, `app/components/ProfilePanel.tsx`)
 
-- A centered modal summoned via `useOverlays().openProfile(tab?)`, tabbed: **Profile** (personal/education/targets fields, multi-resume management, backup & restore), **Strength** (the rubric-scored Candidate Strength), **Usage** (cost/token breakdown), **Memory** (the memory CRUD list, merged in from the old standalone `/memory` page).
+- A centered modal summoned via `useOverlays().openProfile(tab?)`, tabbed: **Profile** (personal/education/targets fields, multi-resume management, backup & restore), **Usage** (cost/token breakdown), **Memory** (the memory CRUD list, merged in from the old standalone `/memory` page).
 
 ## Networking / connections (overlay, `app/components/ConnectionsPanel.tsx`)
 
@@ -156,7 +155,6 @@ Greeting + Priorities strip + stats + the job tracker table, top to bottom, one 
 - `POST /api/jobs/import` — `{ url?, extraText?, imageBase64?, imageMediaType?, extraLink? }`, requires at least one of `url`/`extraText` → Haiku extraction, returns `{ company, title, location, type, deadline, salary_range, description, url, source, warning? }`. `url` in the response is `null` when none was given.
 - `POST /api/jobs/[id]/analyze` — 5-category fit scorecard, each category constrained to an enum of anchored values, weighted to a total out of 100: Explicit Requirements Met (0-25), Skills Match (0-20), Role Alignment (0-20), Industry Fit (0-20), Logistics/Location Fit (0-15). `claude-sonnet-4-6`, `temperature: 0`. Scores *fit for this specific posting*, not general candidate strength — scored against what's literally on the resume today, with explicit-requirement misses capped low regardless of overall strength. Color coding on the total: 80+ green, 60–79 amber, <60 red; per-category bars are colored by percent-of-that-category's-max, not the raw score. This is the per-job AI score the whole tracker is built around.
 - `POST /api/jobs/[id]/gaps`, `POST /api/jobs/[id]/bullets`, `POST /api/jobs/[id]/cover-letter` — per-job AI panels, all read from `buildSystemPrompt(userId)` + the job record.
-- `POST /api/profile/summary` — the rubric-scored Candidate Strength. Returns `{strengths, gaps, score_breakdown, readiness_score, summary}`; `readiness_score` is computed server-side as the sum of `score_breakdown`'s sub-scores using Anthropic structured outputs (each sub-score constrained to an enum of anchored values), not read directly from free-form model output.
 - `GET /api/export` — full data dump for the current user across all active tables. `POST /api/import` — restores from that dump into the current user (upserts profile, appends everything else including resumes). Used by Profile's Backup & Restore card, and by `/welcome`'s restore shortcut for a fresh browser/device; the only recovery path since there are no accounts.
 - `GET /api/resumes` — list the user's resumes (default first). `POST /api/resumes` — create one (`{name, raw_text}`); the first resume for a user is auto-marked default. `PUT /api/resumes/[id]` — update `name`/`raw_text`, or pass `{set_default: true}` to make it the one AI features read (clears the previous default first to respect the partial unique index). `DELETE /api/resumes/[id]` — deletes it; if it was the default, the oldest remaining resume is auto-promoted.
 
@@ -181,7 +179,7 @@ Tokens defined in `app/globals.css`, all verified against WCAG AA on the `--bg` 
 
 - Coach chat: `claude-sonnet-4-6`, streaming via `anthropic.messages.stream()`
 - Memory extraction, fit gaps, resume bullets, cover letter, job import parsing: `claude-haiku-4-5-20251001`, non-streaming
-- Candidate Strength (`/api/profile/summary`) and the per-job fit scorecard (`/api/jobs/[id]/analyze`): both `claude-sonnet-4-6`, `temperature: 0`, structured outputs (`output_config.format` with an enum-constrained JSON schema) so each rubric sub-score can only land on one of its anchored values — see API notes above
+- Per-job fit scorecard (`/api/jobs/[id]/analyze`): `claude-sonnet-4-6`, `temperature: 0`, structured outputs (`output_config.format` with an enum-constrained JSON schema) so each rubric sub-score can only land on one of its anchored values — see API notes above
 
 Each call uses the requesting user's own API key (from `x-api-key`, via `lib/user.ts`). The `ANTHROPIC_API_KEY` env var is only a fallback for local dev, gated out of production entirely (see Multi-user model).
 

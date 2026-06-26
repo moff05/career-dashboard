@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
-import { getUserId, getApiKey, isSystemUser } from '@/lib/user';;
+import { getUserId, getApiKey, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
 
 export const maxDuration = 60;

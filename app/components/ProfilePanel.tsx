@@ -24,7 +24,7 @@ const ROUTE_LABELS: Record<string, string> = {
   coach_chat: 'Coach Chat', memory_extraction: 'Memory Extraction',
   fit_scorecard: 'Fit Scorecard', resume_bullets: 'Resume Bullets', cover_letter: 'Cover Letter',
   job_details: 'Job Details', fit_gaps: 'Fit Gaps', job_import: 'Job Import',
-  resume_extract: 'Resume Parsing', profile_summary: 'Candidate Strength',
+  resume_extract: 'Resume Parsing',
 };
 interface Memory { id: number; content: string; category: string; source: string; created_at: string; }
 const MEMORY_CATEGORIES = ['preference', 'goal', 'insight', 'company', 'role', 'location', 'skill', 'story_bank', 'other'];

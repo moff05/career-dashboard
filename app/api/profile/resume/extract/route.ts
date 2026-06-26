@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import mammoth from 'mammoth';
 import { extractText } from 'unpdf';
-import { getUserId, getApiKey, isSystemUser } from '@/lib/user';;
+import { getUserId, getApiKey, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
 
 const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';

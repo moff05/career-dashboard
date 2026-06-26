@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
-import { getUserId, getApiKey, isSystemUser } from '@/lib/user';;
+import { getUserId, getApiKey, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
 
 
