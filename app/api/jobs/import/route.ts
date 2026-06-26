@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { getUserId, getApiKey } from '@/lib/user';
+import { getUserId, getApiKey, isSystemUser } from '@/lib/user';;
 import { logUsage } from '@/lib/usage';
 
 
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
     const apiKey = getApiKey(request);
     if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
     const userId = getUserId(request);
+    if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
     const anthropic = new Anthropic({ apiKey });
     const body = await request.json();
     const { url, extraText, imageBase64, imageMediaType, extraLink } = body as {

@@ -14,6 +14,12 @@ export function getUserId(request: NextRequest): string {
   return randomUUID();
 }
 
+// Returns true for synthetic user IDs injected by deploy hooks or health checks.
+// AI routes should reject these before making any API calls.
+export function isSystemUser(userId: string): boolean {
+  return userId.startsWith('__');
+}
+
 export function getApiKey(request: NextRequest): string | null {
   const headerKey = request.headers.get('x-api-key');
   if (headerKey) return headerKey;

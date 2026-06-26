@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
-import { getUserId, getApiKey } from '@/lib/user';
+import { getUserId, getApiKey, isSystemUser } from '@/lib/user';;
 import { logUsage } from '@/lib/usage';
 
 export const maxDuration = 60;
@@ -10,7 +10,7 @@ export const maxDuration = 60;
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const userId = getUserId(request);
-    const apiKey = getApiKey(request);
+    if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });    const apiKey = getApiKey(request);
     if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
     const { id } = await params;
     const db = getDb();
