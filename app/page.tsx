@@ -378,12 +378,6 @@ export default function DashboardPage() {
       });
   }, []);
 
-  const refreshAnalysis = useCallback((id: number) => {
-    delete analysisCacheRef.current[id];
-    runAnalysis(id);
-  }, [runAnalysis]);
-
-
   const runGaps = useCallback((id: number) => {
     gapsCacheRef.current[id] = 'loading';
     setGapsResults(prev => ({ ...prev, [id]: 'loading' }));
@@ -411,6 +405,17 @@ export default function DashboardPage() {
       })
       .catch(() => { bulletsCacheRef.current[id] = 'error'; setBulletsResults(prev => ({ ...prev, [id]: 'error' })); });
   }, []);
+
+  const refreshAnalysis = useCallback((id: number) => {
+    delete analysisCacheRef.current[id];
+    delete gapsCacheRef.current[id];
+    delete bulletsCacheRef.current[id];
+    runAnalysis(id);
+    if (localStorage.getItem('cid_api_key')) {
+      runGaps(id);
+      runBullets(id);
+    }
+  }, [runAnalysis, runGaps, runBullets]);
 
   const runCoverLetter = useCallback((id: number, tone: string, angle: string) => {
     coverLetterCacheRef.current[id] = 'loading';
@@ -1215,7 +1220,7 @@ export default function DashboardPage() {
                                         <div style={{ color: 'var(--text)', fontSize: '13px', lineHeight: 1.6 }}>{r.summary}</div>
                                         <button onClick={() => refreshAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
                                           onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-                                          <RotateCcw size={10} /> Refresh
+                                          <RotateCcw size={10} /> Refresh all
                                         </button>
                                       </div>
                                     </div>
@@ -1302,9 +1307,6 @@ export default function DashboardPage() {
                                         ))}
                                       </div>
                                     </div>
-                                    <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}>
-                                      <RotateCcw size={10} /> Regenerate gaps
-                                    </button>
                                   </div>
                                 );
                               })()}
