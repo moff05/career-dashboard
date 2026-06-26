@@ -14,7 +14,7 @@ interface Job {
   url: string | null; description: string | null; salary_range: string | null;
   location: string | null; source: string | null; notes: string | null;
   created_at: string; status_updated_at: string | null; starred: number;
-  score_data?: string | null;
+  score_data?: string | null; gaps_data?: string | null; bullets_data?: string | null;
 }
 
 interface AnalysisCategory { name: string; score: number; max: number; rationale: string; }
@@ -393,6 +393,7 @@ export default function DashboardPage() {
         const result: GapsState = data.error ? 'error' : data;
         gapsCacheRef.current[id] = result;
         setGapsResults(prev => ({ ...prev, [id]: result }));
+        if (!data.error) setJobs(prev => prev.map(j => j.id === id ? { ...j, gaps_data: JSON.stringify(data) } : j));
       })
       .catch(() => { gapsCacheRef.current[id] = 'error'; setGapsResults(prev => ({ ...prev, [id]: 'error' })); });
   }, []);
@@ -406,6 +407,7 @@ export default function DashboardPage() {
         const result: BulletsState = data.error ? 'error' : data;
         bulletsCacheRef.current[id] = result;
         setBulletsResults(prev => ({ ...prev, [id]: result }));
+        if (!data.error) setJobs(prev => prev.map(j => j.id === id ? { ...j, bullets_data: JSON.stringify(data) } : j));
       })
       .catch(() => { bulletsCacheRef.current[id] = 'error'; setBulletsResults(prev => ({ ...prev, [id]: 'error' })); });
   }, []);
@@ -569,7 +571,7 @@ export default function DashboardPage() {
         n.add(id);
         const thisJob = jobs.find(j => j.id === id);
         const hasKey = !!localStorage.getItem('cid_api_key');
-        // Hydrate full scorecard from DB-persisted score_data on first expand this session
+        // Hydrate all three from DB on first expand this session
         if (thisJob?.score_data && !analysisCacheRef.current[id]) {
           try {
             const parsed = JSON.parse(thisJob.score_data) as AnalysisResult;
@@ -577,13 +579,32 @@ export default function DashboardPage() {
             setAnalysisResults(prev => ({ ...prev, [id]: parsed }));
           } catch { /* ignore corrupt data */ }
         }
+        if (thisJob?.gaps_data && !gapsCacheRef.current[id]) {
+          try {
+            const parsed = JSON.parse(thisJob.gaps_data) as GapsResult;
+            gapsCacheRef.current[id] = parsed;
+            setGapsResults(prev => ({ ...prev, [id]: parsed }));
+          } catch { /* ignore corrupt data */ }
+        }
+        if (thisJob?.bullets_data && !bulletsCacheRef.current[id]) {
+          try {
+            const parsed = JSON.parse(thisJob.bullets_data) as BulletsResult;
+            bulletsCacheRef.current[id] = parsed;
+            setBulletsResults(prev => ({ ...prev, [id]: parsed }));
+          } catch { /* ignore corrupt data */ }
+        }
         const neverRun = !analysisCacheRef.current[id] && !thisJob?.match_score;
         if (neverRun) {
+          // First time — fire all three simultaneously
           runAnalysis(id);
           if (hasKey) {
             if (!gapsCacheRef.current[id]) runGaps(id);
             if (!bulletsCacheRef.current[id]) runBullets(id);
           }
+        } else if (hasKey) {
+          // Previously scored — backfill gaps/bullets if not persisted yet
+          if (!gapsCacheRef.current[id]) runGaps(id);
+          if (!bulletsCacheRef.current[id]) runBullets(id);
         }
         fetchConnections(thisJob?.company || '');
       }
@@ -652,6 +673,15 @@ export default function DashboardPage() {
     setExpandedJobs(prev => new Set(prev).add(jobId));
     setJobTabs(prev => prev[jobId] ? prev : { ...prev, [jobId]: 'overview' });
     const hasKey = !!localStorage.getItem('cid_api_key');
+    if (job.score_data && !analysisCacheRef.current[jobId]) {
+      try { const p = JSON.parse(job.score_data) as AnalysisResult; analysisCacheRef.current[jobId] = p; setAnalysisResults(prev => ({ ...prev, [jobId]: p })); } catch { /* ignore */ }
+    }
+    if (job.gaps_data && !gapsCacheRef.current[jobId]) {
+      try { const p = JSON.parse(job.gaps_data) as GapsResult; gapsCacheRef.current[jobId] = p; setGapsResults(prev => ({ ...prev, [jobId]: p })); } catch { /* ignore */ }
+    }
+    if (job.bullets_data && !bulletsCacheRef.current[jobId]) {
+      try { const p = JSON.parse(job.bullets_data) as BulletsResult; bulletsCacheRef.current[jobId] = p; setBulletsResults(prev => ({ ...prev, [jobId]: p })); } catch { /* ignore */ }
+    }
     const neverRun = !analysisCacheRef.current[jobId] && !job.match_score;
     if (neverRun) {
       runAnalysis(jobId);
@@ -659,6 +689,9 @@ export default function DashboardPage() {
         if (!gapsCacheRef.current[jobId]) runGaps(jobId);
         if (!bulletsCacheRef.current[jobId]) runBullets(jobId);
       }
+    } else if (hasKey) {
+      if (!gapsCacheRef.current[jobId]) runGaps(jobId);
+      if (!bulletsCacheRef.current[jobId]) runBullets(jobId);
     }
     fetchConnections(job.company);
     setTimeout(() => document.getElementById(`job-row-${jobId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
@@ -989,11 +1022,10 @@ export default function DashboardPage() {
                           {/* Tabs */}
                           <div style={{ display: 'flex', gap: '0px', borderBottom: '1px solid var(--border)', marginBottom: '20px', paddingTop: '14px', flexWrap: 'nowrap', overflowX: 'auto' }}>
                             {[
-                              { id: 'overview',      label: 'Overview' },
-                              { id: 'score',         label: 'AI Score' },
-                              { id: 'cover-letter',  label: 'Cover Letter' },
-                              { id: 'gaps',          label: 'Fit Gaps' },
-                              { id: 'bullets',       label: 'Bullets' },
+                              { id: 'overview',        label: 'Overview' },
+                              { id: 'analysis',        label: 'Analysis' },
+                              { id: 'resume-bullets',  label: 'Resume Bullets' },
+                              { id: 'cover-letter',    label: 'Cover Letter' },
                             ].map(tab => (
                               <button key={tab.id} onClick={() => setTab(job.id, tab.id)} style={{
                                 backgroundColor: 'transparent',
@@ -1012,6 +1044,29 @@ export default function DashboardPage() {
                           {/* Overview tab */}
                           {activeTab === 'overview' && (
                             <div>
+                              {/* Score summary card — shown if analysis is available */}
+                              {(() => {
+                                const r = analysis && analysis !== 'loading' && analysis !== 'error' && analysis !== 'no-key' ? analysis as AnalysisResult : null;
+                                const score = r?.total ?? job.match_score;
+                                if (!score) return null;
+                                return (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: '16px', cursor: 'pointer' }}
+                                    onClick={() => setTab(job.id, 'analysis')}>
+                                    <div style={{ width: '56px', height: '56px', borderRadius: '50%', flexShrink: 0, border: `2px solid ${scoreColor(score)}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                      <span style={{ fontSize: '20px', fontWeight: 800, color: scoreColor(score), lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{score}</span>
+                                      <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>/100</span>
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      {r ? (
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5 }}>{r.summary}</div>
+                                      ) : (
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Score from last analysis — click to view breakdown</div>
+                                      )}
+                                    </div>
+                                    <ChevronRight size={13} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                                  </div>
+                                );
+                              })()}
                               {job.url && (
                                 <a href={job.url} target="_blank" rel="noopener noreferrer" style={{
                                   display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '18px',
@@ -1101,8 +1156,8 @@ export default function DashboardPage() {
                             </div>
                           )}
 
-                          {/* Score tab */}
-                          {activeTab === 'score' && (
+                          {/* Analysis tab — score breakdown + fit gaps */}
+                          {activeTab === 'analysis' && (
                             <div>
                               {analysis === 'loading' && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '20px 0' }}>
@@ -1189,6 +1244,67 @@ export default function DashboardPage() {
                                         );
                                       })}
                                     </div>
+                                  </div>
+                                );
+                              })()}
+
+                              {/* Gaps section — rendered inline below score breakdown */}
+                              {(() => {
+                                const gaps = gapsResults[job.id];
+                                if (!gaps) return null;
+                                if (gaps === 'loading') return (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '20px 0', borderTop: '1px solid var(--border)', marginTop: '8px' }}>
+                                    <Loader size={14} color="var(--accent)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                                    Analyzing fit gaps...
+                                  </div>
+                                );
+                                if (gaps === 'error') return (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '12px 0', borderTop: '1px solid var(--border)', marginTop: '8px' }}>
+                                    <AlertCircle size={13} color="var(--danger)" /> Fit gaps failed.{' '}
+                                    <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
+                                  </div>
+                                );
+                                const g = gaps as GapsResult;
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '20px' }}>
+                                    <div style={{ backgroundColor: 'var(--success-bg)', border: '1px solid var(--success-bg)', borderRadius: 'var(--r-lg)', padding: '14px 16px' }}>
+                                      <div style={{ color: 'var(--success)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Your Positioning</div>
+                                      <p style={{ color: 'var(--success)', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{g.positioning}</p>
+                                    </div>
+                                    <div>
+                                      <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Gaps to Address</div>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {g.gaps.map((gap, i) => (
+                                          <div key={i} style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '12px 14px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
+                                              <span style={{ color: gap.severity === 'major' ? 'var(--danger)' : 'var(--accent)', fontSize: '11px', fontWeight: 700 }}>{gap.skill}</span>
+                                              <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: gap.severity === 'major' ? 'var(--danger)' : 'var(--accent-hi)', backgroundColor: gap.severity === 'major' ? 'var(--danger-bg)' : 'var(--accent-bg)', border: `1px solid ${gap.severity === 'major' ? 'var(--danger-bg)' : 'var(--accent-dim)'}`, borderRadius: 'var(--r-sm)', padding: '1px 5px' }}>{gap.severity}</span>
+                                            </div>
+                                            <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: 0, lineHeight: 1.55 }}>{gap.how_to_address}</p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: g.should_apply ? 'var(--success-bg)' : 'var(--danger-bg)', border: `1px solid ${g.should_apply ? 'var(--success-bg)' : 'var(--danger-bg)'}`, borderRadius: 'var(--r-lg)', padding: '12px 16px' }}>
+                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: g.should_apply ? 'var(--success)' : 'var(--danger)', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
+                                        {g.should_apply ? <><Check size={13} /> Apply</> : <><X size={13} /> Skip</>}
+                                      </span>
+                                      <span style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5 }}>{g.apply_reasoning}</span>
+                                    </div>
+                                    <div>
+                                      <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Quick Wins</div>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        {g.quick_wins.map((w, i) => (
+                                          <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                                            <span style={{ color: 'var(--success)', fontSize: '11px', flexShrink: 0, marginTop: '2px' }}>→</span>
+                                            <span style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.55 }}>{w}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}>
+                                      <RotateCcw size={10} /> Regenerate gaps
+                                    </button>
                                   </div>
                                 );
                               })()}
@@ -1291,103 +1407,15 @@ export default function DashboardPage() {
                             );
                           })()}
 
-                          {/* Fit Gaps tab */}
-                          {activeTab === 'gaps' && (() => {
-                            const gaps = gapsResults[job.id];
-                            return (
-                              <div>
-                                {!gaps && (
-                                  <div style={{ padding: '20px 0' }}>
-                                    <button onClick={() => runGaps(job.id)} className="btn-primary" style={{ fontSize: '12px', padding: '7px 16px' }}>
-                                      Generate Fit Gaps
-                                    </button>
-                                  </div>
-                                )}
-                                {gaps === 'loading' && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '20px 0' }}>
-                                    <Loader size={14} color="var(--accent)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
-                                    Analyzing fit gaps...
-                                  </div>
-                                )}
-                                {gaps === 'error' && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '12px 0' }}>
-                                    <AlertCircle size={13} color="var(--danger)" /> Failed.{' '}
-                                    <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
-                                  </div>
-                                )}
-                                {gaps && gaps !== 'loading' && gaps !== 'error' && (() => {
-                                  const g = gaps as GapsResult;
-                                  return (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'fadeIn 0.25s ease' }}>
-
-                                      {/* Positioning */}
-                                      <div style={{ backgroundColor: 'var(--success-bg)', border: '1px solid var(--success-bg)', borderRadius: 'var(--r-lg)', padding: '14px 16px' }}>
-                                        <div style={{ color: 'var(--success)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Your Positioning</div>
-                                        <p style={{ color: 'var(--success)', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{g.positioning}</p>
-                                      </div>
-
-                                      {/* Gaps */}
-                                      <div>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Gaps to Address</div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                          {g.gaps.map((gap, i) => (
-                                            <div key={i} style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '12px 14px' }}>
-                                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
-                                                <span style={{ color: gap.severity === 'major' ? 'var(--danger)' : 'var(--accent)', fontSize: '11px', fontWeight: 700 }}>{gap.skill}</span>
-                                                <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: gap.severity === 'major' ? 'var(--danger)' : 'var(--accent-hi)', backgroundColor: gap.severity === 'major' ? 'var(--danger-bg)' : 'var(--accent-bg)', border: `1px solid ${gap.severity === 'major' ? 'var(--danger-bg)' : 'var(--accent-dim)'}`, borderRadius: 'var(--r-sm)', padding: '1px 5px' }}>{gap.severity}</span>
-                                              </div>
-                                              <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: 0, lineHeight: 1.55 }}>{gap.how_to_address}</p>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-
-                                      {/* Apply signal — full-width banner */}
-                                      <div style={{
-                                        display: 'flex', alignItems: 'center', gap: '12px',
-                                        backgroundColor: g.should_apply ? 'var(--success-bg)' : 'var(--danger-bg)',
-                                        border: `1px solid ${g.should_apply ? 'var(--success-bg)' : 'var(--danger-bg)'}`,
-                                        borderRadius: 'var(--r-lg)', padding: '12px 16px',
-                                      }}>
-                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: g.should_apply ? 'var(--success)' : 'var(--danger)', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
-                                          {g.should_apply ? <><Check size={13} /> Apply</> : <><X size={13} /> Skip</>}
-                                        </span>
-                                        <span style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5 }}>{g.apply_reasoning}</span>
-                                      </div>
-
-                                      {/* Quick wins */}
-                                      <div>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Quick Wins</div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                          {g.quick_wins.map((w, i) => (
-                                            <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                                              <span style={{ color: 'var(--success)', fontSize: '11px', flexShrink: 0, marginTop: '2px' }}>→</span>
-                                              <span style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.55 }}>{w}</span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-
-                                      <button onClick={() => { delete gapsCacheRef.current[job.id]; runGaps(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}
-                                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-                                        <RotateCcw size={10} /> Regenerate
-                                      </button>
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            );
-                          })()}
-
-                          {/* Bullets tab */}
-                          {activeTab === 'bullets' && (() => {
+                          {/* Resume Bullets tab */}
+                          {activeTab === 'resume-bullets' && (() => {
                             const bl = bulletsResults[job.id];
                             return (
                               <div>
                                 {!bl && (
                                   <div style={{ padding: '20px 0' }}>
                                     <button onClick={() => runBullets(job.id)} className="btn-primary" style={{ fontSize: '12px', padding: '7px 16px' }}>
-                                      Generate Bullets
+                                      Generate Resume Bullets
                                     </button>
                                   </div>
                                 )}

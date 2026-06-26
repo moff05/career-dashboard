@@ -32,7 +32,12 @@ ${job.description ? `JD:\n${String(job.description).slice(0, 6000)}` : '(No JD)'
     const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json({ error: 'Parse failed' }, { status: 500 });
-    return NextResponse.json(JSON.parse(match[0]));
+    const result = JSON.parse(match[0]);
+    await db.execute({
+      sql: 'UPDATE jobs SET bullets_data = ? WHERE id = ? AND user_id = ?',
+      args: [JSON.stringify(result), parseInt(id), userId],
+    });
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Bullets error:', error);
     return NextResponse.json({ error: 'Bullets analysis failed' }, { status: 500 });
