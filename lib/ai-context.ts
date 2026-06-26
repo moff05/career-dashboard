@@ -46,7 +46,7 @@ export async function buildSystemPrompt(userId: string): Promise<string> {
         .join('\n\n');
 
   const jobRows = (await db.execute({
-    sql: 'SELECT type, status, company, title FROM jobs WHERE user_id = ?',
+    sql: "SELECT type, status, company, title FROM jobs WHERE user_id = ? AND status NOT IN ('rejected', 'offer')",
     args: [userId],
   })).rows as unknown as Job[];
   const jobSummaryMap: Record<string, string[]> = {};
