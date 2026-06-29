@@ -82,6 +82,7 @@ export default function DashboardPage() {
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [deadlineDismissed, setDeadlineDismissed] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
@@ -652,6 +653,40 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Deadline banner — shows when ≥1 active job has a deadline within 3 days */}
+      {!loading && !deadlineDismissed && (() => {
+        const now = new Date(); now.setHours(0, 0, 0, 0);
+        const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() + 3);
+        const urgent = jobs.filter(j => {
+          if (!j.deadline || j.status === 'offer' || j.status === 'rejected') return false;
+          const d = new Date(j.deadline + 'T00:00:00');
+          return d >= now && d <= cutoff;
+        });
+        if (!urgent.length) return null;
+        return (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            backgroundColor: 'rgba(249,115,22,0.07)', border: '1px solid rgba(249,115,22,0.22)',
+            borderRadius: 'var(--r-lg)', padding: '10px 14px', marginBottom: '14px',
+          }}>
+            <AlertCircle size={13} color="var(--accent)" style={{ flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              {urgent.map((j, i) => (
+                <span key={j.id}>
+                  {i > 0 && <span style={{ color: 'var(--border-hi)', margin: '0 6px' }}>·</span>}
+                  <span style={{ color: 'var(--text)', fontWeight: 600 }}>{j.company}</span>
+                  {' — '}<DeadlineDisplay deadline={j.deadline!} />
+                </span>
+              ))}
+            </span>
+            <button onClick={() => setDeadlineDismissed(true)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '2px', lineHeight: 1, display: 'flex' }}>
+              <X size={12} />
+            </button>
+          </div>
+        );
+      })()}
+
       {/* Table */}
       {loading ? (
         <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '80px', fontSize: '13px' }}>Loading...</div>
@@ -662,11 +697,25 @@ export default function DashboardPage() {
         </div>
       ) : jobs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px 32px' }}>
-          <div style={{ color: 'var(--text)', fontSize: '14px', marginBottom: '6px' }}>No jobs tracked yet</div>
-          <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '24px' }}>Paste a link, paste the description, or just type it in yourself</div>
-          <button data-tutorial="add-job" onClick={openImport} className="btn-primary" style={{ margin: '0 auto' }}>
-            <Plus size={13} /> Add a Job
-          </button>
+          <div style={{ color: 'var(--text)', fontSize: '14px', fontWeight: 700, marginBottom: '8px' }}>No jobs tracked yet</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '20px' }}>Paste a job link or description — the AI takes it from there.</div>
+          <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '6px', marginBottom: '28px', textAlign: 'left' }}>
+            {[
+              'Scores your fit 0–100 across every requirement',
+              'Pinpoints your skill gaps vs. the role',
+              'Rewrites your resume bullets to match',
+            ].map(line => (
+              <div key={line} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                <span style={{ color: 'var(--accent)', fontWeight: 700, flexShrink: 0 }}>›</span>
+                {line}
+              </div>
+            ))}
+          </div>
+          <div>
+            <button data-tutorial="add-job" onClick={openImport} className="btn-primary" style={{ margin: '0 auto' }}>
+              <Plus size={13} /> Add a Job
+            </button>
+          </div>
         </div>
       ) : (
         <div style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', overflowX: 'auto', overflowY: 'hidden' }}>
