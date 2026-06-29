@@ -8,12 +8,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const db = getDb();
     const { id } = await params;
     const body = await request.json();
-    const { company, title, type, status, match_score, posting_date, deadline, url, description, salary_range, location, source, notes } = body;
+    const { company, title, type, type_year, status, match_score, posting_date, deadline, url, description, salary_range, location, source, notes } = body;
     await db.execute({
-      sql: `UPDATE jobs SET company=?, title=?, type=?, status=?, match_score=?, posting_date=?, deadline=?, url=?, description=?, salary_range=?, location=?, source=?, notes=? WHERE id=? AND user_id=?`,
+      sql: `UPDATE jobs SET company=?, title=?, type=?, type_year=?, status=?, match_score=?, posting_date=?, deadline=?, url=?, description=?, salary_range=?, location=?, source=?, notes=? WHERE id=? AND user_id=?`,
       // libsql throws on `undefined` bind params (not just falls back to NULL), so any
       // field missing from the body would crash the whole update — coalesce defensively.
-      args: [company ?? null, title ?? null, type ?? null, status ?? null, match_score || null, posting_date || null, deadline || null,
+      args: [company ?? null, title ?? null, type ?? null, type_year ?? null, status ?? null, match_score || null, posting_date || null, deadline || null,
              url || null, description || null, salary_range || null, location || null, source || null, notes || null,
              parseInt(id), userId],
     });

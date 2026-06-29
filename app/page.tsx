@@ -15,6 +15,7 @@ interface Job {
   location: string | null; source: string | null; notes: string | null;
   created_at: string; status_updated_at: string | null; starred: number;
   score_data?: string | null; gaps_data?: string | null; bullets_data?: string | null; cover_letter_data?: string | null;
+  type_year?: number | null;
 }
 
 interface AnalysisCategory { name: string; score: number; max: number; rationale: string; }
@@ -99,15 +100,20 @@ const LEVEL_CFG = {
 };
 
 const TYPE_OPTIONS = [
-  { value: 'fall-2026-internship',   label: 'Fall 2026' },
-  { value: 'spring-2027-internship', label: 'Spring 2027' },
-  { value: 'summer-internship',      label: 'Summer Intern' },
-  { value: 'full-time',              label: 'Full-Time' },
+  { value: 'fall-internship',   label: 'Fall Internship' },
+  { value: 'spring-internship', label: 'Spring Internship' },
+  { value: 'summer-internship', label: 'Summer Intern' },
+  { value: 'full-time',         label: 'Full-Time' },
 ];
 const TYPE_COLORS: Record<string, string> = {
-  'fall-2026-internship': '#7c3aed', 'spring-2027-internship': '#0891b2',
-  'summer-internship': 'var(--success)',    'full-time': 'var(--accent-hi)',
+  'fall-internship': '#7c3aed', 'spring-internship': '#0891b2',
+  'summer-internship': 'var(--success)', 'full-time': 'var(--accent-hi)',
 };
+function typeLabel(type: string, year?: number | null): string {
+  if (type === 'fall-internship') return year ? `Fall '${String(year).slice(2)}` : 'Fall Intern';
+  if (type === 'spring-internship') return year ? `Spring '${String(year).slice(2)}` : 'Spring Intern';
+  return TYPE_OPTIONS.find(t => t.value === type)?.label || type;
+}
 const STATUS_OPTIONS = ['saved', 'applied', 'interviewing', 'offer', 'rejected'];
 
 // ─── Subcomponents ────────────────────────────────────────────────────────────
@@ -251,9 +257,10 @@ function ConnStatusRow({ conn, cs, onSet, onDelete }: {
 
 // ─── Form helpers ─────────────────────────────────────────────────────────────
 const EMPTY_FORM = {
-  company: '', title: '', type: 'fall-2026-internship', status: 'saved',
+  company: '', title: '', type: 'fall-internship', status: 'saved',
   match_score: '', location: '', source: '', posting_date: '',
   deadline: '', url: '', salary_range: '', notes: '', description: '',
+  type_year: '',
 };
 type FormData = typeof EMPTY_FORM;
 
@@ -524,14 +531,14 @@ export default function DashboardPage() {
       const data = await res.json();
       if (data.error) { setImportFetchError(data.error); setImportStep('input'); return; }
       setImportWarning(data.warning || '');
-      setImportForm({ company: data.company||'', title: data.title||'', type: data.type||'fall-2026-internship', status: 'saved', match_score: '', location: data.location||'', source: data.source||'Pasted', posting_date: data.posting_date||'', deadline: data.deadline||'', url: data.url||trimmedUrl, salary_range: data.salary_range||'', notes: '', description: data.description||'' });
+      setImportForm({ company: data.company||'', title: data.title||'', type: data.type||'fall-internship', status: 'saved', match_score: '', location: data.location||'', source: data.source||'Pasted', posting_date: data.posting_date||'', deadline: data.deadline||'', url: data.url||trimmedUrl, salary_range: data.salary_range||'', notes: '', description: data.description||'', type_year: '' });
       setImportStep('review');
     } catch { setImportFetchError('Request failed.'); setImportStep('input'); }
   };
 
   const handleImportSave = async () => {
     setSaving(true);
-    await apiFetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...importForm, match_score: importForm.match_score ? parseInt(importForm.match_score) : null }) });
+    await apiFetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...importForm, match_score: importForm.match_score ? parseInt(importForm.match_score) : null, type_year: importForm.type_year ? parseInt(importForm.type_year) : null }) });
     setSaving(false); closeImport(); fetchJobs();
   };
 
@@ -547,7 +554,7 @@ export default function DashboardPage() {
 
   const handleSave = async () => {
     setSaving(true);
-    const payload = { ...form, match_score: form.match_score ? parseInt(form.match_score) : null };
+    const payload = { ...form, match_score: form.match_score ? parseInt(form.match_score) : null, type_year: form.type_year ? parseInt(form.type_year) : null };
     if (editingJob) {
       await apiFetch(`/api/jobs/${editingJob.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     } else {
@@ -638,7 +645,7 @@ export default function DashboardPage() {
 
   const openEdit = (job: Job) => {
     setEditingJob(job);
-    setForm({ company: job.company, title: job.title, type: job.type, status: job.status, match_score: job.match_score?.toString()||'', location: job.location||'', source: job.source||'', posting_date: job.posting_date||'', deadline: job.deadline||'', url: job.url||'', salary_range: job.salary_range||'', notes: job.notes||'', description: job.description||'' });
+    setForm({ company: job.company, title: job.title, type: job.type, status: job.status, match_score: job.match_score?.toString()||'', location: job.location||'', source: job.source||'', posting_date: job.posting_date||'', deadline: job.deadline||'', url: job.url||'', salary_range: job.salary_range||'', notes: job.notes||'', description: job.description||'', type_year: job.type_year?.toString()||'' });
     setShowModal(true);
   };
 
@@ -953,7 +960,7 @@ export default function DashboardPage() {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '8px', paddingLeft: '21px' }}>
                             <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em' }}>
-                              {TYPE_OPTIONS.find(t => t.value === job.type)?.label || job.type}
+                              {typeLabel(job.type, job.type_year)}
                             </span>
                             <div onClick={e => e.stopPropagation()}>
                               <StatusBadge job={job} onStatusChange={handleStatusChange} />
@@ -1011,7 +1018,7 @@ export default function DashboardPage() {
                           {/* Type */}
                           <div>
                             <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em' }}>
-                              {TYPE_OPTIONS.find(t => t.value === job.type)?.label || job.type}
+                              {typeLabel(job.type, job.type_year)}
                             </span>
                           </div>
 
@@ -1125,7 +1132,7 @@ export default function DashboardPage() {
                                   { label: 'Location', value: job.location },
                                   { label: 'Deadline', value: job.deadline ? <><span style={{ color: 'var(--text-muted)' }}>{job.deadline}</span> <DeadlineDisplay deadline={job.deadline} /></> : null },
                                   { label: 'Salary', value: job.salary_range },
-                                  { label: 'Type', value: job.type ? <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontWeight: 700 }}>{TYPE_OPTIONS.find(t => t.value === job.type)?.label}</span> : null },
+                                  { label: 'Type', value: job.type ? <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontWeight: 700 }}>{typeLabel(job.type, job.type_year)}</span> : null },
                                   { label: 'Source', value: job.source },
                                   { label: 'Posted', value: job.posting_date },
                                 ].map(({ label, value }) => (
@@ -1641,9 +1648,14 @@ export default function DashboardPage() {
                   <Field label="Match Score (1–10)" field="match_score" form={importForm} setForm={setImportForm} type="number" />
                   <div>
                     <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
-                    <select value={importForm.type} onChange={e => setImportForm(p => ({ ...p, type: e.target.value }))} style={{ ...formInput }}>
-                      {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </select>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <select value={importForm.type} onChange={e => setImportForm(p => ({ ...p, type: e.target.value }))} style={{ ...formInput, flex: 2 }}>
+                        {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                      {(importForm.type === 'fall-internship' || importForm.type === 'spring-internship') && (
+                        <input type="number" value={importForm.type_year} onChange={e => setImportForm(p => ({ ...p, type_year: e.target.value }))} placeholder="Year" min="2024" max="2035" style={{ ...formInput, flex: 1, minWidth: 0 }} />
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Source</label>
@@ -1698,9 +1710,14 @@ export default function DashboardPage() {
               <Field label="Source" field="source" form={form} setForm={setForm} />
               <div>
                 <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
-                <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} style={formInput}>
-                  {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} style={{ ...formInput, flex: 2 }}>
+                    {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                  {(form.type === 'fall-internship' || form.type === 'spring-internship') && (
+                    <input type="number" value={form.type_year} onChange={e => setForm(p => ({ ...p, type_year: e.target.value }))} placeholder="Year" min="2024" max="2035" style={{ ...formInput, flex: 1, minWidth: 0 }} />
+                  )}
+                </div>
               </div>
               <div>
                 <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Status</label>

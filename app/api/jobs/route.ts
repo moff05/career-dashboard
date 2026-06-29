@@ -19,12 +19,12 @@ export async function POST(request: NextRequest) {
     const userId = getUserId(request);
     const db = getDb();
     const body = await request.json();
-    const { company, title, type, status, match_score, posting_date, deadline, url, description, salary_range, location, source, notes } = body;
+    const { company, title, type, type_year, status, match_score, posting_date, deadline, url, description, salary_range, location, source, notes } = body;
     if (!company || !title || !type) return NextResponse.json({ error: 'company, title, type are required' }, { status: 400 });
     const result = await db.execute({
-      sql: `INSERT INTO jobs (user_id, company, title, type, status, match_score, posting_date, deadline, url, description, salary_range, location, source, notes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [userId, company, title, type, status || 'saved', match_score || null, posting_date || null, deadline || null,
+      sql: `INSERT INTO jobs (user_id, company, title, type, type_year, status, match_score, posting_date, deadline, url, description, salary_range, location, source, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [userId, company, title, type, type_year || null, status || 'saved', match_score || null, posting_date || null, deadline || null,
              url || null, description || null, salary_range || null, location || null, source || null, notes || null],
     });
     const newJob = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ?', args: [Number(result.lastInsertRowid)] })).rows[0];

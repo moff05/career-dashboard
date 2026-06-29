@@ -11,7 +11,7 @@ const SINGLE_TABLES: Record<string, string[]> = {
 // resume moved here once multiple named resumes per user became possible.
 const MULTI_TABLES: Record<string, string[]> = {
   resume: ['name', 'raw_text', 'parsed_at', 'is_default'],
-  jobs: ['company', 'title', 'type', 'status', 'match_score', 'posting_date', 'deadline', 'url', 'description', 'salary_range', 'location', 'source', 'notes', 'starred', 'created_at', 'status_updated_at'],
+  jobs: ['company', 'title', 'type', 'type_year', 'status', 'match_score', 'posting_date', 'deadline', 'url', 'description', 'salary_range', 'location', 'source', 'notes', 'starred', 'created_at', 'status_updated_at'],
   chat_messages: ['role', 'content', 'session_id', 'created_at'],
   memories: ['content', 'category', 'source', 'created_at'],
   timeline_events: ['title', 'description', 'date', 'type', 'done', 'created_at'],
