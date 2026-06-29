@@ -167,7 +167,7 @@ function StatusBadge({ job, onStatusChange }: { job: Job; onStatusChange: (id: n
     <div style={{ display: 'inline-block' }}>
       <span ref={badgeRef} onClick={handleOpen} style={{
         backgroundColor: s.bg, color: s.text, border: `1px solid ${s.border}`,
-        borderRadius: 'var(--r-sm)', padding: '3px 8px', fontSize: '10px', fontWeight: 700,
+        borderRadius: 'var(--r-sm)', padding: '3px 8px', fontSize: '11px', fontWeight: 700,
         textTransform: 'capitalize', cursor: 'pointer', userSelect: 'none', display: 'inline-block',
         letterSpacing: '0.02em',
       }}>{job.status}</span>
@@ -226,9 +226,9 @@ function ConnStatusRow({ conn, cs, onSet, onDelete }: {
       <div style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: cs.color, flexShrink: 0 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ color: 'var(--text)', fontSize: '12px', fontWeight: 600 }}>{conn.name}{conn.role ? ` — ${conn.role}` : ''}</div>
-        {conn.relationship && <div style={{ color: 'var(--text-muted)', fontSize: '10px' }}>{conn.relationship}</div>}
+        {conn.relationship && <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{conn.relationship}</div>}
       </div>
-      <button ref={btnRef} onClick={handleOpen} style={{ backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '3px 9px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap' }}>
+      <button ref={btnRef} onClick={handleOpen} style={{ backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '3px 9px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap' }}>
         {cs.label}
       </button>
       {open && typeof document !== 'undefined' && createPortal(
@@ -951,7 +951,7 @@ export default function DashboardPage() {
                   }}>
                   {isExpanded ? <ChevronDown size={11} color="var(--text-muted)" /> : <ChevronRight size={11} color="var(--text-muted)" />}
                   <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{company}</span>
-                  <span style={{ backgroundColor: 'var(--border-dim)', color: 'var(--text-muted)', borderRadius: '20px', padding: '1px 7px', fontSize: '10px', fontWeight: 500, flexShrink: 0 }}>
+                  <span style={{ backgroundColor: 'var(--border-dim)', color: 'var(--text-muted)', borderRadius: '20px', padding: '1px 7px', fontSize: '11px', fontWeight: 500, flexShrink: 0 }}>
                     {companyJobs.length} {companyJobs.length === 1 ? 'role' : 'roles'}
                   </span>
                   {companyJobs.some(j => j.starred) && <Star size={11} color="var(--accent)" fill="var(--accent)" style={{ flexShrink: 0 }} />}
@@ -991,7 +991,7 @@ export default function DashboardPage() {
                               {isStale(job) && (
                                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '3px', backgroundColor: 'rgba(168,85,247,0.08)', borderRadius: '20px', padding: '1px 6px' }}>
                                   <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#a855f7' }} />
-                                  <span style={{ color: '#a855f7', fontSize: '10px', fontWeight: 600 }}>Follow up</span>
+                                  <span style={{ color: '#a855f7', fontSize: '11px', fontWeight: 600 }}>Follow up</span>
                                 </div>
                               )}
                             </div>
@@ -1002,7 +1002,7 @@ export default function DashboardPage() {
                               </button>
                               {pendingDeleteId === job.id ? (
                                 <>
-                                  <button onClick={() => handleDelete(job.id)} title="Confirm delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '4px 6px', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px', fontWeight: 700, fontFamily: 'inherit' }}>
+                                  <button onClick={() => handleDelete(job.id)} title="Confirm delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '4px 6px', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '11px', fontWeight: 700, fontFamily: 'inherit' }}>
                                     <Check size={10} /> Del
                                   </button>
                                   <button onClick={() => setPendingDeleteId(null)} title="Cancel" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', borderRadius: '20px', display: 'flex' }}>
@@ -1018,7 +1018,7 @@ export default function DashboardPage() {
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '8px', paddingLeft: '21px' }}>
-                            <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em' }}>
+                            <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.02em' }}>
                               {typeLabel(job.type, job.type_year)}
                             </span>
                             <div onClick={e => e.stopPropagation()}>
@@ -1031,12 +1031,12 @@ export default function DashboardPage() {
                             )}
                             {job.deadline && (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <span style={{ color: 'var(--text-dim)', fontSize: '10px' }}>Due</span>
+                                <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>Due</span>
                                 <DeadlineDisplay deadline={job.deadline} />
                               </span>
                             )}
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ color: 'var(--text-dim)', fontSize: '10px' }}>Posted</span>
+                              <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>Posted</span>
                               <PostedDisplay date={job.posting_date} />
                             </span>
                           </div>
@@ -1069,14 +1069,14 @@ export default function DashboardPage() {
                             {isStale(job) && (
                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '3px', backgroundColor: 'rgba(168,85,247,0.08)', borderRadius: '20px', padding: '1px 6px' }}>
                                 <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#a855f7' }} />
-                                <span style={{ color: '#a855f7', fontSize: '10px', fontWeight: 600 }}>Follow up</span>
+                                <span style={{ color: '#a855f7', fontSize: '11px', fontWeight: 600 }}>Follow up</span>
                               </div>
                             )}
                           </div>
 
                           {/* Type */}
                           <div>
-                            <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.02em' }}>
+                            <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.02em' }}>
                               {typeLabel(job.type, job.type_year)}
                             </span>
                           </div>
@@ -1109,7 +1109,7 @@ export default function DashboardPage() {
                             </button>
                             {pendingDeleteId === job.id ? (
                               <>
-                                <button onClick={() => handleDelete(job.id)} title="Confirm delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '4px 6px', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px', fontWeight: 700, fontFamily: 'inherit' }}>
+                                <button onClick={() => handleDelete(job.id)} title="Confirm delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '4px 6px', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '11px', fontWeight: 700, fontFamily: 'inherit' }}>
                                   <Check size={10} /> Del
                                 </button>
                                 <button onClick={() => setPendingDeleteId(null)} title="Cancel" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', borderRadius: '20px', display: 'flex' }}>
@@ -1283,7 +1283,7 @@ export default function DashboardPage() {
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                   }}>
                                     <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(job.match_score), lineHeight: 1 }}>{job.match_score}</span>
-                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>/100</span>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>/100</span>
                                   </div>
                                   <div>
                                     <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '8px' }}>Score from last analysis.</div>
@@ -1319,7 +1319,7 @@ export default function DashboardPage() {
                                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                       }}>
                                         <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(r.total), lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{r.total}</span>
-                                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>/100</span>
+                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>/100</span>
                                       </div>
                                       <div style={{ flex: 1 }}>
                                         <div style={{ color: 'var(--text)', fontSize: '13px', lineHeight: 1.6 }}>{r.summary}</div>
@@ -1440,7 +1440,7 @@ export default function DashboardPage() {
                                       color: 'var(--text)', fontSize: '12px', fontFamily: 'inherit', lineHeight: 1.5,
                                     }}
                                   />
-                                  <div style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '10px', marginTop: '3px' }}>{angle.length}/300</div>
+                                  <div style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '11px', marginTop: '3px' }}>{angle.length}/300</div>
                                 </div>
 
                                 {/* Tone selector + generate */}
@@ -1487,7 +1487,7 @@ export default function DashboardPage() {
                                         </div>
                                         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                                           {result.keywords.map((kw, i) => (
-                                            <span key={i} style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '2px 7px', fontSize: '10px' }}>{kw}</span>
+                                            <span key={i} style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '2px 7px', fontSize: '11px' }}>{kw}</span>
                                           ))}
                                         </div>
                                       </div>
@@ -1573,7 +1573,7 @@ export default function DashboardPage() {
                                                 <span style={{ color: 'var(--success)', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', flexShrink: 0, marginTop: '2px', lineHeight: 1.6 }}>After</span>
                                                 <span style={{ color: 'var(--text)', fontSize: '11px', lineHeight: 1.55, fontWeight: 500 }}>{item.tailored}</span>
                                               </div>
-                                              <div style={{ color: 'var(--text-muted)', fontSize: '10px', lineHeight: 1.5, borderTop: '1px solid var(--border)', paddingTop: '6px', marginTop: '4px' }}>{item.why}</div>
+                                              <div style={{ color: 'var(--text-muted)', fontSize: '11px', lineHeight: 1.5, borderTop: '1px solid var(--border)', paddingTop: '6px', marginTop: '4px' }}>{item.why}</div>
                                             </div>
                                           ))}
                                         </div>

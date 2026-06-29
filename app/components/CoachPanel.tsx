@@ -207,7 +207,7 @@ export function CoachPanel() {
               <Send size={15} />
             </button>
           </div>
-          <p style={{ color: 'var(--text-dim)', fontSize: '10px', margin: '7px 0 0', textAlign: 'center' }}>Enter to send · Shift+Enter for new line</p>
+          <p style={{ color: 'var(--text-dim)', fontSize: '11px', margin: '7px 0 0', textAlign: 'center' }}>Enter to send · Shift+Enter for new line</p>
         </div>
       </div>
 

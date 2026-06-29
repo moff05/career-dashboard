@@ -632,7 +632,7 @@ export function ProfilePanel() {
                       <span style={{ flexShrink: 0, fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--r-sm)', textTransform: 'capitalize', marginTop: '1px', background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>{m.category}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ color: 'var(--text)', fontSize: '13px', lineHeight: 1.55 }}>{m.content}</div>
-                        <div style={{ color: 'var(--text-dim)', fontSize: '10px', marginTop: '5px' }}>{m.source === 'manual' ? 'Added manually' : `From ${m.source}`} · {timeAgo(m.created_at)}</div>
+                        <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '5px' }}>{m.source === 'manual' ? 'Added manually' : `From ${m.source}`} · {timeAgo(m.created_at)}</div>
                       </div>
                       <button onClick={() => deleteMemory(m.id)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '2px', flexShrink: 0, display: 'flex' }}><Trash2 size={13} /></button>
                     </div>

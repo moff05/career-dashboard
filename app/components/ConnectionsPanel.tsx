@@ -206,7 +206,7 @@ export function ConnectionsPanel() {
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 <span style={{ color: 'var(--text)', fontSize: '13px', fontWeight: 700 }}>{conn.name}</span>
                                 {conn.role && <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{conn.role}</span>}
-                                <button onClick={() => cycleStatus(conn)} style={{ backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '2px 9px', fontSize: '10px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', lineHeight: '16px' }} title="Click to update status">
+                                <button onClick={() => cycleStatus(conn)} style={{ backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '2px 9px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', lineHeight: '16px' }} title="Click to update status">
                                   {cs.label}
                                 </button>
                               </div>
