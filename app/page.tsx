@@ -748,7 +748,7 @@ export default function DashboardPage() {
         </div>
         {jobs.length > 0 && (
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button id="tutorial-add-job" onClick={openImport} className="btn-primary"><Plus size={13} /> Add a Job</button>
+            <button data-tutorial="add-job" onClick={openImport} className="btn-primary"><Plus size={13} /> Add a Job</button>
           </div>
         )}
       </div>
@@ -850,7 +850,7 @@ export default function DashboardPage() {
         <div style={{ textAlign: 'center', padding: '80px 32px' }}>
           <div style={{ color: 'var(--text)', fontSize: '14px', marginBottom: '6px' }}>No jobs tracked yet</div>
           <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '24px' }}>Paste a link, paste the description, or just type it in yourself</div>
-          <button id="tutorial-add-job" onClick={openImport} className="btn-primary" style={{ margin: '0 auto' }}>
+          <button data-tutorial="add-job" onClick={openImport} className="btn-primary" style={{ margin: '0 auto' }}>
             <Plus size={13} /> Add a Job
           </button>
         </div>

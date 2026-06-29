@@ -58,7 +58,7 @@ const STEPS: TourStep[] = [
     type: 'spotlight',
     title: 'Add your first job',
     body: 'Paste a job URL or description. The AI scores your fit, finds your gaps, and tailors your resume bullets — all automatically the first time you open the job.',
-    target: '#tutorial-add-job',
+    target: '[data-tutorial="add-job"]',
     advance: 'manual',
     primaryLabel: 'Got it',
   },
