@@ -152,7 +152,7 @@ export default function WelcomePage() {
           borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: '24px',
           color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.6,
         }}>
-          No accounts, no signup. You bring your own free Anthropic API key (typical cost: a few cents a day), and everything stays in your browser — nothing is stored on a server you don&apos;t control.
+          No accounts, no signup. You bring your own Anthropic API key — your key never touches our server. New accounts start with $5 free credit, enough for dozens of job scorecards.
         </div>
 
         {!showRestore && !showCode ? (

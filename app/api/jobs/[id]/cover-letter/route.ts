@@ -61,6 +61,10 @@ Return ONLY valid JSON, no other text:
       } catch { /* fall through to plain-text fallback below */ }
     }
     if (!letter) letter = rawText.trim();
+    await db.execute({
+      sql: 'UPDATE jobs SET cover_letter_data = ? WHERE id = ? AND user_id = ?',
+      args: [JSON.stringify({ letter, keywords, tone }), parseInt(id), userId],
+    });
     return NextResponse.json({ letter, keywords, tone });
   } catch (error) {
     console.error('Cover letter error:', error);

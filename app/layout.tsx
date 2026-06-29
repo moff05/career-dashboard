@@ -79,9 +79,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta property="og:description" content="A job tracker that feels like a spreadsheet, with AI that actually earns its place." />
         <meta property="og:url" content="https://career-dashboard-ten.vercel.app" />
         <meta property="og:type" content="website" />
-        <meta name="twitter:card" content="summary" />
+        <meta property="og:image" content="https://career-dashboard-ten.vercel.app/api/og" />
+        <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="jobs_" />
         <meta name="twitter:description" content="A job tracker that feels like a spreadsheet, with AI that actually earns its place." />
+        <meta name="twitter:image" content="https://career-dashboard-ten.vercel.app/api/og" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

@@ -14,7 +14,7 @@ interface Job {
   url: string | null; description: string | null; salary_range: string | null;
   location: string | null; source: string | null; notes: string | null;
   created_at: string; status_updated_at: string | null; starred: number;
-  score_data?: string | null; gaps_data?: string | null; bullets_data?: string | null;
+  score_data?: string | null; gaps_data?: string | null; bullets_data?: string | null; cover_letter_data?: string | null;
 }
 
 interface AnalysisCategory { name: string; score: number; max: number; rationale: string; }
@@ -319,6 +319,7 @@ export default function DashboardPage() {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
   const [expandedJobs, setExpandedJobs] = useState<Set<number>>(new Set());
@@ -426,6 +427,7 @@ export default function DashboardPage() {
         const result: CoverLetterState = data.error ? 'error' : data;
         coverLetterCacheRef.current[id] = result;
         setCoverLetterResults(prev => ({ ...prev, [id]: result }));
+        if (!data.error) setJobs(prev => prev.map(j => j.id === id ? { ...j, cover_letter_data: JSON.stringify(data) } : j));
       })
       .catch(() => { coverLetterCacheRef.current[id] = 'error'; setCoverLetterResults(prev => ({ ...prev, [id]: 'error' })); });
   }, []);
@@ -433,9 +435,13 @@ export default function DashboardPage() {
   const fetchConnections = useCallback(async (company: string) => {
     if (!company || connectionsCacheRef.current[company] !== undefined) return;
     connectionsCacheRef.current[company] = [];
-    const data = await apiFetch(`/api/connections?company=${encodeURIComponent(company)}`).then(r => r.json()).catch(() => []);
-    connectionsCacheRef.current[company] = data;
-    setConnectionsMap(prev => ({ ...prev, [company]: data }));
+    try {
+      const data = await apiFetch(`/api/connections?company=${encodeURIComponent(company)}`).then(r => r.json());
+      connectionsCacheRef.current[company] = data;
+      setConnectionsMap(prev => ({ ...prev, [company]: data }));
+    } catch {
+      delete connectionsCacheRef.current[company];
+    }
   }, []);
 
   // Adding/editing a connection always happens in the standalone Connections
@@ -551,7 +557,7 @@ export default function DashboardPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Delete this job?')) return;
+    setPendingDeleteId(null);
     await apiFetch(`/api/jobs/${id}`, { method: 'DELETE' });
     setExpandedJobs(prev => { const n = new Set(prev); n.delete(id); return n; });
     fetchJobs();
@@ -596,6 +602,14 @@ export default function DashboardPage() {
             const parsed = JSON.parse(thisJob.bullets_data) as BulletsResult;
             bulletsCacheRef.current[id] = parsed;
             setBulletsResults(prev => ({ ...prev, [id]: parsed }));
+          } catch { /* ignore corrupt data */ }
+        }
+        if (thisJob?.cover_letter_data && !coverLetterCacheRef.current[id]) {
+          try {
+            const parsed = JSON.parse(thisJob.cover_letter_data) as CoverLetterResult;
+            coverLetterCacheRef.current[id] = parsed;
+            setCoverLetterResults(prev => ({ ...prev, [id]: parsed }));
+            if (parsed.tone) setCoverLetterTones(prev => ({ ...prev, [id]: parsed.tone }));
           } catch { /* ignore corrupt data */ }
         }
         const neverRun = !analysisCacheRef.current[id] && !thisJob?.match_score;
@@ -687,6 +701,9 @@ export default function DashboardPage() {
     if (job.bullets_data && !bulletsCacheRef.current[jobId]) {
       try { const p = JSON.parse(job.bullets_data) as BulletsResult; bulletsCacheRef.current[jobId] = p; setBulletsResults(prev => ({ ...prev, [jobId]: p })); } catch { /* ignore */ }
     }
+    if (job.cover_letter_data && !coverLetterCacheRef.current[jobId]) {
+      try { const p = JSON.parse(job.cover_letter_data) as CoverLetterResult; coverLetterCacheRef.current[jobId] = p; setCoverLetterResults(prev => ({ ...prev, [jobId]: p })); if (p.tone) setCoverLetterTones(prev => ({ ...prev, [jobId]: p.tone })); } catch { /* ignore */ }
+    }
     const neverRun = !analysisCacheRef.current[jobId] && !job.match_score;
     if (neverRun) {
       runAnalysis(jobId);
@@ -744,7 +761,7 @@ export default function DashboardPage() {
                   <span style={{ color: 'var(--text)', fontSize: '12px', fontWeight: 600 }}>{p.label}</span>
                   <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '8px' }}>{p.sub}</span>
                 </div>
-                {p.score != null && <span style={{ fontSize: '11px', fontWeight: 700, color: scoreColor(p.score * 10), flexShrink: 0 }}>{p.score}/10</span>}
+                {p.score != null && <span style={{ fontSize: '11px', fontWeight: 700, color: scoreColor(p.score), flexShrink: 0 }}>{p.score}/100</span>}
                 <span style={{ fontSize: '9px', fontWeight: 700, color: c.color, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{c.tag}</span>
               </button>
             );
@@ -839,7 +856,7 @@ export default function DashboardPage() {
             <div style={{
               display: 'grid', gridTemplateColumns: GRID, gap: GAP, minWidth: '720px',
               padding: '9px 16px', borderBottom: '1px solid var(--border)',
-              fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+              fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em',
             }}>
               <div />
               <div style={colHdr('title')} onClick={() => handleSort('title')}>Title <SortIcon col="title" /></div>
@@ -917,9 +934,20 @@ export default function DashboardPage() {
                               <button onClick={() => openEdit(job)} title="Edit" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '5px', borderRadius: '20px', display: 'flex' }}>
                                 <Edit2 size={11} />
                               </button>
-                              <button onClick={() => handleDelete(job.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '5px', borderRadius: '20px', display: 'flex' }}>
-                                <Trash2 size={11} />
-                              </button>
+                              {pendingDeleteId === job.id ? (
+                                <>
+                                  <button onClick={() => handleDelete(job.id)} title="Confirm delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '4px 6px', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px', fontWeight: 700, fontFamily: 'inherit' }}>
+                                    <Check size={10} /> Del
+                                  </button>
+                                  <button onClick={() => setPendingDeleteId(null)} title="Cancel" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', borderRadius: '20px', display: 'flex' }}>
+                                    <X size={10} />
+                                  </button>
+                                </>
+                              ) : (
+                                <button onClick={() => setPendingDeleteId(job.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '5px', borderRadius: '20px', display: 'flex' }}>
+                                  <Trash2 size={11} />
+                                </button>
+                              )}
                             </div>
                           </div>
 
@@ -1013,10 +1041,21 @@ export default function DashboardPage() {
                               onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
                               <Edit2 size={11} />
                             </button>
-                            <button onClick={() => handleDelete(job.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '5px', borderRadius: '20px', display: 'flex' }}
-                              onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
-                              <Trash2 size={11} />
-                            </button>
+                            {pendingDeleteId === job.id ? (
+                              <>
+                                <button onClick={() => handleDelete(job.id)} title="Confirm delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '4px 6px', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px', fontWeight: 700, fontFamily: 'inherit' }}>
+                                  <Check size={10} /> Del
+                                </button>
+                                <button onClick={() => setPendingDeleteId(null)} title="Cancel" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px', borderRadius: '20px', display: 'flex' }}>
+                                  <X size={10} />
+                                </button>
+                              </>
+                            ) : (
+                              <button onClick={() => setPendingDeleteId(job.id)} title="Delete" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '5px', borderRadius: '20px', display: 'flex' }}
+                                onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
+                                <Trash2 size={11} />
+                              </button>
+                            )}
                           </div>
                         </div>
                       )}
@@ -1092,7 +1131,7 @@ export default function DashboardPage() {
                                 ].map(({ label, value }) => (
                                   value ? (
                                     <div key={label}>
-                                      <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>{label}</div>
+                                      <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>{label}</div>
                                       <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.4 }}>{value}</div>
                                     </div>
                                   ) : null
@@ -1101,7 +1140,7 @@ export default function DashboardPage() {
                               {job.description && (
                                 <div style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '12px 14px', marginBottom: '14px' }}>
                                   <button onClick={() => setShowDescription(p => ({ ...p, [job.id]: !p[job.id] }))} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-                                    <span style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Full description</span>
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Full description</span>
                                     {showDescription[job.id] ? <ChevronDown size={12} color="var(--text-muted)" /> : <ChevronRight size={12} color="var(--text-muted)" />}
                                   </button>
                                   {showDescription[job.id] && (
@@ -1113,7 +1152,7 @@ export default function DashboardPage() {
                               )}
                               {job.notes && (
                                 <div style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '12px 14px' }}>
-                                  <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '6px' }}>Notes</div>
+                                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Notes</div>
                                   <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.6 }}>{job.notes}</div>
                                 </div>
                               )}
@@ -1126,7 +1165,7 @@ export default function DashboardPage() {
                                 return (
                                   <div style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '12px 14px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: conns.length > 0 ? '10px' : 0 }}>
-                                      <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                      <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                         Network
                                         {conns.length > 0 && <span style={{ backgroundColor: 'transparent', color: 'var(--text-muted)', borderRadius: '20px', padding: '0 5px', fontSize: '9px', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>{conns.length}</span>}
                                       </div>
@@ -1273,11 +1312,11 @@ export default function DashboardPage() {
                                 return (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '20px' }}>
                                     <div style={{ backgroundColor: 'var(--success-bg)', border: '1px solid var(--success-bg)', borderRadius: 'var(--r-lg)', padding: '14px 16px' }}>
-                                      <div style={{ color: 'var(--success)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Your Positioning</div>
+                                      <div style={{ color: 'var(--success)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>Your Positioning</div>
                                       <p style={{ color: 'var(--success)', fontSize: '12px', lineHeight: 1.65, margin: 0 }}>{g.positioning}</p>
                                     </div>
                                     <div>
-                                      <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>Gaps to Address</div>
+                                      <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Gaps to Address</div>
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         {g.gaps.map((gap, i) => (
                                           <div key={i} style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '12px 14px' }}>
@@ -1297,7 +1336,7 @@ export default function DashboardPage() {
                                       <span style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5 }}>{g.apply_reasoning}</span>
                                     </div>
                                     <div>
-                                      <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Quick Wins</div>
+                                      <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>Quick Wins</div>
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                         {g.quick_wins.map((w, i) => (
                                           <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
@@ -1377,7 +1416,7 @@ export default function DashboardPage() {
                                     </div>
                                     {result.keywords && result.keywords.length > 0 && (
                                       <div style={{ marginBottom: '12px' }}>
-                                        <div style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                                        <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-muted)', marginBottom: '6px' }}>
                                           ATS keywords mirrored in this letter
                                         </div>
                                         <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -1440,7 +1479,7 @@ export default function DashboardPage() {
 
                                       {/* Lead With */}
                                       <div>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Lead With These</div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>Lead With These</div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                           {b.lead_with.map((item, i) => (
                                             <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '10px 13px' }}>
@@ -1456,7 +1495,7 @@ export default function DashboardPage() {
 
                                       {/* Tailored bullets */}
                                       <div>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Tailored Bullets</div>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>Tailored Bullets</div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                           {b.tailored_bullets.map((item, i) => (
                                             <div key={i} style={{ backgroundColor: 'var(--surface)', borderRadius: 'var(--r-lg)', padding: '12px 14px' }}>
@@ -1477,7 +1516,7 @@ export default function DashboardPage() {
                                       {/* Keywords + Deprioritize */}
                                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                                         <div>
-                                          <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Add These Keywords</div>
+                                          <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>Add These Keywords</div>
                                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                                             {b.keywords_to_add.map((k, i) => (
                                               <span key={i} style={{ backgroundColor: 'var(--surface)', color: '#818cf8', border: '1px solid rgba(129,140,248,0.2)', borderRadius: '20px', padding: '3px 8px', fontSize: '11px', fontWeight: 500 }}>{k}</span>
@@ -1486,7 +1525,7 @@ export default function DashboardPage() {
                                         </div>
                                         {b.deprioritize.length > 0 && (
                                           <div>
-                                            <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px' }}>Deprioritize</div>
+                                            <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>Deprioritize</div>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                               {b.deprioritize.map((item, i) => (
                                                 <div key={i} style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
@@ -1538,7 +1577,7 @@ export default function DashboardPage() {
                   style={{ width: '100%', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '11px 14px', color: 'var(--text)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                   onFocus={e => (e.target.style.borderColor = 'var(--accent)')} onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
                 <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '10px' }}>Job description <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>— required if no link above</span></div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>Job description <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>— required if no link above</span></div>
                   <textarea value={importExtraText} onChange={e => setImportExtraText(e.target.value)} placeholder="Paste the job description, a recruiter email, or any extra details..." rows={3}
                     style={{ width: '100%', backgroundColor: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '10px 12px', color: 'var(--text-muted)', fontSize: '12px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, marginBottom: '8px' }} />
                   <input type="url" value={importExtraLink} onChange={e => setImportExtraLink(e.target.value)} placeholder="Additional link (LinkedIn, company page...)"

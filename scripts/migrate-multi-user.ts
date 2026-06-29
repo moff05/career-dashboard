@@ -201,6 +201,7 @@ async function migrate() {
   await addColumn('jobs', 'score_data', 'TEXT');
   await addColumn('jobs', 'gaps_data', 'TEXT');
   await addColumn('jobs', 'bullets_data', 'TEXT');
+  await addColumn('jobs', 'cover_letter_data', 'TEXT');
 
   await migrateResumeTable();
 
