@@ -364,6 +364,10 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.85); }
   .overlay-backdrop, .overlay-panel.from-bottom, .overlay-panel.from-right { animation: none; }
 }
 
+/* ─── UTILITIES ─────────────────────────────────────────────────── */
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
 /* ─── MOBILE ────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .page-container { padding: 16px; }

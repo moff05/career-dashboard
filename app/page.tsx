@@ -885,7 +885,7 @@ export default function DashboardPage() {
                       {isJobExpanded && (
                         <div style={{ backgroundColor: 'var(--bg)', borderBottom: '1px solid var(--border)', padding: '0 16px 24px' }}>
                           {/* Tabs */}
-                          <div style={{ display: 'flex', gap: '0px', borderBottom: '1px solid var(--border)', marginBottom: '20px', paddingTop: '14px', flexWrap: 'nowrap', overflowX: 'auto' }}>
+                          <div className="hide-scrollbar" style={{ display: 'flex', gap: '0px', borderBottom: '1px solid var(--border)', marginBottom: '20px', paddingTop: '14px', flexWrap: 'nowrap', overflowX: 'auto' }}>
                             {[
                               { id: 'overview',        label: 'Overview' },
                               { id: 'analysis',        label: 'Analysis' },
