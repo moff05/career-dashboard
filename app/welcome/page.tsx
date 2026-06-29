@@ -121,7 +121,7 @@ export default function WelcomePage() {
             jobs<span style={{ color: 'var(--accent)' }}>_</span>
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '8px 0 0', lineHeight: 1.6 }}>
-            A job tracker that feels like a spreadsheet, with two AI features that earn their place.
+            A job tracker that feels like a spreadsheet, with AI that actually earns its place.
           </p>
         </div>
 
@@ -152,7 +152,7 @@ export default function WelcomePage() {
           borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: '24px',
           color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.6,
         }}>
-          No accounts, no signup. You bring your own Anthropic API key — your key never touches our server. New accounts start with $5 free credit, enough for dozens of job scorecards.
+          No accounts, no signup. Your API key is browser-only — it never touches our server. Anthropic gives new API users $5 in free credit, enough for dozens of job scorecards.
         </div>
 
         {!showRestore && !showCode ? (
@@ -284,7 +284,7 @@ export default function WelcomePage() {
         )}
 
         <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '11px', marginTop: '20px' }}>
-          Open source · Your data stays with you
+          Open source · API key stays local
         </p>
       </div>
     </div>

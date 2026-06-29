@@ -326,6 +326,8 @@ export default function DashboardPage() {
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [loadError, setLoadError] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
@@ -538,41 +540,69 @@ export default function DashboardPage() {
 
   const handleImportSave = async () => {
     setSaving(true);
-    await apiFetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...importForm, match_score: importForm.match_score ? parseInt(importForm.match_score) : null, type_year: importForm.type_year ? parseInt(importForm.type_year) : null }) });
-    setSaving(false); closeImport(); fetchJobs();
+    setImportFetchError('');
+    try {
+      await apiFetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...importForm, match_score: importForm.match_score ? parseInt(importForm.match_score) : null, type_year: importForm.type_year ? parseInt(importForm.type_year) : null }) });
+      closeImport(); fetchJobs();
+    } catch {
+      setImportFetchError('Save failed — check your connection and try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
-    const data = await apiFetch('/api/jobs').then(r => r.json());
-    setJobs(data);
-    setLoading(false);
-    setExpandedCompanies(new Set([...new Set(data.map((j: Job) => j.company))] as string[]));
+    setLoadError(false);
+    try {
+      const data = await apiFetch('/api/jobs').then(r => r.json());
+      setJobs(data);
+      setExpandedCompanies(new Set([...new Set(data.map((j: Job) => j.company))] as string[]));
+    } catch {
+      setJobs([]);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError('');
     const payload = { ...form, match_score: form.match_score ? parseInt(form.match_score) : null, type_year: form.type_year ? parseInt(form.type_year) : null };
-    if (editingJob) {
-      await apiFetch(`/api/jobs/${editingJob.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    } else {
-      await apiFetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    try {
+      if (editingJob) {
+        await apiFetch(`/api/jobs/${editingJob.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      } else {
+        await apiFetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      }
+      setShowModal(false); fetchJobs();
+    } catch {
+      setSaveError('Save failed — check your connection and try again.');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false); setShowModal(false); fetchJobs();
   };
 
   const handleDelete = async (id: number) => {
     setPendingDeleteId(null);
-    await apiFetch(`/api/jobs/${id}`, { method: 'DELETE' });
-    setExpandedJobs(prev => { const n = new Set(prev); n.delete(id); return n; });
-    fetchJobs();
+    try {
+      await apiFetch(`/api/jobs/${id}`, { method: 'DELETE' });
+      setExpandedJobs(prev => { const n = new Set(prev); n.delete(id); return n; });
+      fetchJobs();
+    } catch { /* leave the job in place — user can retry */ }
   };
 
   const handleStatusChange = async (id: number, status: string) => {
-    await apiFetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
-    setJobs(prev => prev.map(j => j.id === id ? { ...j, status } : j));
+    const prev = jobs.find(j => j.id === id)?.status;
+    setJobs(jobs => jobs.map(j => j.id === id ? { ...j, status } : j));
+    try {
+      await apiFetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+    } catch {
+      if (prev) setJobs(jobs => jobs.map(j => j.id === id ? { ...j, status: prev } : j));
+    }
   };
 
   const handleStarToggle = async (id: number, current: number) => {
@@ -646,6 +676,7 @@ export default function DashboardPage() {
   const openEdit = (job: Job) => {
     setEditingJob(job);
     setForm({ company: job.company, title: job.title, type: job.type, status: job.status, match_score: job.match_score?.toString()||'', location: job.location||'', source: job.source||'', posting_date: job.posting_date||'', deadline: job.deadline||'', url: job.url||'', salary_range: job.salary_range||'', notes: job.notes||'', description: job.description||'', type_year: job.type_year?.toString()||'' });
+    setSaveError('');
     setShowModal(true);
   };
 
@@ -836,6 +867,29 @@ export default function DashboardPage() {
             <Star size={11} fill={starFilter ? 'var(--accent)' : 'none'} /> Starred
           </button>
         </div>
+        {isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>Sort</span>
+            <select
+              value={sortBy ? `${sortBy}-${sortDir}` : ''}
+              onChange={e => {
+                const v = e.target.value;
+                if (!v) { setSortBy(null); setSortDir('asc'); }
+                else { const [col, dir] = v.split('-'); setSortBy(col); setSortDir(dir as 'asc' | 'desc'); }
+              }}
+              style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '4px 8px', color: 'var(--text)', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }}
+            >
+              <option value="">Default (starred first)</option>
+              <option value="title-asc">Title A–Z</option>
+              <option value="title-desc">Title Z–A</option>
+              <option value="match_score-desc">Score: High first</option>
+              <option value="match_score-asc">Score: Low first</option>
+              <option value="deadline-asc">Deadline: Soonest</option>
+              <option value="deadline-desc">Deadline: Latest</option>
+              <option value="status-asc">Status A–Z</option>
+            </select>
+          </div>
+        )}
       </div>
       {(searchText || statusFilter !== 'all' || typeFilter !== 'all' || starFilter) && (
         <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginBottom: '10px' }}>
@@ -846,6 +900,11 @@ export default function DashboardPage() {
       {/* Table */}
       {loading ? (
         <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '80px', fontSize: '13px' }}>Loading...</div>
+      ) : loadError ? (
+        <div style={{ textAlign: 'center', padding: '80px 32px' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '12px' }}>Failed to load jobs.</div>
+          <button onClick={fetchJobs} className="btn-ghost" style={{ fontSize: '12px', padding: '6px 14px' }}>Retry</button>
+        </div>
       ) : jobs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '80px 32px' }}>
           <div style={{ color: 'var(--text)', fontSize: '14px', marginBottom: '6px' }}>No jobs tracked yet</div>
@@ -1735,7 +1794,8 @@ export default function DashboardPage() {
               <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Description</label>
               <textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} style={{ ...formInput, resize: 'vertical', fontFamily: 'inherit' }} />
             </div>
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
+            {saveError && <div style={{ color: 'var(--danger)', fontSize: '11px', textAlign: 'right', marginTop: '12px' }}>{saveError}</div>}
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
               <button onClick={() => setShowModal(false)} style={{ backgroundColor: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
               <button onClick={handleSave} disabled={saving || !form.company || !form.title} className="btn-primary">
                 {saving ? 'Saving...' : 'Save Job'}

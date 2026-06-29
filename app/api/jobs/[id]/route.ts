@@ -33,9 +33,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const { id } = await params;
     const body = await request.json();
     if ('status' in body) body.status_updated_at = new Date().toISOString();
-    const fields = Object.keys(body).map(k => `${k} = ?`).join(', ');
+    const ALLOWED = new Set(['status', 'status_updated_at', 'starred', 'notes', 'type', 'type_year', 'match_score', 'posting_date', 'deadline', 'url', 'salary_range', 'location', 'source', 'company', 'title', 'description', 'cover_letter_data', 'score_data', 'gaps_data', 'bullets_data']);
+    const safeKeys = Object.keys(body).filter(k => ALLOWED.has(k));
+    if (safeKeys.length === 0) return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    const fields = safeKeys.map(k => `${k} = ?`).join(', ');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const args = [...Object.values(body), parseInt(id), userId] as any[];
+    const args = [...safeKeys.map(k => body[k]), parseInt(id), userId] as any[];
     await db.execute({ sql: `UPDATE jobs SET ${fields} WHERE id = ? AND user_id = ?`, args });
     const updated = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ? AND user_id = ?', args: [parseInt(id), userId] })).rows[0];
     if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
