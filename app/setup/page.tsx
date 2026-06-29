@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, FileText } from 'lucide-react';
 import { saveUser } from '@/app/hooks/useUser';
@@ -38,6 +38,9 @@ const LABEL: React.CSSProperties = {
 
 export default function SetupPage() {
   const router = useRouter();
+  useEffect(() => {
+    if (localStorage.getItem('cid_user_id')) router.replace('/');
+  }, [router]);
   const [step, setStep] = useState<Step>(STEPS[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -391,14 +394,14 @@ export default function SetupPage() {
                 background: 'var(--surface)', border: '1px solid var(--border)',
                 borderRadius: 'var(--r-lg)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px',
               }}>
-                <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>Where to get one:</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>Where to get one (free):</div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5 }}>
-                  1. Go to <span style={{ color: 'var(--accent)' }}>console.anthropic.com</span><br />
-                  2. Sign up / log in → API Keys → Create Key<br />
+                  1. Go to <span style={{ color: 'var(--accent)' }}>console.anthropic.com</span> — new accounts get <strong style={{ color: 'var(--text)' }}>$5 free credit</strong>, no card needed<br />
+                  2. API Keys → Create Key<br />
                   3. Paste it above
                 </div>
                 <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '2px' }}>
-                  Typical cost: ~$0.05–0.20/day for normal use. Your key is stored in your browser only.
+                  $5 covers ~30–60 full AI actions. Your key is stored in your browser only.
                 </div>
               </div>
 
