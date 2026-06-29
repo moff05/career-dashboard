@@ -79,12 +79,17 @@ function useTargetRect(selector: string | undefined, step: number) {
   useEffect(() => {
     if (!selector) { setRect(null); return; }
     const measure = () => {
-      requestAnimationFrame(() => {
-        const el = document.querySelector(selector);
-        setRect(el ? el.getBoundingClientRect() : null);
-      });
+      const el = document.querySelector(selector);
+      setRect(el ? el.getBoundingClientRect() : null);
+      return !!el;
     };
-    measure();
+    // Poll until the target element appears in the DOM (handles elements that
+    // render after a data fetch, e.g. the Add a Job button on step 4)
+    if (!measure()) {
+      const interval = setInterval(() => { if (measure()) clearInterval(interval); }, 100);
+      window.addEventListener('resize', measure);
+      return () => { clearInterval(interval); window.removeEventListener('resize', measure); };
+    }
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, [selector, step]);
