@@ -116,3 +116,5 @@ lib/
 ## Design
 
 Primary black canvas (`#0A0A0A`), white/gray text, one orange accent (`#F97316`) — verified against WCAG AA, not eyeballed. JetBrains Mono for everything, including AI-generated prose. The `>` prompt is the recurring brand motif. The aesthetic borrows from terminal/CLI culture; the product underneath does not — every action is a button or a form, never a command to type or remember.
+
+
