@@ -54,6 +54,7 @@ export function ProfilePanel() {
   const [editField, setEditField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveFieldError, setSaveFieldError] = useState('');
 
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [activeResumeId, setActiveResumeId] = useState<number | null>(null);
@@ -224,33 +225,42 @@ export function ProfilePanel() {
     setResumeError(''); setResumeEditing(true); setPendingProfileFields(null); setPrefilledFields([]);
   }
   async function addResume() {
-    const created = await apiFetch('/api/resumes', { method: 'POST', body: JSON.stringify({ name: `Resume ${resumes.length + 1}`, raw_text: '' }) }).then(r => r.json()) as Resume;
-    setResumes(prev => [...prev, created]);
-    setActiveResumeId(created.id); setResumeDraft(''); setNameDraft(created.name);
-    setResumeError(''); setPendingProfileFields(null); setPrefilledFields([]); setResumeEditing(true);
+    try {
+      const created = await apiFetch('/api/resumes', { method: 'POST', body: JSON.stringify({ name: `Resume ${resumes.length + 1}`, raw_text: '' }) }).then(r => r.json()) as Resume;
+      setResumes(prev => [...prev, created]);
+      setActiveResumeId(created.id); setResumeDraft(''); setNameDraft(created.name);
+      setResumeError(''); setPendingProfileFields(null); setPrefilledFields([]); setResumeEditing(true);
+    } catch { setResumeError('Could not create resume. Try again.'); }
   }
   async function deleteResume(id: number) {
-    await apiFetch(`/api/resumes/${id}`, { method: 'DELETE' });
-    await loadResumes(); setResumeEditing(false);
+    try {
+      await apiFetch(`/api/resumes/${id}`, { method: 'DELETE' });
+      await loadResumes(); setResumeEditing(false);
+    } catch { setResumeError('Failed to delete resume. Try again.'); }
   }
   async function setDefaultResume(id: number) {
-    await apiFetch(`/api/resumes/${id}`, { method: 'PUT', body: JSON.stringify({ set_default: true }) });
-    await loadResumes(id);
+    try {
+      await apiFetch(`/api/resumes/${id}`, { method: 'PUT', body: JSON.stringify({ set_default: true }) });
+      await loadResumes(id);
+    } catch { setResumeError('Failed to update default. Try again.'); }
   }
   async function saveResume() {
     if (!activeResume) return;
-    setResumeSaving(true);
-    const updated = await apiFetch(`/api/resumes/${activeResume.id}`, { method: 'PUT', body: JSON.stringify({ name: nameDraft.trim() || activeResume.name, raw_text: resumeDraft }) }).then(r => r.json()) as Resume;
-    setResumes(prev => prev.map(r => r.id === updated.id ? updated : r));
-    if (pendingProfileFields) {
-      const merged = { ...profile } as Record<string, string | undefined>;
-      let changed = false;
-      for (const [key, value] of Object.entries(pendingProfileFields)) {
-        if (value?.trim() && !merged[key]?.trim()) { merged[key] = value.trim(); changed = true; }
+    setResumeSaving(true); setResumeError('');
+    try {
+      const updated = await apiFetch(`/api/resumes/${activeResume.id}`, { method: 'PUT', body: JSON.stringify({ name: nameDraft.trim() || activeResume.name, raw_text: resumeDraft }) }).then(r => r.json()) as Resume;
+      setResumes(prev => prev.map(r => r.id === updated.id ? updated : r));
+      if (pendingProfileFields) {
+        const merged = { ...profile } as Record<string, string | undefined>;
+        let changed = false;
+        for (const [key, value] of Object.entries(pendingProfileFields)) {
+          if (value?.trim() && !merged[key]?.trim()) { merged[key] = value.trim(); changed = true; }
+        }
+        if (changed) { const res = await apiFetch('/api/profile', { method: 'PUT', body: JSON.stringify(merged) }); setProfile(await res.json()); }
       }
-      if (changed) { const res = await apiFetch('/api/profile', { method: 'PUT', body: JSON.stringify(merged) }); setProfile(await res.json()); }
-    }
-    setResumeEditing(false); setResumeSaving(false); setPendingProfileFields(null); setPrefilledFields([]);
+      setResumeEditing(false); setPendingProfileFields(null); setPrefilledFields([]);
+    } catch { setResumeError('Failed to save resume. Try again.'); }
+    setResumeSaving(false);
   }
   async function handleResumeFile(file: File | undefined) {
     if (!file) return;
@@ -275,18 +285,23 @@ export function ProfilePanel() {
     setResumeParsing(false);
   }
 
-  const startEdit = (field: string, value: string) => { setEditField(field); setEditValue(value || ''); };
+  const startEdit = (field: string, value: string) => { setEditField(field); setEditValue(value || ''); setSaveFieldError(''); };
   const saveField = async () => {
     if (!editField) return;
-    setSaving(true);
-    const updated = { ...profile, [editField]: editValue };
-    const res = await apiFetch('/api/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
-    setProfile(await res.json()); setEditField(null); setSaving(false);
+    setSaving(true); setSaveFieldError('');
+    try {
+      const updated = { ...profile, [editField]: editValue };
+      const res = await apiFetch('/api/profile', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updated) });
+      setProfile(await res.json()); setEditField(null);
+    } catch { setSaveFieldError('Failed to save. Try again.'); }
+    setSaving(false);
   };
 
   async function deleteMemory(id: number) {
-    await apiFetch(`/api/memories/${id}`, { method: 'DELETE' });
-    setMemories(prev => prev.filter(m => m.id !== id));
+    try {
+      await apiFetch(`/api/memories/${id}`, { method: 'DELETE' });
+      setMemories(prev => prev.filter(m => m.id !== id));
+    } catch { /* memory stays in list if delete fails */ }
   }
 
   const EditableField = ({ field, label, value, multiline = false }: { field: string; label: string; value: string | undefined; multiline?: boolean }) => {
@@ -308,8 +323,9 @@ export function ProfilePanel() {
               : <input type="text" value={editValue} onChange={e => setEditValue(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') saveField(); if (e.key === 'Escape') setEditField(null); }} autoFocus className="field-input" style={{ width: '100%' }} />}
             <div style={{ display: 'flex', gap: '8px', marginTop: '7px' }}>
               <button onClick={saveField} disabled={saving} className="btn-primary" style={{ padding: '5px 14px', fontSize: '12px' }}>{saving ? 'Saving…' : 'Save'}</button>
-              <button onClick={() => setEditField(null)} className="btn-ghost" style={{ padding: '5px 12px', fontSize: '12px' }}>Cancel</button>
+              <button onClick={() => { setEditField(null); setSaveFieldError(''); }} className="btn-ghost" style={{ padding: '5px 12px', fontSize: '12px' }}>Cancel</button>
             </div>
+            {saveFieldError && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '5px' }}>{saveFieldError}</div>}
           </div>
         ) : (
           <div style={{ color: 'var(--text)', fontSize: '13px', lineHeight: '1.5' }}>
