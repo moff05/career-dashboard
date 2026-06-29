@@ -24,10 +24,10 @@ export function CoachPanel() {
   const { coachOpen, closeCoach, coachPrefill } = useOverlays();
   const [sessionId] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      const stored = sessionStorage.getItem('coach-session-id');
+      const stored = localStorage.getItem('coach-session-id');
       if (stored) return stored;
       const id = crypto.randomUUID();
-      sessionStorage.setItem('coach-session-id', id);
+      localStorage.setItem('coach-session-id', id);
       return id;
     }
     return 'default';

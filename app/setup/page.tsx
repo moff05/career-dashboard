@@ -447,7 +447,7 @@ export default function SetupPage() {
 
         {/* Footer note */}
         <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '11px', marginTop: '20px' }}>
-          Open source · Your data stays with you · No account required
+          Open source · API key stays local · No account required
         </p>
       </div>
     </div>

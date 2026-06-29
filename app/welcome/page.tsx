@@ -152,7 +152,7 @@ export default function WelcomePage() {
           borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: '24px',
           color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.6,
         }}>
-          No accounts, no signup. Your API key is browser-only — it never touches our server. Anthropic gives new API users $5 in free credit, enough for dozens of job scorecards.
+          No accounts, no signup. Your API key is browser-only — it never touches our server. Anthropic gives new API users $5 in free credit — job scoring costs ~$0.01 per role, coach conversations ~$0.05–0.20 each.
         </div>
 
         {!showRestore && !showCode ? (
@@ -225,6 +225,9 @@ export default function WelcomePage() {
                 borderRadius: 'var(--r-lg)', padding: '12px 18px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
               }}>Cancel</button>
             </div>
+            <p style={{ color: 'var(--text-dim)', fontSize: '11px', margin: 0, lineHeight: 1.5 }}>
+              The sync code temporarily stores your API key server-side for up to 10 minutes to complete the transfer, then it&apos;s automatically deleted.
+            </p>
           </div>
 
         ) : (

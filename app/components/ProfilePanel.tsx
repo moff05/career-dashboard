@@ -105,10 +105,12 @@ export function ProfilePanel() {
   const [memFilter, setMemFilter] = useState('all');
 
   async function loadResumes(selectId?: number) {
-    const data = await apiFetch('/api/resumes').then(r => r.json()) as Resume[];
-    setResumes(data);
-    const fallback = data.find(r => r.is_default) || data[0];
-    setActiveResumeId(selectId ?? fallback?.id ?? null);
+    try {
+      const data = await apiFetch('/api/resumes').then(r => r.json()) as Resume[];
+      setResumes(data);
+      const fallback = data.find(r => r.is_default) || data[0];
+      setActiveResumeId(selectId ?? fallback?.id ?? null);
+    } catch { /* panel shows empty resume state */ }
   }
   async function fetchMemories() {
     const data = await apiFetch('/api/memories').then(r => r.json()).catch(() => []);
@@ -121,7 +123,7 @@ export function ProfilePanel() {
     if (!profileOpen || loaded.done) return;
     loaded.done = true;
     setCurrentApiKey(localStorage.getItem('cid_api_key') || '');
-    apiFetch('/api/profile').then(r => r.json()).then(data => setProfile(data));
+    apiFetch('/api/profile').then(r => r.json()).then(data => setProfile(data)).catch(() => {});
     loadResumes();
     apiFetch('/api/usage').then(r => r.json()).then(data => setUsage(data)).finally(() => setLoadingUsage(false));
     fetchMemories();
@@ -491,7 +493,7 @@ export function ProfilePanel() {
                 {deviceCodeMode === 'generate' ? (
                   <>
                     <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 12px', lineHeight: 1.5 }}>
-                      Generate a code on this device, then enter it on your other device.
+                      Generate a code on this device, then enter it on your other device. Your API key is temporarily stored server-side for up to 10 minutes to complete the transfer, then automatically deleted.
                     </p>
                     {deviceCode && deviceCodeSecondsLeft > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
