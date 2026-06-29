@@ -27,6 +27,19 @@ const ROUTE_LABELS: Record<string, string> = {
   resume_extract: 'Resume Parsing', hunt_agent: 'Job Hunt',
   profile_summary: 'Profile Summary', weekly_brief: 'Weekly Brief',
 };
+const ROUTE_DESCRIPTIONS: Record<string, string> = {
+  coach_chat: 'Personalized job search coaching',
+  fit_scorecard: 'Match score breakdown by category',
+  fit_gaps: 'Skill gaps vs. job requirements',
+  resume_bullets: 'Resume bullets tailored to each role',
+  cover_letter: 'Cover letter drafts',
+  memory_extraction: 'Saves insights from Coach chats',
+  job_import: 'AI extraction from pasted job postings',
+  resume_extract: 'Parses your uploaded resume',
+  profile_summary: 'AI summary of your profile',
+  hunt_agent: 'AI-powered job scouting (early feature)',
+  weekly_brief: 'Weekly job search digest (early feature)',
+};
 interface Memory { id: number; content: string; category: string; source: string; created_at: string; }
 const MEMORY_CATEGORIES = ['preference', 'goal', 'insight', 'company', 'role', 'location', 'skill', 'story_bank', 'other'];
 
@@ -604,8 +617,13 @@ export function ProfilePanel() {
                       return (
                         <div key={r.route}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '3px' }}>
-                            <span style={{ color: 'var(--text)' }}>{ROUTE_LABELS[r.route] || r.route}</span>
-                            <span style={{ color: 'var(--text-muted)' }}>${r.cost_usd.toFixed(3)}</span>
+                            <div>
+                              <span style={{ color: 'var(--text)' }}>{ROUTE_LABELS[r.route] || r.route}</span>
+                              {ROUTE_DESCRIPTIONS[r.route] && (
+                                <div style={{ color: 'var(--text-dim)', fontSize: '10px', marginTop: '1px' }}>{ROUTE_DESCRIPTIONS[r.route]}</div>
+                              )}
+                            </div>
+                            <span style={{ color: 'var(--text-muted)', flexShrink: 0, marginLeft: '8px' }}>${r.cost_usd.toFixed(3)}</span>
                           </div>
                           <div style={{ height: '4px', borderRadius: '2px', background: 'var(--surface-2)', overflow: 'hidden' }}>
                             <div style={{ height: '100%', width: `${Math.max(pct, 2)}%`, background: 'var(--accent)', borderRadius: '2px' }} />

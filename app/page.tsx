@@ -779,11 +779,26 @@ export default function DashboardPage() {
                             <div onClick={e => e.stopPropagation()}>
                               <StatusBadge job={job} onStatusChange={handleStatusChange} />
                             </div>
-                            {job.match_score != null && (
-                              <span style={{ color: job.match_score >= 80 ? 'var(--success)' : job.match_score >= 60 ? 'var(--accent)' : 'var(--danger)', fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
-                                {job.match_score}/100
-                              </span>
-                            )}
+                            {job.match_score != null && (() => {
+                              let gap: string | null = null;
+                              if (job.score_data) {
+                                try {
+                                  const d = JSON.parse(job.score_data) as AnalysisResult;
+                                  if (d.categories?.length) {
+                                    const w = d.categories.reduce((a, b) => (a.score / a.max) <= (b.score / b.max) ? a : b);
+                                    gap = w.name;
+                                  }
+                                } catch { /* ignore */ }
+                              }
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                                  <span style={{ color: scoreColor(job.match_score), fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
+                                    {job.match_score}/100
+                                  </span>
+                                  {gap && <span style={{ color: 'var(--text-dim)', fontSize: '10px' }}>↓ {gap}</span>}
+                                </div>
+                              );
+                            })()}
                             {job.deadline && (
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                 <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>Due</span>
@@ -843,11 +858,26 @@ export default function DashboardPage() {
 
                           {/* Score */}
                           <div>
-                            {job.match_score ? (
-                              <span style={{ color: job.match_score >= 80 ? 'var(--success)' : job.match_score >= 60 ? 'var(--accent)' : 'var(--danger)', fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums' }}>
-                                {job.match_score}/100
-                              </span>
-                            ) : <span style={{ color: 'var(--text-dim)' }}>—</span>}
+                            {job.match_score ? (() => {
+                              let gap: string | null = null;
+                              if (job.score_data) {
+                                try {
+                                  const d = JSON.parse(job.score_data) as AnalysisResult;
+                                  if (d.categories?.length) {
+                                    const w = d.categories.reduce((a, b) => (a.score / a.max) <= (b.score / b.max) ? a : b);
+                                    gap = w.name;
+                                  }
+                                } catch { /* ignore */ }
+                              }
+                              return (
+                                <span
+                                  title={gap ? `Gap: ${gap}` : undefined}
+                                  style={{ color: scoreColor(job.match_score), fontWeight: 800, fontSize: '12px', fontVariantNumeric: 'tabular-nums', cursor: gap ? 'help' : 'default' }}
+                                >
+                                  {job.match_score}/100
+                                </span>
+                              );
+                            })() : <span style={{ color: 'var(--text-dim)' }}>—</span>}
                           </div>
 
                           {/* Deadline */}
