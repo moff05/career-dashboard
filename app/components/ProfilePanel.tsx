@@ -25,7 +25,7 @@ const ROUTE_LABELS: Record<string, string> = {
   fit_scorecard: 'Fit Scorecard', resume_bullets: 'Resume Bullets', cover_letter: 'Cover Letter',
   job_details: 'Job Details', fit_gaps: 'Fit Gaps', job_import: 'Job Import',
   resume_extract: 'Resume Parsing', hunt_agent: 'Job Hunt',
-  profile_summary: 'Profile Summary', weekly_brief: 'Weekly Brief',
+  profile_summary: 'Profile Summary',
 };
 const ROUTE_DESCRIPTIONS: Record<string, string> = {
   coach_chat: 'Personalized job search coaching',
@@ -38,7 +38,6 @@ const ROUTE_DESCRIPTIONS: Record<string, string> = {
   resume_extract: 'Parses your uploaded resume',
   profile_summary: 'AI summary of your profile',
   hunt_agent: 'AI-powered job scouting (early feature)',
-  weekly_brief: 'Weekly job search digest (early feature)',
 };
 interface Memory { id: number; content: string; category: string; source: string; created_at: string; }
 const MEMORY_CATEGORIES = ['preference', 'goal', 'insight', 'company', 'role', 'location', 'skill', 'story_bank', 'other'];
