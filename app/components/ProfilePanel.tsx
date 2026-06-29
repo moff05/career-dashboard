@@ -24,7 +24,8 @@ const ROUTE_LABELS: Record<string, string> = {
   coach_chat: 'Coach Chat', memory_extraction: 'Memory Extraction',
   fit_scorecard: 'Fit Scorecard', resume_bullets: 'Resume Bullets', cover_letter: 'Cover Letter',
   job_details: 'Job Details', fit_gaps: 'Fit Gaps', job_import: 'Job Import',
-  resume_extract: 'Resume Parsing',
+  resume_extract: 'Resume Parsing', hunt_agent: 'Job Hunt',
+  profile_summary: 'Profile Summary', weekly_brief: 'Weekly Brief',
 };
 interface Memory { id: number; content: string; category: string; source: string; created_at: string; }
 const MEMORY_CATEGORIES = ['preference', 'goal', 'insight', 'company', 'role', 'location', 'skill', 'story_bank', 'other'];
@@ -472,7 +473,7 @@ export function ProfilePanel() {
               <div style={card}>
                 <h3 className="section-label" style={{ margin: '0 0 6px' }}>Backup &amp; Restore</h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 14px', lineHeight: 1.5 }}>
-                  There are no accounts here — your data lives only in this browser. If you clear your browser data or switch devices, it&apos;s gone unless you&apos;ve backed it up.
+                  Your jobs and profile are stored on our server. This backup protects your session ID — the browser key that links you to your account. If you lose it, restore from here to reconnect.
                 </p>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button onClick={handleExport} disabled={exporting} className="btn-ghost">
@@ -648,7 +649,7 @@ export function ProfilePanel() {
                       <span style={{ flexShrink: 0, fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: 'var(--r-sm)', textTransform: 'capitalize', marginTop: '1px', background: 'var(--surface-2)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>{m.category}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ color: 'var(--text)', fontSize: '13px', lineHeight: 1.55 }}>{m.content}</div>
-                        <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '5px' }}>{m.source === 'manual' ? 'Added manually' : `From ${m.source}`} · {timeAgo(m.created_at)}</div>
+                        <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '5px' }}>{m.source === 'manual' ? 'Added manually' : 'From Coach'} · {timeAgo(m.created_at)}</div>
                       </div>
                       <button onClick={() => deleteMemory(m.id)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '2px', flexShrink: 0, display: 'flex' }}><Trash2 size={13} /></button>
                     </div>
