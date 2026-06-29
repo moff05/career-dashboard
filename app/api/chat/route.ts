@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const sid = session_id || 'default';
 
     const history = (await db.execute({
-      sql: 'SELECT role, content FROM chat_messages WHERE user_id = ? AND session_id = ? ORDER BY created_at ASC LIMIT 20',
+      sql: 'SELECT role, content FROM chat_messages WHERE user_id = ? AND session_id = ? ORDER BY created_at ASC LIMIT 50',
       args: [userId, sid],
     })).rows as unknown as DbMessage[];
 
