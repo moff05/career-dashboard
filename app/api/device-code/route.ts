@@ -20,6 +20,15 @@ export async function POST(request: NextRequest) {
     // Clean up expired codes
     await db.execute({ sql: 'DELETE FROM device_codes WHERE expires_at < ?', args: [new Date().toISOString()] });
 
+    // Rate limit: at most 3 active codes per user at a time
+    const activeCount = (await db.execute({
+      sql: 'SELECT COUNT(*) as cnt FROM device_codes WHERE user_id = ?',
+      args: [userId],
+    })).rows[0] as unknown as { cnt: number };
+    if (Number(activeCount.cnt) >= 3) {
+      return NextResponse.json({ error: 'Too many active codes. Wait a few minutes and try again.' }, { status: 429 });
+    }
+
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
