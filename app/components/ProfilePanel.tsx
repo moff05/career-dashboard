@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
-import { Edit2, ExternalLink, Loader, FileText, Check, Download, Upload, Plus, DollarSign, X, Trash2, Brain, Smartphone } from 'lucide-react';
+import { Edit2, ExternalLink, Loader, FileText, Check, Download, Upload, Plus, Activity, X, Trash2, Brain, Smartphone } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
 import { BookOpen } from 'lucide-react';
 import { useRef } from 'react';
@@ -19,6 +19,11 @@ interface Usage {
   total_calls: number; total_input_tokens: number; total_output_tokens: number;
   total_web_search_requests: number; total_cost_usd: number; since: string | null;
   by_route: UsageByRoute[];
+}
+function fmtTokens(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
+  return String(n);
 }
 const ROUTE_LABELS: Record<string, string> = {
   coach_chat: 'Coach Chat', memory_extraction: 'Memory Extraction',
@@ -530,11 +535,11 @@ export function ProfilePanel() {
           {tab === 'usage' && (
             <div style={card}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <DollarSign size={12} color="var(--text-muted)" />
-                <h3 className="section-label" style={{ margin: 0 }}>Usage &amp; Cost</h3>
+                <Activity size={12} color="var(--text-muted)" />
+                <h3 className="section-label" style={{ margin: 0 }}>AI Usage</h3>
               </div>
               <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 14px', lineHeight: 1.5 }}>
-                AI usage logged for this account. Estimated from token counts and published pricing.
+                AI calls made for this account.
               </p>
               {loadingUsage ? (
                 <div style={{ textAlign: 'center', padding: '20px' }}><Loader size={16} color="var(--accent)" style={{ animation: 'spin 1s linear infinite' }} /></div>
@@ -543,16 +548,18 @@ export function ProfilePanel() {
               ) : (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ color: 'var(--text)', fontSize: '26px', fontWeight: 800 }}>${usage.total_cost_usd.toFixed(2)}</span>
+                    <span style={{ color: 'var(--text)', fontSize: '26px', fontWeight: 800 }}>{usage.total_calls}</span>
                     <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                      {usage.total_calls} call{usage.total_calls === 1 ? '' : 's'}
+                      call{usage.total_calls === 1 ? '' : 's'}
                       {usage.since ? ` since ${new Date(usage.since.replace(' ', 'T') + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}
                     </span>
                   </div>
-                  {usage.total_web_search_requests > 0 && <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginBottom: '14px' }}>{usage.total_web_search_requests} web search{usage.total_web_search_requests === 1 ? '' : 'es'} included</div>}
+                  <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginBottom: '14px' }}>
+                    {fmtTokens(usage.total_input_tokens + usage.total_output_tokens)} tokens
+                  </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', marginTop: '14px' }}>
                     {usage.by_route.slice(0, 8).map(r => {
-                      const pct = usage.total_cost_usd > 0 ? (r.cost_usd / usage.total_cost_usd) * 100 : 0;
+                      const pct = usage.total_calls > 0 ? (r.calls / usage.total_calls) * 100 : 0;
                       return (
                         <div key={r.route}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '3px' }}>
@@ -562,7 +569,7 @@ export function ProfilePanel() {
                                 <div style={{ color: 'var(--text-dim)', fontSize: '10px', marginTop: '1px' }}>{ROUTE_DESCRIPTIONS[r.route]}</div>
                               )}
                             </div>
-                            <span style={{ color: 'var(--text-muted)', flexShrink: 0, marginLeft: '8px' }}>${r.cost_usd.toFixed(3)}</span>
+                            <span style={{ color: 'var(--text-muted)', flexShrink: 0, marginLeft: '8px' }}>{r.calls} call{r.calls === 1 ? '' : 's'}</span>
                           </div>
                           <div style={{ height: '4px', borderRadius: '2px', background: 'var(--surface-2)', overflow: 'hidden' }}>
                             <div style={{ height: '100%', width: `${Math.max(pct, 2)}%`, background: 'var(--accent)', borderRadius: '2px' }} />
