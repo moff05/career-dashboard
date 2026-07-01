@@ -10,6 +10,25 @@ import { StatusBadge } from '@/app/components/StatusBadge';
 import { ConnStatusRow } from '@/app/components/ConnStatusRow';
 import { type Connection, CONN_STATUS, CONN_CYCLE } from '@/app/components/ConnectionsPanel';
 
+// ─── Animated number — counts up from 0 to value with ease-out ───────────────
+function AnimatedNumber({ value, duration = 550 }: { value: number; duration?: number }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    if (value === 0) { setDisplay(0); return; }
+    let start: number | null = null;
+    const tick = (ts: number) => {
+      if (!start) start = ts;
+      const p = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic
+      setDisplay(Math.round(eased * value));
+      if (p < 1) requestAnimationFrame(tick);
+      else setDisplay(value);
+    };
+    requestAnimationFrame(tick);
+  }, [value, duration]);
+  return <>{display}</>;
+}
+
 // ─── Form helpers ─────────────────────────────────────────────────────────────
 const EMPTY_FORM = {
   company: '', title: '', type: 'fall-internship', status: 'saved',
@@ -53,6 +72,7 @@ export default function DashboardPage() {
   // the very first client render matches the server's placeholder exactly,
   // and the real value lands a tick later as an ordinary state update.
   const [mounted, setMounted] = useState(false);
+  const [typedGreeting, setTypedGreeting] = useState('');
   useEffect(() => {
     setMounted(true);
     const params = new URLSearchParams(window.location.search);
@@ -75,6 +95,14 @@ export default function DashboardPage() {
     return () => mq.removeEventListener('change', onChange);
   }, []);
   const today = mounted ? new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '';
+  useEffect(() => {
+    if (!mounted) return;
+    const full = `${greeting()}${firstName ? `, ${firstName}` : ''}`;
+    let i = 0;
+    setTypedGreeting('');
+    const id = setInterval(() => { i++; setTypedGreeting(full.slice(0, i)); if (i >= full.length) clearInterval(id); }, 38);
+    return () => clearInterval(id);
+  }, [mounted, firstName]); // eslint-disable-line react-hooks/exhaustive-deps
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -529,7 +557,7 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ color: 'var(--text)', fontSize: '17px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>
-            {mounted ? greeting() : 'Welcome'}{firstName ? `, ${firstName}` : ''}
+            {typedGreeting || ' '}
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '4px 0 0' }}>{today}</p>
         </div>
@@ -573,7 +601,7 @@ export default function DashboardPage() {
           { label: 'starred', value: stats.starred, color: 'var(--accent)', always: false },
         ].filter(s => s.always || s.value > 0).map(({ label, value, color }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-            <span style={{ color, fontWeight: 700, fontSize: '14px', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+            <span style={{ color, fontWeight: 700, fontSize: '14px', fontVariantNumeric: 'tabular-nums' }}><AnimatedNumber value={value} /></span>
             <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{label}</span>
           </div>
         ))}
@@ -1106,7 +1134,7 @@ export default function DashboardPage() {
                               {analysis === 'loading' && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '20px 0' }}>
                                   <Loader size={14} color="var(--accent)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
-                                  Analyzing fit against your profile...
+                                  Analyzing fit against your profile...<span className="term-cursor">▋</span>
                                 </div>
                               )}
                               {!analysis && job.match_score && (
@@ -1116,7 +1144,7 @@ export default function DashboardPage() {
                                     border: `3px solid ${scoreColor(job.match_score)}`,
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                   }}>
-                                    <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(job.match_score), lineHeight: 1 }}>{job.match_score}</span>
+                                    <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(job.match_score), lineHeight: 1 }}><AnimatedNumber value={job.match_score ?? 0} /></span>
                                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>/100</span>
                                   </div>
                                   <div>
@@ -1155,7 +1183,7 @@ export default function DashboardPage() {
                                         border: `3px solid ${scoreColor(r.total)}`,
                                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                       }}>
-                                        <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(r.total), lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{r.total}</span>
+                                        <span style={{ fontSize: '28px', fontWeight: 800, color: scoreColor(r.total), lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}><AnimatedNumber value={r.total} /></span>
                                         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>/100</span>
                                       </div>
                                       <div style={{ flex: 1 }}>
@@ -1205,7 +1233,7 @@ export default function DashboardPage() {
                                 if (gaps === 'loading') return (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '20px 0', borderTop: '1px solid var(--border)', marginTop: '8px' }}>
                                     <Loader size={14} color="var(--accent)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
-                                    Analyzing fit gaps...
+                                    Analyzing fit gaps...<span className="term-cursor">▋</span>
                                   </div>
                                 );
                                 if (gaps === 'error') return (

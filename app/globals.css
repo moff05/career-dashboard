@@ -136,6 +136,20 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.85); }
 @media (prefers-reduced-motion: reduce) {
   .cursor { animation: none; opacity: 1; }
 }
+/* Blinks 4× on mount then stays solid — for the jobs_ wordmark */
+.cursor-blink-once {
+  animation: cursor-blink 0.65s step-end 4;
+}
+/* Inline terminal cursor for AI loading states */
+.term-cursor {
+  display: inline-block;
+  animation: cursor-blink 0.7s step-end infinite;
+  margin-left: 3px;
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cursor-blink-once, .term-cursor { animation: none; }
+}
 
 /* ─── APP SHELL ─────────────────────────────────────────────────── */
 .app-header {
