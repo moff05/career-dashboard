@@ -1,36 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
-import { getUserId, getApiKey, isSystemUser } from '@/lib/user';
+import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-
-
+import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/gemini';
 
 interface ExtractedMemory { content: string; category: string; }
 
 export async function POST(request: NextRequest) {
   try {
     const userId = getUserId(request);
-    if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });    const apiKey = getApiKey(request);
-    const anthropic = new Anthropic({ apiKey: apiKey || '' });
+    if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
     const { message, response, session_id } = await request.json();
 
-    const completion = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 512,
-      messages: [{
+    const model = getModel();
+    const completion = await model.generateContent({
+      contents: [{
         role: 'user',
-        content: `Extract any new information about the user from this conversation exchange that would help a career coach know them better. Return as JSON array: [{"content": string, "category": "preference"|"goal"|"insight"|"company"|"role"|"location"|"skill"|"other"}]. Return empty array [] if nothing worth saving.
+        parts: [{ text: `Extract any new information about the user from this conversation exchange that would help a career coach know them better. Return as JSON array: [{"content": string, "category": "preference"|"goal"|"insight"|"company"|"role"|"location"|"skill"|"other"}]. Return empty array [] if nothing worth saving.
 
 User said: ${message}
 Assistant said: ${response}
 
-Return ONLY the JSON array.`,
+Return ONLY the JSON array.` }],
       }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
     });
-    await logUsage(userId, 'memory_extraction', 'claude-haiku-4-5-20251001', completion.usage);
+    await logUsage(userId, 'memory_extraction', GEMINI_MODEL, geminiUsage(completion.response.usageMetadata));
 
-    const responseText = completion.content[0].type === 'text' ? completion.content[0].text : '[]';
+    const responseText = completion.response.text();
     let memories: ExtractedMemory[] = [];
     try {
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);

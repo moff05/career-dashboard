@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
-import { getUserId, getApiKey, isSystemUser } from '@/lib/user';
+import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
+import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/gemini';
 
 export const maxDuration = 60;
 
@@ -16,8 +16,7 @@ const TONE_INSTRUCTIONS: Record<string, string> = {
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const userId = getUserId(request);
-    if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });    const apiKey = getApiKey(request);
-    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
+    if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
     const tone = body.tone || 'professional';
@@ -28,12 +27,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     } | undefined;
     if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
 
-    const anthropic = new Anthropic({ apiKey });
     const systemPrompt = await buildSystemPrompt(userId);
+    const model = getModel(systemPrompt);
     const toneInstruction = TONE_INSTRUCTIONS[tone] || TONE_INSTRUCTIONS.professional;
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001', max_tokens: 1800, system: systemPrompt,
-      messages: [{ role: 'user', content: `Write a tailored cover letter for this role, AND extract 8-10 ATS keywords/phrases from the job description.
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: `Write a tailored cover letter for this role, AND extract 8-10 ATS keywords/phrases from the job description.
 
 Tone: ${toneInstruction}.
 JOB: Company: ${job.company} | Title: ${job.title} | Location: ${job.location || 'not specified'}
@@ -46,10 +44,11 @@ Return ONLY valid JSON, no other text:
 {
   "keywords": ["keyword1", "keyword2", "..."],
   "letter": "full cover letter text here"
-}` }],
+}` }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
     });
-    await logUsage(userId, 'cover_letter', 'claude-haiku-4-5-20251001', response.usage);
-    const rawText = response.content[0].type === 'text' ? response.content[0].text : '';
+    await logUsage(userId, 'cover_letter', GEMINI_MODEL, geminiUsage(result.response.usageMetadata));
+    const rawText = result.response.text();
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     let letter = '';
     let keywords: string[] = [];

@@ -6,13 +6,10 @@ import { Check, FileText } from 'lucide-react';
 import { saveUser } from '@/app/hooks/useUser';
 import { extractResumeText } from '@/lib/resumeExtract';
 
-// API key comes first (resume parsing may need Claude), then resume — uploading
-// it early lets us pre-fill identity/background below from what it finds.
-const STEPS = ['apikey', 'resume', 'identity', 'background'] as const;
+const STEPS = ['resume', 'identity', 'background'] as const;
 type Step = typeof STEPS[number];
 
 const STEP_META: Record<Step, { label: string; hint: string }> = {
-  apikey:     { label: 'Your API key',      hint: 'Optional — needed for AI features, but you can add it later and use the tracker manually until then.' },
   resume:     { label: 'Add your resume',   hint: 'Upload a PDF, Word doc, or photo of your resume/CV, or paste plain text. We\'ll pull your info from it in the next steps.' },
   identity:   { label: 'Who are you?',      hint: 'Basic info so the AI knows your name and context.' },
   background: { label: 'Career context',    hint: 'Where you are and where you\'re headed.' },
@@ -52,7 +49,6 @@ export default function SetupPage() {
     university: '', degree: '', graduation_date: '', gpa: '', honors: '', minors: '',
     target_roles: '', target_cities: '', notes: '',
     resume_text: '',
-    api_key: '',
   });
 
   const stepIdx = STEPS.indexOf(step);
@@ -73,7 +69,7 @@ export default function SetupPage() {
     setParsingFile(true);
     setPrefilledFields([]);
     try {
-      const { text, profile } = await extractResumeText(file, form.api_key.trim());
+      const { text, profile } = await extractResumeText(file);
       const filled: string[] = [];
       const merged: Partial<typeof form> = overwriteText ? { resume_text: text } : {};
       const apply = (key: keyof typeof form, label: string, value?: string) => {
@@ -118,18 +114,7 @@ export default function SetupPage() {
 
   function validate(): string {
     if (step === 'identity' && !form.name.trim()) return 'Name is required.';
-    // API key is optional — only validated if they actually entered something.
-    // Skipping it entirely is handled by skipApiKey() below, not here.
-    if (step === 'apikey' && form.api_key.trim() && !form.api_key.startsWith('sk-ant-')) {
-      return 'That doesn\'t look like an Anthropic API key (should start with sk-ant-).';
-    }
     return '';
-  }
-
-  function skipApiKey() {
-    setForm(p => ({ ...p, api_key: '' }));
-    setError('');
-    setStep(STEPS[stepIdx + 1]);
   }
 
   async function advance() {
@@ -145,7 +130,7 @@ export default function SetupPage() {
     setSaving(true);
     try {
       const userId = generateUserId();
-      saveUser(userId, form.api_key.trim());
+      saveUser(userId, '');
       localStorage.setItem('cid_display_name', form.name.trim());
 
       // Create profile in DB
@@ -154,7 +139,6 @@ export default function SetupPage() {
         headers: {
           'Content-Type': 'application/json',
           'x-user-id': userId,
-          'x-api-key': form.api_key.trim(),
         },
         body: JSON.stringify({
           name: form.name.trim(),
@@ -181,7 +165,6 @@ export default function SetupPage() {
           headers: {
             'Content-Type': 'application/json',
             'x-user-id': userId,
-            'x-api-key': form.api_key.trim(),
           },
           body: JSON.stringify({ raw_text: form.resume_text.trim() }),
         });
@@ -189,7 +172,7 @@ export default function SetupPage() {
 
       router.replace('/');
     } catch {
-      setError('Something went wrong saving your profile. Check your API key and try again.');
+      setError('Something went wrong saving your profile. Please try again.');
       setSaving(false);
     }
   }
@@ -376,58 +359,6 @@ export default function SetupPage() {
               <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: 0 }}>
                 Optional but strongly recommended — enables tailored cover letters, gap analysis, and personalized coaching. We&apos;ll use it to pre-fill the next two steps; you can always adjust afterward.
               </p>
-            </div>
-          )}
-
-          {/* ── Step: API key ── */}
-          {step === 'apikey' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label style={LABEL}>Anthropic API key (optional)</label>
-                <input value={form.api_key} onChange={e => set('api_key', e.target.value)}
-                  placeholder="sk-ant-api03-..." type="password" style={INPUT} autoFocus
-                  onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
-                  onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
-              </div>
-
-              <div style={{
-                background: 'var(--surface)', border: '1px solid var(--border)',
-                borderRadius: 'var(--r-lg)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px',
-              }}>
-                <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>How to get one:</div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.7 }}>
-                  1. Create a free account at{' '}
-                  <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer"
-                    style={{ color: 'var(--accent)', textDecoration: 'none' }}
-                    onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-                    onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}>
-                    console.anthropic.com
-                  </a><br />
-                  2. Go to <strong style={{ color: 'var(--text)' }}>Settings → API Keys → Create Key</strong><br />
-                  3. Copy and paste it above
-                </div>
-                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-start',
-                    background: 'var(--accent)', color: '#0A0A0A', borderRadius: 'var(--r-lg)',
-                    padding: '7px 14px', fontSize: '12px', fontWeight: 700, fontFamily: 'inherit',
-                    textDecoration: 'none', transition: 'background 0.12s',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-hi)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent)')}>
-                  Get your API key →
-                </a>
-                <div style={{ color: 'var(--text-dim)', fontSize: '11px' }}>
-                  New accounts get <strong style={{ color: 'var(--text-muted)' }}>$5 free credit</strong> — enough for ~30–60 AI actions. Your key is stored in your browser only, never on our servers.
-                </div>
-              </div>
-
-              <button onClick={skipApiKey} style={{
-                background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px',
-                cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', padding: 0, textDecoration: 'underline',
-              }}>
-                Skip for now — you can add this later in Profile. You'll still be able to track jobs manually; AI features (scoring, coach, cover letters) need a key.
-              </button>
             </div>
           )}
 

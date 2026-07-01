@@ -24,14 +24,10 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 /**
- * Reads a resume/CV file and returns its text plus any profile fields Claude
- * could pull out of it. Everything routes through the server now — .txt used
- * to be decoded and returned client-side with no field extraction at all
- * (silently skipping the "auto-fill my profile" feature for the most common
- * upload type), which is exactly the bug this was fixed for. `apiKeyOverride`
- * lets callers mid-setup pass the key before it's saved to localStorage.
+ * Reads a resume/CV file and returns its text plus any profile fields Gemini
+ * could pull out of it. Everything routes through the server.
  */
-export async function extractResumeText(file: File, apiKeyOverride?: string): Promise<ResumeExtractResult> {
+export async function extractResumeText(file: File): Promise<ResumeExtractResult> {
   const name = file.name.toLowerCase();
 
   const isTxt = file.type === 'text/plain' || name.endsWith('.txt');
@@ -46,13 +42,7 @@ export async function extractResumeText(file: File, apiKeyOverride?: string): Pr
   const fileType = isTxt ? 'text/plain' : isDocx ? DOCX_TYPE : isPdf ? 'application/pdf' : (file.type || 'image/jpeg');
   const body = JSON.stringify({ fileBase64, fileType, fileName: file.name });
 
-  const res = apiKeyOverride
-    ? await fetch('/api/profile/resume/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKeyOverride },
-        body,
-      })
-    : await apiFetch('/api/profile/resume/extract', { method: 'POST', body });
+  const res = await apiFetch('/api/profile/resume/extract', { method: 'POST', body });
 
   const data = await res.json();
   if (!res.ok || data.error) throw new Error(data.error || 'Could not read that file.');

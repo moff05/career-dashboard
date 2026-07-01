@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
-import { getUserId, getApiKey, isSystemUser } from '@/lib/user';
+import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
+import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/gemini';
 
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const userId = getUserId(request);
-    if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });    const apiKey = getApiKey(request);
-    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
+    if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
     const { id } = await params;
     const db = getDb();
     const job = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ? AND user_id = ?', args: [parseInt(id), userId] })).rows[0] as unknown as {
@@ -20,8 +19,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     } | undefined;
     if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
 
-    const anthropic = new Anthropic({ apiKey });
     const systemPrompt = await buildSystemPrompt(userId);
+    const model = getModel(systemPrompt);
     const typeLabel: Record<string, string> = {
       'fall-2026-internship': 'Fall 2026 Internship', 'spring-2027-internship': 'Spring 2027 Internship',
       'summer-internship': 'Summer Internship', 'full-time': 'Full-Time / New Grad',
@@ -41,43 +40,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       logistics_fit:          { max: 15, values: [0, 7, 15], label: 'Logistics / Location Fit' },
     } as const;
 
-    const categorySchema = (values: readonly number[]) => ({
-      type: 'object',
-      properties: {
-        score: { type: 'number', enum: values },
-        rationale: { type: 'string' },
-      },
-      required: ['score', 'rationale'],
-      additionalProperties: false,
-    });
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1600,
-      temperature: 0,
-      system: systemPrompt,
-      output_config: {
-        format: {
-          type: 'json_schema',
-          schema: {
-            type: 'object',
-            properties: {
-              categories: {
-                type: 'object',
-                properties: Object.fromEntries(
-                  Object.entries(CATEGORY).map(([key, c]) => [key, categorySchema(c.values)])
-                ),
-                required: Object.keys(CATEGORY),
-                additionalProperties: false,
-              },
-              summary: { type: 'string' },
-            },
-            required: ['categories', 'summary'],
-            additionalProperties: false,
-          },
-        },
-      },
-      messages: [{ role: 'user', content: `Score how realistically this candidate would get through screening and land THIS SPECIFIC job — not how strong they are in general, and not how well they might grow into it. Be harsh and literal. Most applications, for most candidates, are not a great match: a realistic score distribution lands mostly in the 25-55 range out of 100. Scores above 75 should be rare and reserved for a genuinely strong, low-risk match with no material gaps against what this posting actually asks for. Do not give credit for "potential" — score against what is on the resume today. A candidate who is otherwise excellent but misses this posting's explicit stated requirements should score low on Explicit Requirements Met regardless of their overall strength; being a great candidate in general does not make someone a fit for a posting they don't meet the stated bar for.
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: `Score how realistically this candidate would get through screening and land THIS SPECIFIC job — not how strong they are in general, and not how well they might grow into it. Be harsh and literal. Most applications, for most candidates, are not a great match: a realistic score distribution lands mostly in the 25-55 range out of 100. Scores above 75 should be rare and reserved for a genuinely strong, low-risk match with no material gaps against what this posting actually asks for. Do not give credit for "potential" — score against what is on the resume today. A candidate who is otherwise excellent but misses this posting's explicit stated requirements should score low on Explicit Requirements Met regardless of their overall strength; being a great candidate in general does not make someone a fit for a posting they don't meet the stated bar for.
 
 JOB: Company: ${job.company} | Title: ${job.title} | Type: ${typeLabel[job.type] || job.type} | Location: ${job.location || 'not specified'}
 ${job.description ? `Description:\n${job.description}` : '(No description)'}
@@ -113,10 +77,14 @@ Score these 5 categories. Each score must be EXACTLY one of the listed values �
 7 = the posting states a real constraint (relocation, on-site, visa sponsorship not offered) that the candidate's profile neither confirms nor rules out
 15 = the posting states no location/remote constraint at all, or whatever it states is already satisfied by the candidate's profile — default here when the posting is silent on logistics, since silence is not a stated conflict
 
-The summary must be direct and unsentimental: state plainly whether this is a realistic shot or a long shot, and why, in 2-3 sentences. Do not soften it to make the candidate feel better — that defeats the point of tracking applications honestly.` }],
+The summary must be direct and unsentimental: state plainly whether this is a realistic shot or a long shot, and why, in 2-3 sentences. Do not soften it to make the candidate feel better — that defeats the point of tracking applications honestly.
+
+Return a JSON object with this structure:
+{"categories":{"explicit_requirements":{"score":0,"rationale":""},"skills_match":{"score":0,"rationale":""},"role_alignment":{"score":0,"rationale":""},"industry_fit":{"score":0,"rationale":""},"logistics_fit":{"score":0,"rationale":""}},"summary":""}` }] }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
     });
-    await logUsage(userId, 'fit_scorecard', 'claude-sonnet-4-6', response.usage);
-    const text = response.content[0].type === 'text' ? response.content[0].text : '{}';
+    await logUsage(userId, 'fit_scorecard', GEMINI_MODEL, geminiUsage(result.response.usageMetadata));
+    const text = result.response.text();
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json({ error: 'Parse failed' }, { status: 500 });
 

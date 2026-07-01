@@ -1,23 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
-import { getUserId, getApiKey, isSystemUser } from '@/lib/user';
+import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
+import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/gemini';
 
 export const maxDuration = 60;
 
-
-
 interface DbMessage { role: string; content: string; }
-
 
 export async function POST(request: NextRequest) {
   try {
     const userId = getUserId(request);
-    if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });    const apiKey = getApiKey(request);
-    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
-    const anthropic = new Anthropic({ apiKey });
+    if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
     const { message, session_id } = await request.json();
     if (!message) return NextResponse.json({ error: 'message is required' }, { status: 400 });
     const db = getDb();
@@ -34,17 +29,15 @@ export async function POST(request: NextRequest) {
       args: [userId, 'user', message, sid],
     });
 
-    const messages: Anthropic.MessageParam[] = [
-      ...history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-      { role: 'user', content: message },
-    ];
+    const model = getModel(systemPrompt);
 
-    const stream = anthropic.messages.stream({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
-      system: systemPrompt,
-      messages,
-    });
+    // Convert DB history to Gemini format (assistant → model)
+    const geminiHistory = history.map(m => ({
+      role: m.role === 'assistant' ? 'model' as const : 'user' as const,
+      parts: [{ text: m.content }],
+    }));
+
+    const chat = model.startChat({ history: geminiHistory });
 
     const encoder = new TextEncoder();
     let fullResponse = '';
@@ -52,18 +45,18 @@ export async function POST(request: NextRequest) {
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const event of stream) {
-            if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-              fullResponse += event.delta.text;
-              controller.enqueue(encoder.encode(event.delta.text));
-            }
+          const result = await chat.sendMessageStream(message);
+          for await (const chunk of result.stream) {
+            const text = chunk.text();
+            fullResponse += text;
+            controller.enqueue(encoder.encode(text));
           }
           await db.execute({
             sql: 'INSERT INTO chat_messages (user_id, role, content, session_id) VALUES (?, ?, ?, ?)',
             args: [userId, 'assistant', fullResponse, sid],
           });
-          const finalMessage = await stream.finalMessage();
-          await logUsage(userId, 'coach_chat', 'claude-sonnet-4-6', finalMessage.usage);
+          const finalResponse = await result.response;
+          await logUsage(userId, 'coach_chat', GEMINI_MODEL, geminiUsage(finalResponse.usageMetadata));
           controller.close();
         } catch (err) {
           controller.error(err);

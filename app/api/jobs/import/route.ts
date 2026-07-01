@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
-import { getUserId, getApiKey, isSystemUser } from '@/lib/user';
+import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-
+import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/gemini';
 
 
 const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
@@ -56,11 +55,8 @@ async function fetchAndStrip(url: string): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = getApiKey(request);
-    if (!apiKey) return NextResponse.json({ error: 'API key required' }, { status: 401 });
     const userId = getUserId(request);
     if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
-    const anthropic = new Anthropic({ apiKey });
     const body = await request.json();
     const { url, extraText, imageBase64, imageMediaType, extraLink } = body as {
       url?: string;
@@ -100,28 +96,21 @@ export async function POST(request: NextRequest) {
       contextParts.push(`[USER-PROVIDED CONTEXT]\n${extraText.trim()}`);
     }
 
-    // 3. Screenshot via Claude vision
+    // 3. Screenshot via Gemini vision
     if (imageBase64 && imageMediaType && VALID_IMAGE_TYPES.includes(imageMediaType as ImageMediaType)) {
       try {
-        const visionRes = await anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 800,
-          messages: [{
+        const model = getModel();
+        const visionRes = await model.generateContent({
+          contents: [{
             role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: { type: 'base64', media_type: imageMediaType as ImageMediaType, data: imageBase64 },
-              },
-              {
-                type: 'text',
-                text: 'Extract all text visible in this job posting screenshot. Preserve structure (titles, bullet points). Return only the extracted text, no commentary.',
-              },
+            parts: [
+              { inlineData: { mimeType: imageMediaType as ImageMediaType, data: imageBase64 } },
+              { text: 'Extract all text visible in this job posting screenshot. Preserve structure (titles, bullet points). Return only the extracted text, no commentary.' },
             ],
           }],
         });
-        await logUsage(userId, 'job_import', 'claude-haiku-4-5-20251001', visionRes.usage);
-        const imageText = visionRes.content[0].type === 'text' ? visionRes.content[0].text : '';
+        await logUsage(userId, 'job_import', GEMINI_MODEL, geminiUsage(visionRes.response.usageMetadata));
+        const imageText = visionRes.response.text();
         if (imageText) contextParts.push(`[FROM SCREENSHOT]\n${imageText}`);
       } catch {
         warnings.push('Could not process the screenshot.');
@@ -145,12 +134,11 @@ export async function POST(request: NextRequest) {
 
     const combinedContext = contextParts.join('\n\n---\n\n').slice(0, 18000);
 
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
-      messages: [{
+    const model = getModel();
+    const response = await model.generateContent({
+      contents: [{
         role: 'user',
-        content: `Extract job posting details from these combined sources. Only extract what is explicitly present — do not infer or invent. Leave fields as empty string if not found.
+        parts: [{ text: `Extract job posting details from these combined sources. Only extract what is explicitly present — do not infer or invent. Leave fields as empty string if not found.
 
 ${combinedContext}
 
@@ -174,12 +162,13 @@ Rules:
 - deadline: YYYY-MM-DD application deadline — empty if not found
 - posting_date: YYYY-MM-DD date the job was posted — empty if not found
 - salary_range: compensation as written — empty if not found
-- description: the FULL job description including all responsibilities, requirements, and qualifications — copy the actual text, do not summarize. Empty if insufficient info.`,
+- description: the FULL job description including all responsibilities, requirements, and qualifications — copy the actual text, do not summarize. Empty if insufficient info.` }],
       }],
+      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
     });
-    await logUsage(userId, 'job_import', 'claude-haiku-4-5-20251001', response.usage);
+    await logUsage(userId, 'job_import', GEMINI_MODEL, geminiUsage(response.response.usageMetadata));
 
-    const rawText = response.content[0].type === 'text' ? response.content[0].text : '{}';
+    const rawText = response.response.text();
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const extracted = JSON.parse(jsonMatch[0]);

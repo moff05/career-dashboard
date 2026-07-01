@@ -16,7 +16,7 @@ export interface Job {
 
 export interface AnalysisCategory { name: string; score: number; max: number; rationale: string; }
 export interface AnalysisResult { categories: AnalysisCategory[]; total: number; summary: string; }
-export type AnalysisState = AnalysisResult | 'loading' | 'error' | 'no-key';
+export type AnalysisState = AnalysisResult | 'loading' | 'error';
 
 export interface GapsResult { gaps: { skill: string; severity: string; how_to_address: string }[]; positioning: string; quick_wins: string[]; should_apply: boolean; apply_reasoning: string; }
 export type GapsState = GapsResult | 'loading' | 'error';

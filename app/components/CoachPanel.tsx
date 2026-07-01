@@ -75,10 +75,6 @@ export function CoachPanel() {
     const text = (forceText ?? input).trim();
     if (!text || loading) return;
     if (!forceText) { setInput(''); if (textareaRef.current) textareaRef.current.style.height = 'auto'; }
-    if (!localStorage.getItem('cid_api_key')) {
-      setMessages(prev => [...prev, { role: 'user', content: text }, { role: 'assistant', content: "I need an API key to respond — add one in Profile, then ask again." }]);
-      return;
-    }
     setMessages(prev => [...prev, { role: 'user', content: text }]);
     setLoading(true);
     setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
@@ -207,7 +203,7 @@ export function CoachPanel() {
               <Send size={15} />
             </button>
           </div>
-          <p style={{ color: 'var(--text-dim)', fontSize: '11px', margin: '7px 0 0', textAlign: 'center' }}>Enter to send · Shift+Enter for new line · cost varies per message</p>
+          <p style={{ color: 'var(--text-dim)', fontSize: '11px', margin: '7px 0 0', textAlign: 'center' }}>Enter to send · Shift+Enter for new line</p>
           {messages.length >= 45 && (
             <p style={{ color: 'var(--text-dim)', fontSize: '11px', margin: '4px 0 0', textAlign: 'center', opacity: 0.6 }}>Older messages have left Coach&apos;s active context</p>
           )}

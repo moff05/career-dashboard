@@ -153,11 +153,6 @@ export default function DashboardPage() {
   const [connectionsMap, setConnectionsMap] = useState<Record<string, Connection[]>>({});
 
   const runAnalysis = useCallback((id: number) => {
-    if (!localStorage.getItem('cid_api_key')) {
-      analysisCacheRef.current[id] = 'no-key';
-      setAnalysisResults(prev => ({ ...prev, [id]: 'no-key' }));
-      return;
-    }
     analysisCacheRef.current[id] = 'loading';
     setAnalysisResults(prev => ({ ...prev, [id]: 'loading' }));
     apiFetch(`/api/jobs/${id}/analyze`, { method: 'POST' })
@@ -211,10 +206,8 @@ export default function DashboardPage() {
     delete gapsCacheRef.current[id];
     delete bulletsCacheRef.current[id];
     runAnalysis(id);
-    if (localStorage.getItem('cid_api_key')) {
-      runGaps(id);
-      runBullets(id);
-    }
+    runGaps(id);
+    runBullets(id);
   }, [runAnalysis, runGaps, runBullets]);
 
   const runCoverLetter = useCallback((id: number, tone: string, angle: string) => {
@@ -310,10 +303,6 @@ export default function DashboardPage() {
     const trimmedUrl = importUrl.trim();
     const trimmedText = importExtraText.trim();
     if (!trimmedUrl && !trimmedText) return;
-    if (!localStorage.getItem('cid_api_key')) {
-      setImportFetchError('Add your API key in Profile to auto-fill from a link or description.');
-      return;
-    }
     setImportFetchError(''); setImportStep('loading');
     try {
       const res = await apiFetch('/api/jobs/import', {
@@ -408,7 +397,6 @@ export default function DashboardPage() {
       else {
         n.add(id);
         const thisJob = jobs.find(j => j.id === id);
-        const hasKey = !!localStorage.getItem('cid_api_key');
         // Hydrate all three from DB on first expand this session
         if (thisJob?.score_data && !analysisCacheRef.current[id]) {
           try {
@@ -443,11 +431,9 @@ export default function DashboardPage() {
         if (neverRun) {
           // First time — fire all three simultaneously
           runAnalysis(id);
-          if (hasKey) {
-            if (!gapsCacheRef.current[id]) runGaps(id);
-            if (!bulletsCacheRef.current[id]) runBullets(id);
-          }
-        } else if (hasKey) {
+          if (!gapsCacheRef.current[id]) runGaps(id);
+          if (!bulletsCacheRef.current[id]) runBullets(id);
+        } else {
           // Previously scored — backfill gaps/bullets if not persisted yet
           if (!gapsCacheRef.current[id]) runGaps(id);
           if (!bulletsCacheRef.current[id]) runBullets(id);
@@ -519,7 +505,6 @@ export default function DashboardPage() {
     setExpandedCompanies(prev => new Set(prev).add(job.company));
     setExpandedJobs(prev => new Set(prev).add(jobId));
     setJobTabs(prev => prev[jobId] ? prev : { ...prev, [jobId]: 'overview' });
-    const hasKey = !!localStorage.getItem('cid_api_key');
     if (job.score_data && !analysisCacheRef.current[jobId]) {
       try { const p = JSON.parse(job.score_data) as AnalysisResult; analysisCacheRef.current[jobId] = p; setAnalysisResults(prev => ({ ...prev, [jobId]: p })); } catch { /* ignore */ }
     }
@@ -535,11 +520,9 @@ export default function DashboardPage() {
     const neverRun = !analysisCacheRef.current[jobId] && !job.match_score;
     if (neverRun) {
       runAnalysis(jobId);
-      if (hasKey) {
-        if (!gapsCacheRef.current[jobId]) runGaps(jobId);
-        if (!bulletsCacheRef.current[jobId]) runBullets(jobId);
-      }
-    } else if (hasKey) {
+      if (!gapsCacheRef.current[jobId]) runGaps(jobId);
+      if (!bulletsCacheRef.current[jobId]) runBullets(jobId);
+    } else {
       if (!gapsCacheRef.current[jobId]) runGaps(jobId);
       if (!bulletsCacheRef.current[jobId]) runBullets(jobId);
     }
@@ -1030,7 +1013,7 @@ export default function DashboardPage() {
                             <div>
                               {/* Score summary card — shown if analysis is available */}
                               {(() => {
-                                const r = analysis && analysis !== 'loading' && analysis !== 'error' && analysis !== 'no-key' ? analysis as AnalysisResult : null;
+                                const r = analysis && analysis !== 'loading' && analysis !== 'error' ? analysis as AnalysisResult : null;
                                 const score = r?.total ?? job.match_score;
                                 if (!score) return null;
                                 return (
@@ -1165,7 +1148,6 @@ export default function DashboardPage() {
                                       <button onClick={() => refreshAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'var(--surface)', color: 'var(--accent)', border: '1px solid var(--accent-dim)', borderRadius: 'var(--r-lg)', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                                         Refresh all →
                                       </button>
-                                      <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>~$0.03</span>
                                     </div>
                                   </div>
                                 </div>
@@ -1175,13 +1157,6 @@ export default function DashboardPage() {
                                   <AlertCircle size={13} color="var(--danger)" />
                                   Analysis failed.{' '}
                                   <button onClick={() => refreshAnalysis(job.id)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '12px', padding: 0, fontFamily: 'inherit' }}>Retry</button>
-                                </div>
-                              )}
-                              {analysis === 'no-key' && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-muted)', fontSize: '12px', padding: '12px 0', flexWrap: 'wrap' }}>
-                                  <AlertCircle size={13} color="var(--accent)" />
-                                  Add your API key to get an AI fit score for this job.
-                                  <button onClick={() => openProfile('resume')} className="btn-ghost" style={{ padding: '4px 12px', fontSize: '11px' }}>Add key</button>
                                 </div>
                               )}
                               {analysis && analysis !== 'loading' && analysis !== 'error' && (() => {
@@ -1205,7 +1180,6 @@ export default function DashboardPage() {
                                             onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
                                             <RotateCcw size={10} /> Refresh all
                                           </button>
-                                          <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>~$0.03</span>
                                         </div>
                                       </div>
                                     </div>
@@ -1335,7 +1309,6 @@ export default function DashboardPage() {
                                       cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize',
                                     }}>{t}</button>
                                   ))}
-                                  <span style={{ color: 'var(--text-dim)', fontSize: '11px', marginLeft: 'auto' }}>~$0.01</span>
                                   <button onClick={() => runCoverLetter(job.id, tone, angle)} disabled={isLoading} className="btn-primary" style={{ padding: '6px 16px', fontSize: '12px', cursor: isLoading ? 'wait' : 'pointer' }}>
                                     {isLoading ? <><Loader size={11} style={{ animation: 'spin 1s linear infinite' }} /> Generating…</> : result ? 'Regenerate' : 'Generate'}
                                   </button>
@@ -1405,7 +1378,6 @@ export default function DashboardPage() {
                                     <button onClick={() => runBullets(job.id)} className="btn-primary" style={{ fontSize: '12px', padding: '7px 16px' }}>
                                       Generate Resume Bullets
                                     </button>
-                                    <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>~$0.01</span>
                                   </div>
                                 )}
                                 {bl === 'loading' && (
@@ -1491,7 +1463,6 @@ export default function DashboardPage() {
                                           onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
                                           <RotateCcw size={10} /> Regenerate
                                         </button>
-                                        <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>~$0.01</span>
                                       </div>
                                     </div>
                                   );
@@ -1550,13 +1521,9 @@ export default function DashboardPage() {
                 {importFetchError && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--danger)', fontSize: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
                     <AlertCircle size={13} style={{ flexShrink: 0 }} /> {importFetchError}
-                    {importFetchError.includes('API key') && (
-                      <button onClick={() => { closeImport(); openProfile('resume'); }} className="btn-ghost" style={{ padding: '3px 10px', fontSize: '11px' }}>Add key</button>
-                    )}
                   </div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', marginTop: '18px' }}>
-                  <span style={{ color: 'var(--text-dim)', fontSize: '11px', marginRight: 'auto' }}>~$0.01 from your API key</span>
                   <button onClick={closeImport} style={{ backgroundColor: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
                   <button onClick={fetchImport} disabled={!importUrl.trim() && !importExtraText.trim()} className="btn-primary">
                     <LinkIcon size={13} /> Parse Job

@@ -33,7 +33,6 @@ export default function WelcomePage() {
   const router = useRouter();
   const [showRestore, setShowRestore] = useState(false);
   const [showCode, setShowCode] = useState(false);
-  const [apiKey, setApiKey] = useState('');
   const [fileName, setFileName] = useState('');
   const [fileText, setFileText] = useState('');
   const [restoring, setRestoring] = useState(false);
@@ -61,7 +60,7 @@ export default function WelcomePage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Code not found.');
-      saveUser(data.user_id, data.api_key || '');
+      saveUser(data.user_id, '');
       localStorage.setItem('cid_display_name', data.display_name || '');
       router.push('/');
     } catch (err) {
@@ -72,8 +71,6 @@ export default function WelcomePage() {
 
   async function handleRestore() {
     setError('');
-    if (!apiKey.trim()) return setError('API key is required.');
-    if (!apiKey.startsWith('sk-ant-')) return setError('That doesn\'t look like an Anthropic API key (should start with sk-ant-).');
     if (!fileText) return setError('Choose a backup file first.');
 
     let parsed: Record<string, unknown>;
@@ -88,7 +85,7 @@ export default function WelcomePage() {
       const userId = generateUserId();
       const res = await fetch('/api/import', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-user-id': userId, 'x-api-key': apiKey.trim() },
+        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
         body: JSON.stringify(parsed),
       });
       const data = await res.json();
@@ -97,7 +94,7 @@ export default function WelcomePage() {
       // Only persist the new identity once the import actually succeeded —
       // otherwise a failed restore would leave a valid-looking but empty
       // account behind.
-      saveUser(userId, apiKey.trim());
+      saveUser(userId, '');
       const profileRows = parsed.profile;
       const profileRow = (Array.isArray(profileRows) ? profileRows[0] : profileRows) as { name?: string } | undefined;
       localStorage.setItem('cid_display_name', profileRow?.name?.trim() || '');
@@ -152,7 +149,7 @@ export default function WelcomePage() {
           borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: '24px',
           color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.6,
         }}>
-          No accounts, no signup. Your API key is browser-only — it never touches our server. Anthropic gives new API users $5 in free credit — no card needed. Job scoring runs ~$0.02–0.05 per role, coach conversations ~$0.05–0.20 each.
+          No accounts, no signup. Your identity is browser-only — it never leaves your device. AI features (scoring, coach, cover letters) are included free — no API key needed.
         </div>
 
         {!showRestore && !showCode ? (
@@ -226,7 +223,7 @@ export default function WelcomePage() {
               }}>Cancel</button>
             </div>
             <p style={{ color: 'var(--text-dim)', fontSize: '11px', margin: 0, lineHeight: 1.5 }}>
-              The sync code temporarily stores your API key server-side for up to 10 minutes to complete the transfer, then it&apos;s automatically deleted.
+              The sync code temporarily stores your user ID server-side for up to 10 minutes to complete the transfer, then it&apos;s automatically deleted.
             </p>
           </div>
 
@@ -237,13 +234,7 @@ export default function WelcomePage() {
             padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px',
           }}>
             <div>
-              <label style={LABEL}>Anthropic API key *</label>
-              <input value={apiKey} onChange={e => { setApiKey(e.target.value); setError(''); }}
-                placeholder="sk-ant-api03-..." type="password" style={INPUT} autoFocus />
-            </div>
-
-            <div>
-              <label style={LABEL}>Backup file *</label>
+              <label style={LABEL}>Backup file</label>
               <input id="restore-file-input" type="file" accept="application/json"
                 style={{ display: 'none' }} onChange={e => handleFile(e.target.files?.[0])} />
               <label htmlFor="restore-file-input" style={{
@@ -287,7 +278,7 @@ export default function WelcomePage() {
         )}
 
         <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '11px', marginTop: '20px' }}>
-          Open source · API key stays local
+          Open source · No account required
         </p>
       </div>
     </div>

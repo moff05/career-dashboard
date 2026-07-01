@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
-import { Edit2, ExternalLink, Loader, FileText, Check, Download, Upload, Plus, DollarSign, X, Trash2, Brain, HelpCircle, Smartphone } from 'lucide-react';
+import { Edit2, ExternalLink, Loader, FileText, Check, Download, Upload, Plus, DollarSign, X, Trash2, Brain, Smartphone } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
 import { BookOpen } from 'lucide-react';
 import { useRef } from 'react';
@@ -96,20 +96,6 @@ export function ProfilePanel() {
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [redeemError, setRedeemError] = useState('');
 
-  const [currentApiKey, setCurrentApiKey] = useState('');
-  const [apiKeyDraft, setApiKeyDraft] = useState('');
-  const [apiKeyEditing, setApiKeyEditing] = useState(false);
-  const [apiKeySaved, setApiKeySaved] = useState(false);
-  const [apiKeyHelpOpen, setApiKeyHelpOpen] = useState(false);
-  function saveApiKey() {
-    const trimmed = apiKeyDraft.trim();
-    localStorage.setItem('cid_api_key', trimmed);
-    setCurrentApiKey(trimmed);
-    setApiKeyEditing(false);
-    setApiKeySaved(true);
-    setTimeout(() => setApiKeySaved(false), 3000);
-  }
-
   const [usage, setUsage] = useState<Usage | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(true);
 
@@ -135,7 +121,6 @@ export function ProfilePanel() {
   useEffect(() => {
     if (!profileOpen || loaded.done) return;
     loaded.done = true;
-    setCurrentApiKey(localStorage.getItem('cid_api_key') || '');
     apiFetch('/api/profile').then(r => r.json()).then(data => setProfile(data)).catch(() => {});
     loadResumes();
     apiFetch('/api/usage').then(r => r.json()).then(data => setUsage(data)).finally(() => setLoadingUsage(false));
@@ -186,7 +171,6 @@ export function ProfilePanel() {
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Code not found.');
       localStorage.setItem('cid_user_id', data.user_id);
-      if (data.api_key) localStorage.setItem('cid_api_key', data.api_key);
       if (data.display_name) localStorage.setItem('cid_display_name', data.display_name);
       window.location.reload();
     } catch (err) {
@@ -376,48 +360,6 @@ export function ProfilePanel() {
 
           {tab === 'resume' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={card}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                  <h3 className="section-label" style={{ margin: 0 }}>API Key</h3>
-                  <button onClick={() => setApiKeyHelpOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '2px', display: 'flex', lineHeight: 1 }} aria-label="How to get an API key">
-                    <HelpCircle size={13} />
-                  </button>
-                </div>
-                {apiKeyHelpOpen && (
-                  <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '12px 14px', marginBottom: '12px', fontSize: '12px', lineHeight: 1.7 }}>
-                    <div style={{ color: 'var(--text)', fontWeight: 700, marginBottom: '8px' }}>How to get an API key (5 min)</div>
-                    <ol style={{ margin: 0, paddingLeft: '18px', color: 'var(--text-muted)' }}>
-                      <li>Create a free account at <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>console.anthropic.com</a> — new accounts include <strong style={{ color: 'var(--text)' }}>$5 in free credit</strong></li>
-                      <li>Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Settings → API Keys</a> → <strong style={{ color: 'var(--text)' }}>Create Key</strong></li>
-                      <li>Copy the key (starts with <code style={{ color: 'var(--accent)', fontSize: '11px' }}>sk-ant-</code>) and paste it below</li>
-                    </ol>
-                    <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '8px' }}>$5 covers roughly 30–60 full AI actions (scoring, coach, bullets). Add more under Billing if you run out.</div>
-                  </div>
-                )}
-                <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 12px', lineHeight: 1.5 }}>
-                  Needed for AI features (scoring, coach, cover letters) — tracking jobs manually works without one. Stored in your browser only, never sent to our servers.
-                </p>
-                {apiKeyEditing ? (
-                  <div>
-                    <input value={apiKeyDraft} onChange={e => setApiKeyDraft(e.target.value)} placeholder="sk-ant-api03-..." type="password" autoFocus className="field-input" style={{ width: '100%', marginBottom: '8px' }} />
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button onClick={saveApiKey} className="btn-primary" style={{ padding: '5px 14px', fontSize: '12px' }}>Save</button>
-                      <button onClick={() => { setApiKeyEditing(false); setApiKeyDraft(currentApiKey); }} className="btn-ghost" style={{ padding: '5px 12px', fontSize: '12px' }}>Cancel</button>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ color: currentApiKey ? 'var(--success)' : 'var(--text-dim)', fontSize: '12px', fontWeight: 600 }}>
-                      {currentApiKey ? `Configured (sk-ant-...${currentApiKey.slice(-4)})` : 'Not set'}
-                    </span>
-                    <button onClick={() => { setApiKeyDraft(currentApiKey); setApiKeyEditing(true); }} className="btn-ghost" style={{ padding: '5px 12px', fontSize: '12px' }}>
-                      {currentApiKey ? 'Update' : 'Add key'}
-                    </button>
-                  </div>
-                )}
-                {apiKeySaved && <div style={{ color: 'var(--success)', fontSize: '11px', marginTop: '8px' }}>Saved.</div>}
-              </div>
-
               {[
                 { title: 'Personal', fields: [{ field: 'name', label: 'Full Name' }, { field: 'email', label: 'Email (optional — used to sign cover letters)' }, { field: 'phone', label: 'Phone (optional)' }, { field: 'linkedin', label: 'LinkedIn (optional — used to sign cover letters)' }] },
                 { title: 'Education', fields: [{ field: 'university', label: 'University' }, { field: 'degree', label: 'Degree' }, { field: 'graduation_date', label: 'Graduation' }, { field: 'gpa', label: 'GPA' }, { field: 'minors', label: 'Minors' }, { field: 'honors', label: 'Honors', multiline: true }] },
@@ -592,7 +534,7 @@ export function ProfilePanel() {
                 <h3 className="section-label" style={{ margin: 0 }}>Usage &amp; Cost</h3>
               </div>
               <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 14px', lineHeight: 1.5 }}>
-                What your Anthropic API key has spent on this dashboard. Estimated from token counts and current published pricing — your Anthropic invoice is authoritative.
+                AI usage logged for this account. Estimated from token counts and published pricing.
               </p>
               {loadingUsage ? (
                 <div style={{ textAlign: 'center', padding: '20px' }}><Loader size={16} color="var(--accent)" style={{ animation: 'spin 1s linear infinite' }} /></div>
