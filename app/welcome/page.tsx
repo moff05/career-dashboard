@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Briefcase, Sparkles, MessageSquare, ArrowRight, Upload, Loader } from 'lucide-react';
+import { Briefcase, Sparkles, MessageSquare, ArrowRight, Loader } from 'lucide-react';
 import { saveUser } from '@/app/hooks/useUser';
 
 const FEATURES = [
@@ -24,28 +24,12 @@ const LABEL: React.CSSProperties = {
   fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px',
 };
 
-function generateUserId(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 11);
-}
-
 export default function WelcomePage() {
   const router = useRouter();
-  const [showRestore, setShowRestore] = useState(false);
   const [showCode, setShowCode] = useState(false);
-  const [fileName, setFileName] = useState('');
-  const [fileText, setFileText] = useState('');
-  const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState('');
   const [syncCode, setSyncCode] = useState('');
   const [syncing, setSyncing] = useState(false);
-
-  async function handleFile(file: File | undefined) {
-    if (!file) return;
-    setError('');
-    setFileName(file.name);
-    setFileText(await file.text());
-  }
 
   async function handleSync() {
     setError('');
@@ -69,43 +53,6 @@ export default function WelcomePage() {
     setSyncing(false);
   }
 
-  async function handleRestore() {
-    setError('');
-    if (!fileText) return setError('Choose a backup file first.');
-
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(fileText);
-    } catch {
-      return setError('That file isn\'t valid JSON — choose the .json file from "Export my data".');
-    }
-
-    setRestoring(true);
-    try {
-      const userId = generateUserId();
-      const res = await fetch('/api/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-user-id': userId },
-        body: JSON.stringify(parsed),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Restore failed.');
-
-      // Only persist the new identity once the import actually succeeded —
-      // otherwise a failed restore would leave a valid-looking but empty
-      // account behind.
-      saveUser(userId, '');
-      const profileRows = parsed.profile;
-      const profileRow = (Array.isArray(profileRows) ? profileRows[0] : profileRows) as { name?: string } | undefined;
-      localStorage.setItem('cid_display_name', profileRow?.name?.trim() || '');
-
-      router.push('/');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'That file could not be restored.');
-    }
-    setRestoring(false);
-  }
-
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -117,9 +64,6 @@ export default function WelcomePage() {
           <h1 className="prompt" style={{ color: 'var(--text)', fontSize: '26px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em', justifyContent: 'center', display: 'flex' }}>
             jobs<span style={{ color: 'var(--accent)' }}>_</span>
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: '8px 0 0', lineHeight: 1.6 }}>
-            A job tracker that feels like a spreadsheet, with AI that actually earns its place.
-          </p>
         </div>
 
         <div style={{
@@ -149,10 +93,10 @@ export default function WelcomePage() {
           borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: '24px',
           color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.6,
         }}>
-          No accounts, no signup. Your identity is browser-only — it never leaves your device. AI features (scoring, coach, cover letters) are included free — no API key needed.
+          No accounts, no signup. Your identity is browser-only — it never leaves your device.
         </div>
 
-        {!showRestore && !showCode ? (
+        {!showCode ? (
           <>
             <Link href="/setup" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -172,18 +116,8 @@ export default function WelcomePage() {
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
               Have a sync code? Enter it here
             </button>
-
-            <button onClick={() => { setShowRestore(true); setError(''); }} style={{
-              display: 'block', width: '100%', textAlign: 'center', marginTop: '8px',
-              background: 'none', border: 'none', color: 'var(--text-dim)',
-              fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', padding: '4px',
-            }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
-              Already have a backup? Restore it instead
-            </button>
           </>
-        ) : showCode ? (
+        ) : (
           <div style={{
             background: 'var(--surface)',
             border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
@@ -227,54 +161,6 @@ export default function WelcomePage() {
             </p>
           </div>
 
-        ) : (
-          <div style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)', borderRadius: 'var(--r-lg)',
-            padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px',
-          }}>
-            <div>
-              <label style={LABEL}>Backup file</label>
-              <input id="restore-file-input" type="file" accept="application/json"
-                style={{ display: 'none' }} onChange={e => handleFile(e.target.files?.[0])} />
-              <label htmlFor="restore-file-input" style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                border: '1px dashed var(--border-hi)', borderRadius: 'var(--r-lg)',
-                padding: '14px', cursor: 'pointer', color: 'var(--accent)',
-                fontSize: '13px', fontWeight: 600, textAlign: 'center',
-                background: 'var(--surface)',
-                overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-              }}>
-                {fileName ? <>✓ {fileName} — click to replace</> : <><Upload size={14} /> Choose your career-dashboard-backup-*.json file</>}
-              </label>
-            </div>
-
-            {error && (
-              <div style={{
-                padding: '10px 14px', borderRadius: 'var(--r)',
-                background: 'var(--danger-bg)', border: '1px solid var(--danger-bg)',
-                color: 'var(--danger)', fontSize: '12px',
-              }}>{error}</div>
-            )}
-
-            <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-              <button onClick={handleRestore} disabled={restoring} style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                background: restoring ? 'var(--border-dim)' : 'var(--accent-bg)',
-                color: restoring ? 'var(--border-hi)' : 'var(--accent)',
-                border: '1px solid var(--accent-dim)', borderRadius: 'var(--r-lg)',
-                padding: '12px 20px', fontSize: '13px', fontWeight: 700,
-                cursor: restoring ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
-              }}>
-                {restoring ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : null}
-                {restoring ? 'Restoring…' : 'Restore my data'}
-              </button>
-              <button onClick={() => { setShowRestore(false); setError(''); }} disabled={restoring} style={{
-                background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)',
-                borderRadius: 'var(--r-lg)', padding: '12px 18px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
-              }}>Cancel</button>
-            </div>
-          </div>
         )}
 
         <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '11px', marginTop: '20px' }}>

@@ -161,7 +161,7 @@ function tooltipPos(r: DOMRect) {
 }
 
 export function TutorialModal() {
-  const { tutorialOpen, closeTutorial, profileOpen, closeProfile } = useOverlays();
+  const { tutorialOpen, closeTutorial } = useOverlays();
   const [step, setStep] = useState(0);
   const [mounted, setMounted] = useState(false);
   const prevRectRef = useRef<DOMRect | null>(null);
@@ -176,14 +176,6 @@ export function TutorialModal() {
   const displayRect = rect ?? prevRectRef.current;
   const hasTarget = !!current.target;
 
-  // Auto-advance based on Profile open/close state
-  useEffect(() => {
-    if (!tutorialOpen) return;
-    if (step === 1 && profileOpen) { setStep(2); return; }
-    if (step === 2 && !profileOpen) { setStep(4); return; } // closed before tapping ?
-    if (step === 3 && !profileOpen) { setStep(4); return; }
-  }, [profileOpen, tutorialOpen, step]);
-
   function handleClose() {
     localStorage.setItem('cid_tutorial_done', '1');
     setStep(0);
@@ -191,9 +183,7 @@ export function TutorialModal() {
   }
 
   function handleNext() {
-    if (step === 3 && profileOpen) {
-      closeProfile(); // useEffect watches profileClosed and advances to step 4
-    } else if (step < STEPS.length - 1) {
+    if (step < STEPS.length - 1) {
       setStep(s => s + 1);
     } else {
       handleClose();
