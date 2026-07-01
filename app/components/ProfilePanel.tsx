@@ -5,7 +5,6 @@ import { apiFetch } from '@/lib/apiFetch';
 import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
 import { Edit2, ExternalLink, Loader, FileText, Check, Download, Upload, Plus, Activity, X, Trash2, Brain, Smartphone } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
-import { BookOpen } from 'lucide-react';
 import { useRef } from 'react';
 
 interface ProfileData {
@@ -63,7 +62,7 @@ function timeAgo(ts: string) {
 const fieldLabelStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '10px', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 };
 
 export function ProfilePanel() {
-  const { profileOpen, closeProfile, profileTab, openTutorial } = useOverlays();
+  const { profileOpen, closeProfile, profileTab } = useOverlays();
   const [tab, setTab] = useState('resume');
   useEffect(() => { if (profileOpen) setTab(profileTab || 'resume'); }, [profileOpen, profileTab]);
 
@@ -522,13 +521,6 @@ export function ProfilePanel() {
                 )}
               </div>
 
-              <button
-                onClick={() => { closeProfile(); openTutorial(); }}
-                className="btn-ghost"
-                style={{ alignSelf: 'flex-start', fontSize: '12px', gap: '6px' }}
-              >
-                <BookOpen size={12} /> Replay tutorial
-              </button>
             </div>
           )}
 

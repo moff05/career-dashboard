@@ -63,7 +63,7 @@ function Field({ label, field, form, setForm, type = 'text' }: {
 // ─── Main ────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { displayName } = useUser();
-  const { openCoach, openProfile, openConnections, openTutorial, connectionsOpen, connectionsPrefillCompany } = useOverlays();
+  const { openCoach, openProfile, openConnections, connectionsOpen, connectionsPrefillCompany } = useOverlays();
   const firstName = displayName.split(' ')[0];
   // greeting()/today both read the local clock — computing them during the
   // initial render lets the server's clock (often a different timezone, or
@@ -82,8 +82,6 @@ export default function DashboardPage() {
       window.history.replaceState({}, '', window.location.pathname);
       openImport();
       setImportUrl(importParam);
-    } else if (!localStorage.getItem('cid_tutorial_done')) {
-      openTutorial();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
