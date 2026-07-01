@@ -52,68 +52,68 @@ Most tracked applications land in the 25–55 range. Do not give credit for pote
 JOB: Company: ${job.company} | Title: ${job.title} | Type: ${typeLabel[job.type] || job.type} | Location: ${job.location || 'not specified'}
 ${job.description ? `Description:\n${job.description}` : '(No description)'}
 
-Score each category using ONLY the exact integer values listed. Do not use any other number.
+Score each category with any integer from 0 to its maximum. The anchors below are reference points — use judgment to land between them when the situation calls for it.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. EXPLICIT REQUIREMENTS MET — must be one of: 0, 5, 10, 15, 20, 25
+1. EXPLICIT REQUIREMENTS MET — integer 0 to 25
 
 Read only what the posting explicitly states is required: degree level, GPA cutoff, enrollment status, class year, required years of experience, named required certifications or tools.
 
 0  = fails one or more explicit stated requirements. Full stop. Do not rationalize around it.
-5  = meets most requirements but misses or only ambiguously satisfies one minor stated one
-10 = meets all stated requirements, but barely — only by a generous or uncertain reading of the resume
-15 = clearly meets every stated requirement with nothing left ambiguous
-20 = clearly meets every stated requirement and demonstrably exceeds at least one minor one
+~5 = meets most but misses or only ambiguously satisfies one minor stated one
+~10 = meets all stated requirements, but barely — only by a generous or uncertain reading
+~15 = clearly meets every stated requirement with nothing left ambiguous
+~20 = clearly meets every stated requirement and demonstrably exceeds at least one minor one
 25 = clearly meets every stated requirement and demonstrably exceeds multiple, or exceeds a major one
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2. SKILLS MATCH — must be one of: 0, 4, 8, 12, 16, 20
+2. SKILLS MATCH — integer 0 to 20
 
 Judge only demonstrated skills — tools and techniques used in real jobs or internships. Coursework and class projects are weak signal. A student who "used Python in a class" is not the same as someone who built a production system with it.
 
-0  = skills on resume have no meaningful overlap with what this role does day-to-day
-4  = one or two surface-level relevant skills, demonstrated only in coursework or a side project
-8  = relevant skills exist but almost entirely via coursework or one-off projects — no real applied track record
-12 = real applied experience exists for some core skills, but multiple gaps in role-specific tools or domains
-16 = solid real experience covering most of what the role needs, with one or two specific gaps
-20 = strong, direct overlap across all core skills — candidate has done this exact type of work in a real context
+0  = no meaningful overlap with what this role does day-to-day
+~4 = one or two relevant skills, coursework or side project only
+~8 = relevant skills but almost entirely via coursework — no real applied track record
+~12 = real applied experience for some core skills, multiple gaps in role-specific tools
+~16 = solid real experience, one or two specific gaps remaining
+20 = strong direct overlap across all core skills — done this exact work in a real context
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-3. ROLE ALIGNMENT — must be one of: 0, 4, 8, 12, 16, 20
+3. ROLE ALIGNMENT — integer 0 to 20
 
 Is this the right level AND right function for where this candidate actually is right now?
 
 0  = wrong level (requires experience the candidate doesn't have) OR wrong function entirely
-4  = major mismatch — either level or function is clearly off, not just a stretch
-8  = plausible on paper, but a real and noticeable stretch in level, function, or scope
-12 = right general level and function, but a meaningful mismatch in one dimension (e.g., scope, specialization)
-16 = good fit for level and function with only a minor mismatch
-20 = exactly the right level and function for this candidate's current stage — no significant mismatch
+~4 = major mismatch in level or function — not just a stretch
+~8 = plausible on paper, but a real and noticeable stretch
+~12 = right general level and function, meaningful mismatch in one dimension
+~16 = good fit, only a minor mismatch
+20 = exactly the right level and function for this candidate's current stage
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-4. INDUSTRY FIT — must be one of: 0, 4, 8, 12, 16, 20
+4. INDUSTRY FIT — integer 0 to 20
 
-STRICT. "Transferable skills" are not industry experience. The fact that skills learned in one industry are broadly useful does NOT qualify for a score above 0. Relevant exposure must be direct and documented in the resume.
+STRICT. "Transferable skills" are not industry experience. The fact that skills learned elsewhere are broadly useful does NOT qualify for anything above 0. Relevant exposure must be direct and documented.
 
-0  = no documented experience in this industry or a recognized adjacent sub-sector. General business/tech skills do not count here.
-4  = peripheral connection only — one class, a brief mention, or purely theoretical exposure
-8  = documented experience in a genuinely neighboring industry that shares specific customers, workflows, or regulatory context (not just "also uses spreadsheets")
-12 = documented experience in a recognized adjacent sub-sector with real structural overlap in this industry
-16 = at least one internship, job, or sustained real project in this exact industry or a clear recognized sub-sector
+0  = no documented experience in this industry or a recognized adjacent sub-sector
+~4 = peripheral connection only — one class, brief mention, or purely theoretical
+~8 = documented experience in a genuinely neighboring industry (shared customers, workflows, or regulatory context — not just "also uses spreadsheets")
+~12 = documented experience in a recognized adjacent sub-sector with real structural overlap
+~16 = at least one internship, job, or sustained real project in this exact industry
 20 = multiple roles or sustained projects in this exact industry with depth
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-5. LOGISTICS / LOCATION FIT — must be one of: 0, 5, 10, 15
+5. LOGISTICS / LOCATION FIT — integer 0 to 15
 
 CRITICAL: "target cities" in the candidate profile = cities they are OPEN TO working in. It does NOT mean they currently live there. Current location and availability come ONLY from resume, school enrollment, graduation date, and profile notes.
 
-SCHEDULING RULE: If the candidate is enrolled at a university in a different city than the job, AND the role runs during an academic semester (fall or spring co-op/internship), this IS a direct scheduling conflict → 0. A city being in the target list does not override a semester conflict.
-GRADUATION RULE: If a multi-semester co-op would push the candidate's graduation date past their stated graduation date, that is also a structural conflict → 0.
+SCHEDULING RULE: If the candidate is enrolled at a university in a different city than the job, AND the role runs during an academic semester (fall or spring co-op/internship), this IS a direct scheduling conflict → 0.
+GRADUATION RULE: If a multi-semester co-op would push graduation past the candidate's stated date → 0.
 
-0  = concrete conflict: scheduling conflict due to school enrollment during that semester; graduation timeline conflict; city not in target list; or visa/sponsorship conflict with no flexibility stated
-5  = a real logistical constraint (specific city, on-site, relocation, timing) that the profile neither confirms nor rules out — genuine uncertainty
-10 = mostly clear, but a minor logistical question remains (e.g., start date ambiguity)
-15 = no conflict — posting is silent on logistics, OR location matches target cities with no scheduling or timing conflict evident
+0   = concrete conflict: semester scheduling, graduation timeline, city not in target list, or visa conflict
+~5  = real logistical constraint that the profile neither confirms nor rules out
+~10 = mostly clear, minor logistical question remains
+15  = no conflict — posting silent on logistics, OR location matches target cities with no scheduling conflict evident
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SUMMARY: State plainly whether this is a realistic shot or a long shot and exactly why. Do not soften. Do not say what the candidate "could" do to fix gaps — that is handled separately.
