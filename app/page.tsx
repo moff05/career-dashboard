@@ -1107,7 +1107,6 @@ export default function DashboardPage() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '20px 0' }}>
                                   <Loader size={14} color="var(--accent)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                   Analyzing fit against your profile...
-                                  <span style={{ color: 'var(--text-dim)', marginLeft: 'auto' }}>~$0.03</span>
                                 </div>
                               )}
                               {!analysis && job.match_score && (
@@ -1122,9 +1121,12 @@ export default function DashboardPage() {
                                   </div>
                                   <div>
                                     <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '8px' }}>Score from last analysis.</div>
-                                    <button onClick={() => refreshAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'var(--surface)', color: 'var(--accent)', border: '1px solid var(--accent-dim)', borderRadius: 'var(--r-lg)', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                                      Refresh all →
-                                    </button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                      <button onClick={() => refreshAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: 'var(--surface)', color: 'var(--accent)', border: '1px solid var(--accent-dim)', borderRadius: 'var(--r-lg)', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                        Refresh all →
+                                      </button>
+                                      <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>~$0.03</span>
+                                    </div>
                                   </div>
                                 </div>
                               )}
@@ -1158,10 +1160,13 @@ export default function DashboardPage() {
                                       </div>
                                       <div style={{ flex: 1 }}>
                                         <div style={{ color: 'var(--text)', fontSize: '13px', lineHeight: 1.6 }}>{r.summary}</div>
-                                        <button onClick={() => refreshAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
-                                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-                                          <RotateCcw size={10} /> Refresh all
-                                        </button>
+                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                                          <button onClick={() => refreshAnalysis(job.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
+                                            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
+                                            <RotateCcw size={10} /> Refresh all
+                                          </button>
+                                          <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>~$0.03</span>
+                                        </div>
                                       </div>
                                     </div>
                                     {/* Category bars — each category has its own max (25/20/20/20/15,
@@ -1441,10 +1446,13 @@ export default function DashboardPage() {
                                         )}
                                       </div>
 
-                                      <button onClick={() => { delete bulletsCacheRef.current[job.id]; runBullets(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit', alignSelf: 'flex-start' }}
-                                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-                                        <RotateCcw size={10} /> Regenerate
-                                      </button>
+                                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-start' }}>
+                                        <button onClick={() => { delete bulletsCacheRef.current[job.id]; runBullets(job.id); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '11px', padding: 0, fontFamily: 'inherit' }}
+                                          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-muted)')} onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
+                                          <RotateCcw size={10} /> Regenerate
+                                        </button>
+                                        <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>~$0.01</span>
+                                      </div>
                                     </div>
                                   );
                                 })()}
