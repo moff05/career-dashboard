@@ -19,23 +19,41 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
 
     const systemPrompt = await buildSystemPrompt(userId);
-    const model = getModel(systemPrompt);
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: `Analyze fit gaps for this job. Return ONLY valid JSON.
+    const { client, systemInstruction } = getModel(systemPrompt);
+
+    const prompt = `You are a blunt career advisor. Analyze the fit gaps between this candidate (resume and background in context) and this specific job posting. Be honest — if there are hard disqualifiers, say so plainly.
 
 JOB: Company: ${job.company} | Title: ${job.title}
-${job.description ? `JD:\n${String(job.description).slice(0, 6000)}` : '(No JD)'}
+${job.description ? `JD:\n${String(job.description).slice(0, 6000)}` : '(No JD — base analysis on role title and company)'}
+
+Definitions:
+- "major" gap: A requirement the posting explicitly lists that the candidate clearly lacks. Recruiters will notice this immediately.
+- "minor" gap: Something that would strengthen the application but isn't a stated requirement.
+- "how_to_address": Be specific and actionable. "Take an online course" is too vague. Say which course, certification, or project would close the gap and how long it realistically takes.
 
 Rules for should_apply:
-- Set to FALSE when there is a hard structural disqualifier: a graduation date or enrollment conflict the posting makes explicit, a missing required credential or class year, a location/visa requirement that cannot be met. Strong skills do NOT override a hard gate — if the candidate can't clear the initial screen, applying wastes their time.
-- Set to TRUE only when the candidate legitimately clears all stated requirements, or when there is exactly one ambiguous blocker that a single verifiable action (e.g. one email to HR) could resolve before the deadline. If the blocker is structural and the posting is explicit about it, it is not ambiguous.
-- apply_reasoning must be direct and honest about why you chose true or false. If false, say plainly what the disqualifier is and why it cannot be worked around.
+- FALSE when there is a hard structural disqualifier: wrong graduation year, missing required credential, location/visa conflict, explicitly required years of experience the candidate doesn't have. Strong skills do NOT override a hard gate.
+- TRUE only when the candidate legitimately clears all stated requirements, or there is exactly one ambiguous blocker a single action could resolve.
+- apply_reasoning: State plainly why you chose true or false. If false, name the disqualifier and why it can't be worked around.
 
-{"gaps":[{"skill":"","severity":"major","how_to_address":""}],"positioning":"","quick_wins":[],"should_apply":true,"apply_reasoning":""}` }] }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+"positioning": 2-3 sentences on the strongest angle this candidate should lead with in their application. What's their best argument for why they're the right person?
+
+"quick_wins": Up to 3 specific things the candidate can do in the next 48 hours to strengthen this application (e.g., add a specific project to resume, get a referral, highlight a specific experience in cover letter).
+
+Return ONLY valid JSON, no other text:
+{"gaps":[{"skill":"specific gap name","severity":"major or minor","how_to_address":"specific actionable step"}],"positioning":"2-3 sentences on strongest angle","quick_wins":["specific action 1","specific action 2"],"should_apply":true,"apply_reasoning":"direct explanation"}`;
+
+    const response = await client.chat.completions.create({
+      model: GEMINI_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        ...(systemInstruction ? [{ role: 'system' as const, content: systemInstruction }] : []),
+        { role: 'user' as const, content: prompt },
+      ],
     });
-    await logUsage(userId, 'fit_gaps', GEMINI_MODEL, geminiUsage(result.response.usageMetadata));
-    const text = result.response.text();
+    await logUsage(userId, 'fit_gaps', GEMINI_MODEL, geminiUsage(response.usage));
+    const text = response.choices[0]?.message?.content || '{}';
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json({ error: 'Parse failed' }, { status: 500 });
     const parsed = JSON.parse(match[0]);

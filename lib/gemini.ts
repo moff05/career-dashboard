@@ -1,20 +1,34 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 
-export const GEMINI_MODEL = 'gemini-2.0-flash';
+export const GEMINI_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
 
-export function getModel(systemInstruction?: string) {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error('GEMINI_API_KEY is not set');
-  const genAI = new GoogleGenerativeAI(key);
-  return genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
-    ...(systemInstruction ? { systemInstruction } : {}),
-  });
+let client: OpenAI | null = null;
+
+export function getAIClient(): OpenAI {
+  if (!client) {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
+    client = new OpenAI({
+      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey,
+      defaultHeaders: {
+        'HTTP-Referer': 'https://career-dashboard-ten.vercel.app',
+        'X-Title': 'jobs_',
+      },
+    });
+  }
+  return client;
 }
 
-export function geminiUsage(meta?: { promptTokenCount?: number; candidatesTokenCount?: number }) {
+// Keep this export name so routes don't need updating
+export function getModel(systemInstruction?: string) {
+  return { client: getAIClient(), systemInstruction };
+}
+
+// Translate OpenAI usage to logUsage format
+export function geminiUsage(usage?: { prompt_tokens?: number; completion_tokens?: number } | null) {
   return {
-    input_tokens: meta?.promptTokenCount || 0,
-    output_tokens: meta?.candidatesTokenCount || 0,
+    input_tokens: usage?.prompt_tokens || 0,
+    output_tokens: usage?.completion_tokens || 0,
   };
 }

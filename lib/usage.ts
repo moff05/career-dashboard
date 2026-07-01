@@ -6,6 +6,7 @@ const PRICING: Record<string, { input: number; output: number }> = {
   'claude-sonnet-4-6': { input: 3 / 1_000_000, output: 15 / 1_000_000 },
   'claude-haiku-4-5-20251001': { input: 1 / 1_000_000, output: 5 / 1_000_000 },
   'gemini-2.0-flash': { input: 0.10 / 1_000_000, output: 0.40 / 1_000_000 },
+  'meta-llama/llama-3.3-70b-instruct:free': { input: 0, output: 0 },
 };
 
 // Cache writes use the 5-minute TTL (the only TTL this app sets) at 1.25x

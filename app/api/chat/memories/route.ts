@@ -12,26 +12,32 @@ export async function POST(request: NextRequest) {
     if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
     const { message, response, session_id } = await request.json();
 
-    const model = getModel();
-    const completion = await model.generateContent({
-      contents: [{
-        role: 'user',
-        parts: [{ text: `Extract any new information about the user from this conversation exchange that would help a career coach know them better. Return as JSON array: [{"content": string, "category": "preference"|"goal"|"insight"|"company"|"role"|"location"|"skill"|"other"}]. Return empty array [] if nothing worth saving.
+    const { client } = getModel();
+    const completion = await client.chat.completions.create({
+      model: GEMINI_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [{
+        role: 'user' as const,
+        content: `Extract any new information about the user from this conversation exchange that would help a career coach know them better. Return as a JSON object with a "memories" array. Return {"memories":[]} if nothing worth saving.
 
 User said: ${message}
 Assistant said: ${response}
 
-Return ONLY the JSON array.` }],
+Return ONLY valid JSON, no other text:
+{"memories":[{"content":"string","category":"preference|goal|insight|company|role|location|skill|other"}]}`,
       }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
     });
-    await logUsage(userId, 'memory_extraction', GEMINI_MODEL, geminiUsage(completion.response.usageMetadata));
+    await logUsage(userId, 'memory_extraction', GEMINI_MODEL, geminiUsage(completion.usage));
 
-    const responseText = completion.response.text();
+    const responseText = completion.choices[0]?.message?.content || '{}';
     let memories: ExtractedMemory[] = [];
     try {
-      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) memories = JSON.parse(jsonMatch[0]);
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (Array.isArray(parsed.memories)) memories = parsed.memories;
+      }
     } catch { memories = []; }
 
     if (memories.length > 0) {

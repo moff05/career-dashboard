@@ -96,21 +96,22 @@ export async function POST(request: NextRequest) {
       contextParts.push(`[USER-PROVIDED CONTEXT]\n${extraText.trim()}`);
     }
 
-    // 3. Screenshot via Gemini vision
+    // 3. Screenshot via vision
     if (imageBase64 && imageMediaType && VALID_IMAGE_TYPES.includes(imageMediaType as ImageMediaType)) {
       try {
-        const model = getModel();
-        const visionRes = await model.generateContent({
-          contents: [{
-            role: 'user',
-            parts: [
-              { inlineData: { mimeType: imageMediaType as ImageMediaType, data: imageBase64 } },
-              { text: 'Extract all text visible in this job posting screenshot. Preserve structure (titles, bullet points). Return only the extracted text, no commentary.' },
+        const { client } = getModel();
+        const visionRes = await client.chat.completions.create({
+          model: GEMINI_MODEL,
+          messages: [{
+            role: 'user' as const,
+            content: [
+              { type: 'image_url', image_url: { url: `data:${imageMediaType};base64,${imageBase64}` } },
+              { type: 'text', text: 'Extract all text visible in this job posting screenshot. Preserve structure (titles, bullet points). Return only the extracted text, no commentary.' },
             ],
           }],
         });
-        await logUsage(userId, 'job_import', GEMINI_MODEL, geminiUsage(visionRes.response.usageMetadata));
-        const imageText = visionRes.response.text();
+        await logUsage(userId, 'job_import', GEMINI_MODEL, geminiUsage(visionRes.usage));
+        const imageText = visionRes.choices[0]?.message?.content || '';
         if (imageText) contextParts.push(`[FROM SCREENSHOT]\n${imageText}`);
       } catch {
         warnings.push('Could not process the screenshot.');
@@ -134,11 +135,14 @@ export async function POST(request: NextRequest) {
 
     const combinedContext = contextParts.join('\n\n---\n\n').slice(0, 18000);
 
-    const model = getModel();
-    const response = await model.generateContent({
-      contents: [{
-        role: 'user',
-        parts: [{ text: `Extract job posting details from these combined sources. Only extract what is explicitly present — do not infer or invent. Leave fields as empty string if not found.
+    const { client } = getModel();
+    const response = await client.chat.completions.create({
+      model: GEMINI_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [{
+        role: 'user' as const,
+        content: `Extract job posting details from these combined sources. Only extract what is explicitly present — do not infer or invent. Leave fields as empty string if not found.
 
 ${combinedContext}
 
@@ -162,13 +166,12 @@ Rules:
 - deadline: YYYY-MM-DD application deadline — empty if not found
 - posting_date: YYYY-MM-DD date the job was posted — empty if not found
 - salary_range: compensation as written — empty if not found
-- description: the FULL job description including all responsibilities, requirements, and qualifications — copy the actual text, do not summarize. Empty if insufficient info.` }],
+- description: the FULL job description including all responsibilities, requirements, and qualifications — copy the actual text, do not summarize. Empty if insufficient info.`,
       }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
     });
-    await logUsage(userId, 'job_import', GEMINI_MODEL, geminiUsage(response.response.usageMetadata));
+    await logUsage(userId, 'job_import', GEMINI_MODEL, geminiUsage(response.usage));
 
-    const rawText = response.response.text();
+    const rawText = response.choices[0]?.message?.content || '{}';
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const extracted = JSON.parse(jsonMatch[0]);

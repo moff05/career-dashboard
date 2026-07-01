@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/gemini';
+import { getAIClient, geminiUsage, GEMINI_MODEL } from '@/lib/gemini';
 
 export const maxDuration = 60;
 
@@ -29,34 +29,41 @@ export async function POST(request: NextRequest) {
       args: [userId, 'user', message, sid],
     });
 
-    const model = getModel(systemPrompt);
+    // Build messages array (OpenAI format — 'assistant' not 'model')
+    const messages: { role: 'system' | 'user' | 'assistant'; content: string }[] = [
+      { role: 'system', content: systemPrompt },
+      ...history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      { role: 'user', content: message },
+    ];
 
-    // Convert DB history to Gemini format (assistant → model)
-    const geminiHistory = history.map(m => ({
-      role: m.role === 'assistant' ? 'model' as const : 'user' as const,
-      parts: [{ text: m.content }],
-    }));
-
-    const chat = model.startChat({ history: geminiHistory });
+    const openai = getAIClient();
+    const stream = await openai.chat.completions.create({
+      model: GEMINI_MODEL,
+      messages,
+      stream: true,
+      stream_options: { include_usage: true },
+    });
 
     const encoder = new TextEncoder();
     let fullResponse = '';
+    let finalUsage: { prompt_tokens?: number; completion_tokens?: number } | null = null;
 
     const readable = new ReadableStream({
       async start(controller) {
         try {
-          const result = await chat.sendMessageStream(message);
-          for await (const chunk of result.stream) {
-            const text = chunk.text();
-            fullResponse += text;
-            controller.enqueue(encoder.encode(text));
+          for await (const chunk of stream) {
+            const text = chunk.choices[0]?.delta?.content || '';
+            if (text) {
+              fullResponse += text;
+              controller.enqueue(encoder.encode(text));
+            }
+            if (chunk.usage) finalUsage = chunk.usage;
           }
           await db.execute({
             sql: 'INSERT INTO chat_messages (user_id, role, content, session_id) VALUES (?, ?, ?, ?)',
             args: [userId, 'assistant', fullResponse, sid],
           });
-          const finalResponse = await result.response;
-          await logUsage(userId, 'coach_chat', GEMINI_MODEL, geminiUsage(finalResponse.usageMetadata));
+          await logUsage(userId, 'coach_chat', GEMINI_MODEL, geminiUsage(finalUsage));
           controller.close();
         } catch (err) {
           controller.error(err);

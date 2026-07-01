@@ -20,7 +20,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
 
     const systemPrompt = await buildSystemPrompt(userId);
-    const model = getModel(systemPrompt);
+    const { client, systemInstruction } = getModel(systemPrompt);
     const typeLabel: Record<string, string> = {
       'fall-2026-internship': 'Fall 2026 Internship', 'spring-2027-internship': 'Spring 2027 Internship',
       'summer-internship': 'Summer Internship', 'full-time': 'Full-Time / New Grad',
@@ -40,8 +40,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       logistics_fit:          { max: 15, values: [0, 7, 15], label: 'Logistics / Location Fit' },
     } as const;
 
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: `Score how realistically this candidate would get through screening and land THIS SPECIFIC job — not how strong they are in general, and not how well they might grow into it. Be harsh and literal. Most applications, for most candidates, are not a great match: a realistic score distribution lands mostly in the 25-55 range out of 100. Scores above 75 should be rare and reserved for a genuinely strong, low-risk match with no material gaps against what this posting actually asks for. Do not give credit for "potential" — score against what is on the resume today. A candidate who is otherwise excellent but misses this posting's explicit stated requirements should score low on Explicit Requirements Met regardless of their overall strength; being a great candidate in general does not make someone a fit for a posting they don't meet the stated bar for.
+    const prompt = `Score how realistically this candidate would get through screening and land THIS SPECIFIC job — not how strong they are in general, and not how well they might grow into it. Be harsh and literal. Most applications, for most candidates, are not a great match: a realistic score distribution lands mostly in the 25-55 range out of 100. Scores above 75 should be rare and reserved for a genuinely strong, low-risk match with no material gaps against what this posting actually asks for. Do not give credit for "potential" — score against what is on the resume today. A candidate who is otherwise excellent but misses this posting's explicit stated requirements should score low on Explicit Requirements Met regardless of their overall strength; being a great candidate in general does not make someone a fit for a posting they don't meet the stated bar for.
 
 JOB: Company: ${job.company} | Title: ${job.title} | Type: ${typeLabel[job.type] || job.type} | Location: ${job.location || 'not specified'}
 ${job.description ? `Description:\n${job.description}` : '(No description)'}
@@ -79,12 +78,22 @@ Score these 5 categories. Each score must be EXACTLY one of the listed values �
 
 The summary must be direct and unsentimental: state plainly whether this is a realistic shot or a long shot, and why, in 2-3 sentences. Do not soften it to make the candidate feel better — that defeats the point of tracking applications honestly.
 
-Return a JSON object with this structure:
-{"categories":{"explicit_requirements":{"score":0,"rationale":""},"skills_match":{"score":0,"rationale":""},"role_alignment":{"score":0,"rationale":""},"industry_fit":{"score":0,"rationale":""},"logistics_fit":{"score":0,"rationale":""}},"summary":""}` }] }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+CRITICAL: Your response must be valid JSON only — no markdown, no code blocks, no explanation text before or after. The "score" for each category must be EXACTLY one of the listed integer values — never any other number. Do not average or interpolate.
+
+Return this exact JSON structure:
+{"categories":{"explicit_requirements":{"score":0,"rationale":"2-3 sentences"},"skills_match":{"score":0,"rationale":"2-3 sentences"},"role_alignment":{"score":0,"rationale":"2-3 sentences"},"industry_fit":{"score":0,"rationale":"2-3 sentences"},"logistics_fit":{"score":0,"rationale":"1-2 sentences"}},"summary":"2-3 sentences, direct and unsentimental"}`;
+
+    const response = await client.chat.completions.create({
+      model: GEMINI_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        ...(systemInstruction ? [{ role: 'system' as const, content: systemInstruction }] : []),
+        { role: 'user' as const, content: prompt },
+      ],
     });
-    await logUsage(userId, 'fit_scorecard', GEMINI_MODEL, geminiUsage(result.response.usageMetadata));
-    const text = result.response.text();
+    await logUsage(userId, 'fit_scorecard', GEMINI_MODEL, geminiUsage(response.usage));
+    const text = response.choices[0]?.message?.content || '{}';
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json({ error: 'Parse failed' }, { status: 500 });
 

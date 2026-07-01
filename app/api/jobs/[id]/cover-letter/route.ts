@@ -28,27 +28,43 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 });
 
     const systemPrompt = await buildSystemPrompt(userId);
-    const model = getModel(systemPrompt);
+    const { client, systemInstruction } = getModel(systemPrompt);
     const toneInstruction = TONE_INSTRUCTIONS[tone] || TONE_INSTRUCTIONS.professional;
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: `Write a tailored cover letter for this role, AND extract 8-10 ATS keywords/phrases from the job description.
+
+    const prompt = `Write a tailored cover letter for this candidate applying to this role, and extract ATS keywords from the job description.
 
 Tone: ${toneInstruction}.
 JOB: Company: ${job.company} | Title: ${job.title} | Location: ${job.location || 'not specified'}
-${job.description ? `JD:\n${String(job.description).slice(0, 6000)}` : '(No JD)'}
-${angle ? `CANDIDATE'S ANGLE ON WHY THIS ROLE: ${angle}` : ''}
+${job.description ? `JD:\n${String(job.description).slice(0, 6000)}` : '(No JD — tailor based on role title and company)'}
+${angle ? `CANDIDATE'S ANGLE: ${angle}` : ''}
 
-Open the letter with "Dear Hiring Team,". Never use: "I am writing to express my interest", "I believe I would be a great fit", "I am passionate about". Mirror several of the extracted keywords naturally in the letter body — don't force all of them in if it reads unnaturally. Close with a signature: the candidate's name, and beneath it whichever contact details (email, phone, LinkedIn) are listed in the context above — only the ones actually given, never invented.
+Letter structure (3 paragraphs):
+1. Opening: Start with a specific, compelling hook — a result, insight, or connection to the company's work. Do NOT open with "I am writing", "I am excited", "I believe I would be", or "I am passionate about". Do NOT open with "I" at all.
+2. Middle: Connect 2-3 of the candidate's strongest relevant experiences directly to what this role needs. Use specific details from the resume — not generic claims. Naturally weave in 3-5 of the extracted keywords.
+3. Closing: Express clear interest, reference a specific next step, and close confidently. Keep it to 2-3 sentences.
+
+Rules:
+- Total letter length: 250-350 words
+- Never invent facts not in the resume or context
+- Mirror the JD's language where it fits naturally — don't force every keyword in
+- Close with: candidate's name on one line, then any contact details (email, phone, LinkedIn) that appear in the context — only what's actually there, never invented
+
+Keywords: Extract 8-12 specific skills, tools, or phrases from the JD that an ATS would scan for. Prefer exact phrases over generic terms.
 
 Return ONLY valid JSON, no other text:
-{
-  "keywords": ["keyword1", "keyword2", "..."],
-  "letter": "full cover letter text here"
-}` }] }],
-      generationConfig: { responseMimeType: 'application/json', temperature: 0 },
+{"keywords":["keyword1","keyword2"],"letter":"full letter text here"}`;
+
+    const response = await client.chat.completions.create({
+      model: GEMINI_MODEL,
+      temperature: 0,
+      response_format: { type: 'json_object' },
+      messages: [
+        ...(systemInstruction ? [{ role: 'system' as const, content: systemInstruction }] : []),
+        { role: 'user' as const, content: prompt },
+      ],
     });
-    await logUsage(userId, 'cover_letter', GEMINI_MODEL, geminiUsage(result.response.usageMetadata));
-    const rawText = result.response.text();
+    await logUsage(userId, 'cover_letter', GEMINI_MODEL, geminiUsage(response.usage));
+    const rawText = response.choices[0]?.message?.content || '{}';
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     let letter = '';
     let keywords: string[] = [];
