@@ -23,7 +23,7 @@ function Header() {
     <header className="app-header">
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: '14px', letterSpacing: '-0.01em' }}>
-          jobs<span style={{ color: 'var(--accent)' }} className="cursor-blink-once">_</span>
+          jobs<span style={{ color: 'var(--accent)' }}>_</span>
         </span>
       </div>
 

@@ -100,11 +100,11 @@ export default function DashboardPage() {
     const full = `${greeting()}${firstName ? `, ${firstName}` : ''}`;
     let i = 0;
     setTypedGreeting('');
-    // Delay matches the jobs_ wordmark blink sequence (3 × 0.6s = 1.8s)
+    // Show blinking cursor briefly, then start typing
     let intervalId: ReturnType<typeof setInterval>;
     const delay = setTimeout(() => {
       intervalId = setInterval(() => { i++; setTypedGreeting(full.slice(0, i)); if (i >= full.length) clearInterval(intervalId); }, 38);
-    }, 1800);
+    }, 750);
     return () => { clearTimeout(delay); clearInterval(intervalId); };
   }, [mounted, firstName]); // eslint-disable-line react-hooks/exhaustive-deps
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -561,7 +561,7 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ color: 'var(--text)', fontSize: '17px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>
-            {typedGreeting || ' '}
+            {!mounted ? ' ' : typedGreeting === '' ? <span className="term-cursor">▋</span> : typedGreeting}
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '4px 0 0' }}>{today}</p>
         </div>
