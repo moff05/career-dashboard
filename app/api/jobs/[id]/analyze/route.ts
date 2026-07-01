@@ -72,9 +72,10 @@ Score these 5 categories. Each score must be EXACTLY one of the listed values �
 20 = repeated, direct experience in this exact industry across multiple roles or projects
 
 5. LOGISTICS / LOCATION FIT — one of 0, 7, 15
-0 = the posting states a location/remote/visa requirement that conflicts with something stated in the candidate's profile, with no stated flexibility
-7 = the posting states a real constraint (relocation, on-site, visa sponsorship not offered) that the candidate's profile neither confirms nor rules out
-15 = the posting states no location/remote constraint at all, or whatever it states is already satisfied by the candidate's profile — default here when the posting is silent on logistics, since silence is not a stated conflict
+CRITICAL: "target cities" in the candidate profile means cities they are OPEN TO working in — NOT where they currently live. Never infer current location from target cities. The candidate's actual current location and scheduling constraints come from their resume, school info, graduation date, and profile notes only.
+0 = a concrete conflict exists: the posting requires on-site presence in a city during dates when the candidate is physically elsewhere (e.g. enrolled in school in a different city during that semester); OR the posting's city is not in the candidate's target list at all; OR a visa/sponsorship conflict exists with no flexibility stated
+7 = the posting has a real logistical constraint (specific city, relocation, on-site, timing) and the candidate's profile doesn't clearly confirm or rule it out — genuine uncertainty
+15 = the posting is silent on location/logistics, OR the posting's location matches target cities AND there is no scheduling or timing conflict evident in the profile
 
 The summary must be direct and unsentimental: state plainly whether this is a realistic shot or a long shot, and why, in 2-3 sentences. Do not soften it to make the candidate feel better — that defeats the point of tracking applications honestly.
 
