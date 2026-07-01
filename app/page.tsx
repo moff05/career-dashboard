@@ -103,8 +103,8 @@ export default function DashboardPage() {
     // Show blinking cursor briefly, then start typing
     let intervalId: ReturnType<typeof setInterval>;
     const delay = setTimeout(() => {
-      intervalId = setInterval(() => { i++; setTypedGreeting(full.slice(0, i)); if (i >= full.length) clearInterval(intervalId); }, 38);
-    }, 750);
+      intervalId = setInterval(() => { i++; setTypedGreeting(full.slice(0, i)); if (i >= full.length) clearInterval(intervalId); }, 28);
+    }, 1400);
     return () => { clearTimeout(delay); clearInterval(intervalId); };
   }, [mounted, firstName]); // eslint-disable-line react-hooks/exhaustive-deps
   const [jobs, setJobs] = useState<Job[]>([]);
