@@ -1107,6 +1107,7 @@ export default function DashboardPage() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '20px 0' }}>
                                   <Loader size={14} color="var(--accent)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
                                   Analyzing fit against your profile...
+                                  <span style={{ color: 'var(--text-dim)', marginLeft: 'auto' }}>~$0.03</span>
                                 </div>
                               )}
                               {!analysis && job.match_score && (
@@ -1289,7 +1290,8 @@ export default function DashboardPage() {
                                       cursor: 'pointer', fontFamily: 'inherit', textTransform: 'capitalize',
                                     }}>{t}</button>
                                   ))}
-                                  <button onClick={() => runCoverLetter(job.id, tone, angle)} disabled={isLoading} className="btn-primary" style={{ marginLeft: 'auto', padding: '6px 16px', fontSize: '12px', cursor: isLoading ? 'wait' : 'pointer' }}>
+                                  <span style={{ color: 'var(--text-dim)', fontSize: '11px', marginLeft: 'auto' }}>~$0.01</span>
+                                  <button onClick={() => runCoverLetter(job.id, tone, angle)} disabled={isLoading} className="btn-primary" style={{ padding: '6px 16px', fontSize: '12px', cursor: isLoading ? 'wait' : 'pointer' }}>
                                     {isLoading ? <><Loader size={11} style={{ animation: 'spin 1s linear infinite' }} /> Generating…</> : result ? 'Regenerate' : 'Generate'}
                                   </button>
                                 </div>
@@ -1354,10 +1356,11 @@ export default function DashboardPage() {
                             return (
                               <div>
                                 {!bl && (
-                                  <div style={{ padding: '20px 0' }}>
+                                  <div style={{ padding: '20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <button onClick={() => runBullets(job.id)} className="btn-primary" style={{ fontSize: '12px', padding: '7px 16px' }}>
                                       Generate Resume Bullets
                                     </button>
+                                    <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>~$0.01</span>
                                   </div>
                                 )}
                                 {bl === 'loading' && (
@@ -1504,7 +1507,8 @@ export default function DashboardPage() {
                     )}
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '18px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end', marginTop: '18px' }}>
+                  <span style={{ color: 'var(--text-dim)', fontSize: '11px', marginRight: 'auto' }}>~$0.01 from your API key</span>
                   <button onClick={closeImport} style={{ backgroundColor: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
                   <button onClick={fetchImport} disabled={!importUrl.trim() && !importExtraText.trim()} className="btn-primary">
                     <LinkIcon size={13} /> Parse Job
