@@ -100,8 +100,12 @@ export default function DashboardPage() {
     const full = `${greeting()}${firstName ? `, ${firstName}` : ''}`;
     let i = 0;
     setTypedGreeting('');
-    const id = setInterval(() => { i++; setTypedGreeting(full.slice(0, i)); if (i >= full.length) clearInterval(id); }, 38);
-    return () => clearInterval(id);
+    // Delay matches the jobs_ wordmark blink sequence (3 × 0.6s = 1.8s)
+    let intervalId: ReturnType<typeof setInterval>;
+    const delay = setTimeout(() => {
+      intervalId = setInterval(() => { i++; setTypedGreeting(full.slice(0, i)); if (i >= full.length) clearInterval(intervalId); }, 38);
+    }, 1800);
+    return () => { clearTimeout(delay); clearInterval(intervalId); };
   }, [mounted, firstName]); // eslint-disable-line react-hooks/exhaustive-deps
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
