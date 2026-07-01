@@ -395,10 +395,10 @@ export default function DashboardPage() {
     }
   };
 
-  const handleStarToggle = async (id: number, current: number) => {
+  const handleStarToggle = (id: number, current: number) => {
     const starred = current ? 0 : 1;
-    await apiFetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ starred }) });
     setJobs(prev => prev.map(j => j.id === id ? { ...j, starred } : j));
+    apiFetch(`/api/jobs/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ starred }) });
   };
 
   const toggleJob = useCallback((id: number) => {
