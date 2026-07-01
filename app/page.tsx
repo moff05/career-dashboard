@@ -73,6 +73,7 @@ export default function DashboardPage() {
   // and the real value lands a tick later as an ordinary state update.
   const [mounted, setMounted] = useState(false);
   const [typedGreeting, setTypedGreeting] = useState('');
+  const [fullGreeting, setFullGreeting] = useState('');
   useEffect(() => {
     setMounted(true);
     const params = new URLSearchParams(window.location.search);
@@ -98,13 +99,14 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!mounted) return;
     const full = `${greeting()}${firstName ? `, ${firstName}` : ''}`;
+    setFullGreeting(full);
     let i = 0;
     setTypedGreeting('');
-    // Show blinking cursor briefly, then start typing
+    // 3 blinks at 0.55s each = 1.65s, then typewriter with trailing cursor
     let intervalId: ReturnType<typeof setInterval>;
     const delay = setTimeout(() => {
-      intervalId = setInterval(() => { i++; setTypedGreeting(full.slice(0, i)); if (i >= full.length) clearInterval(intervalId); }, 28);
-    }, 1400);
+      intervalId = setInterval(() => { i++; setTypedGreeting(full.slice(0, i)); if (i >= full.length) clearInterval(intervalId); }, 30);
+    }, 1650);
     return () => { clearTimeout(delay); clearInterval(intervalId); };
   }, [mounted, firstName]); // eslint-disable-line react-hooks/exhaustive-deps
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -561,7 +563,13 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1 style={{ color: 'var(--text)', fontSize: '17px', fontWeight: 700, margin: 0, letterSpacing: '-0.01em' }}>
-            {!mounted ? ' ' : typedGreeting === '' ? <span className="term-cursor">▋</span> : typedGreeting}
+            {!mounted
+              ? ' '
+              : typedGreeting === ''
+                ? <span className="term-cursor" style={{ marginLeft: 0 }}>▋</span>
+                : typedGreeting.length < fullGreeting.length
+                  ? <>{typedGreeting}<span style={{ color: 'var(--accent)' }}>▋</span></>
+                  : typedGreeting}
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '4px 0 0' }}>{today}</p>
         </div>
