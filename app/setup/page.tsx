@@ -392,16 +392,33 @@ export default function SetupPage() {
 
               <div style={{
                 background: 'var(--surface)', border: '1px solid var(--border)',
-                borderRadius: 'var(--r-lg)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '8px',
+                borderRadius: 'var(--r-lg)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px',
               }}>
-                <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>Where to get one (free):</div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5 }}>
-                  1. Go to <span style={{ color: 'var(--accent)' }}>console.anthropic.com</span> — new accounts get <strong style={{ color: 'var(--text)' }}>$5 free credit</strong>, no card needed<br />
-                  2. API Keys → Create Key<br />
-                  3. Paste it above
+                <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600 }}>How to get one:</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.7 }}>
+                  1. Create a free account at{' '}
+                  <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer"
+                    style={{ color: 'var(--accent)', textDecoration: 'none' }}
+                    onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                    onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}>
+                    console.anthropic.com
+                  </a><br />
+                  2. Go to <strong style={{ color: 'var(--text)' }}>Settings → API Keys → Create Key</strong><br />
+                  3. Copy and paste it above
                 </div>
-                <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '2px' }}>
-                  $5 covers ~30–60 full AI actions. Your key is stored in your browser only.
+                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px', alignSelf: 'flex-start',
+                    background: 'var(--accent)', color: '#0A0A0A', borderRadius: 'var(--r-lg)',
+                    padding: '7px 14px', fontSize: '12px', fontWeight: 700, fontFamily: 'inherit',
+                    textDecoration: 'none', transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--accent-hi)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'var(--accent)')}>
+                  Get your API key →
+                </a>
+                <div style={{ color: 'var(--text-dim)', fontSize: '11px' }}>
+                  New accounts get <strong style={{ color: 'var(--text-muted)' }}>$5 free credit</strong> — enough for ~30–60 AI actions. Your key is stored in your browser only, never on our servers.
                 </div>
               </div>
 

@@ -387,8 +387,8 @@ export function ProfilePanel() {
                   <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '12px 14px', marginBottom: '12px', fontSize: '12px', lineHeight: 1.7 }}>
                     <div style={{ color: 'var(--text)', fontWeight: 700, marginBottom: '8px' }}>How to get an API key (5 min)</div>
                     <ol style={{ margin: 0, paddingLeft: '18px', color: 'var(--text-muted)' }}>
-                      <li>Go to <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>console.anthropic.com</a> and create a free account — new accounts include <strong style={{ color: 'var(--text)' }}>$5 in free credit</strong>, no card needed</li>
-                      <li>Click <strong style={{ color: 'var(--text)' }}>API Keys</strong> → <strong style={{ color: 'var(--text)' }}>Create Key</strong>, give it any name</li>
+                      <li>Create a free account at <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>console.anthropic.com</a> — new accounts include <strong style={{ color: 'var(--text)' }}>$5 in free credit</strong></li>
+                      <li>Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Settings → API Keys</a> → <strong style={{ color: 'var(--text)' }}>Create Key</strong></li>
                       <li>Copy the key (starts with <code style={{ color: 'var(--accent)', fontSize: '11px' }}>sk-ant-</code>) and paste it below</li>
                     </ol>
                     <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '8px' }}>$5 covers roughly 30–60 full AI actions (scoring, coach, bullets). Add more under Billing if you run out.</div>
