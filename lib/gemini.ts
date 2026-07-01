@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 
-export const GEMINI_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
+export const GEMINI_MODEL = 'google/gemma-4-31b-it:free';
 
 let client: OpenAI | null = null;
 
