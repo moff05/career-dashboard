@@ -467,7 +467,7 @@ export function ProfilePanel() {
                 {deviceCodeMode === 'generate' ? (
                   <>
                     <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 12px', lineHeight: 1.5 }}>
-                      Generate a code on this device, then enter it on your other device. Your API key is temporarily stored server-side for up to 10 minutes to complete the transfer, then automatically deleted.
+                      Generate a code on this device, then enter it on your other device. Your data is temporarily stored server-side for up to 10 minutes to complete the transfer, then automatically deleted.
                     </p>
                     {deviceCode && deviceCodeSecondsLeft > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
