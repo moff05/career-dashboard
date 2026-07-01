@@ -1,20 +1,16 @@
 import OpenAI from 'openai';
 
-export const GEMINI_MODEL = 'google/gemma-4-31b-it:free';
+export const GEMINI_MODEL = 'llama-3.3-70b-versatile';
 
 let client: OpenAI | null = null;
 
 export function getAIClient(): OpenAI {
   if (!client) {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error('GROQ_API_KEY is not set');
     client = new OpenAI({
-      baseURL: 'https://openrouter.ai/api/v1',
+      baseURL: 'https://api.groq.com/openai/v1',
       apiKey,
-      defaultHeaders: {
-        'HTTP-Referer': 'https://career-dashboard-ten.vercel.app',
-        'X-Title': 'jobs_',
-      },
     });
   }
   return client;
