@@ -46,7 +46,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 style={{ color: 'var(--text)', fontSize: '14px', fontWeight: 700, marginBottom: '8px' }}>Data deletion</h2>
-            <p>Your data is tied to your local user ID. If you clear your browser storage, your access to the account is lost. To request deletion of your data from our servers, contact us at the email below.</p>
+            <p>Your data is tied to your local user ID stored in your browser. To request deletion of your data from our servers, contact us at the email below.</p>
           </section>
 
           <section>
