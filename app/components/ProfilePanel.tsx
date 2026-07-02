@@ -435,6 +435,18 @@ export function ProfilePanel() {
                 )}
               </div>
 
+              <div style={card}>
+                <h3 className="section-label" style={{ margin: '0 0 6px' }}>Chrome Extension</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 12px', lineHeight: 1.5 }}>
+                  Clip any job posting to your tracker in one click — works on LinkedIn, Greenhouse, Workday, and anywhere else.
+                </p>
+                <a href="/extension" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--accent)', fontSize: '12px', textDecoration: 'none', fontWeight: 600 }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+                  <ExternalLink size={11} /> Get the extension
+                </a>
+              </div>
+
             </div>
           )}
 

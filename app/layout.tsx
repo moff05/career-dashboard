@@ -27,11 +27,6 @@ function Header() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <a href="/extension" style={{ color: 'var(--text-dim)', fontSize: '11px', textDecoration: 'none', padding: '4px 6px' }}
-          onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-dim)')}>
-          extension
-        </a>
         <button onClick={() => openConnections()} className="header-btn" aria-label="Connections">
           <Users size={14} /> <span className="header-btn-label">Connections</span>
         </button>
