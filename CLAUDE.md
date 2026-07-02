@@ -1,6 +1,6 @@
 # Career Dashboard — CLAUDE.md
 
-Multi-user, self-hostable job tracker with two AI features bolted on deliberately: per-job fit scoring, and a coach that knows your background. Next.js 16 (App Router), TypeScript, Tailwind CSS, Turso (libsql) for storage, Anthropic SDK for AI. No accounts or passwords — each visitor gets a client-generated UUID identity and brings their own Anthropic API key (BYOK). Live at `career-dashboard-ten.vercel.app`, repo `github.com/moff05/career-dashboard`.
+Multi-user, self-hostable job tracker with two AI features bolted on deliberately: per-job fit scoring, and a coach that knows your background. Next.js 16 (App Router), TypeScript, Tailwind CSS, Turso (libsql) for storage, Groq (OpenAI-compatible SDK, `lib/gemini.ts`) for AI. No accounts or passwords — each visitor gets a client-generated UUID identity. AI runs server-side on a shared `GROQ_API_KEY`; users do not supply their own AI key. Live at `career-dashboard-ten.vercel.app`, repo `github.com/moff05/career-dashboard`.
 
 Originally built as a single-user tool for Nicholas Moffett (University of Miami junior, CRE/AI intern) — his is still the reference persona for feature priorities and tone, but as of the multi-user launch (June 2026) the app no longer hardcodes his data. Anyone using the live instance or a self-hosted copy gets their own isolated profile, jobs, memories, and chat history.
 
@@ -8,13 +8,12 @@ Originally built as a single-user tool for Nicholas Moffett (University of Miami
 
 ## Multi-user model
 
-- First visit with no `cid_user_id`/`cid_api_key` in `localStorage` → `ClientRoot` (`app/ClientRoot.tsx`) redirects to `/welcome`.
-- `/welcome` (`app/welcome/page.tsx`) offers two paths: **Get Started** → `/setup`'s 4-step onboarding flow (**API key** → **resume** → **identity** → **background**), or **"Already have a backup? Restore it instead"** — an inline panel (API key + backup `.json` file) that skips the form entirely: generates a UUID, `POST`s straight to `/api/import` under that new id, and only persists the identity to `localStorage` once the import actually succeeds. This is the only way to reach a restore on a fresh browser/device — without it, `/api/import`'s target user_id doesn't exist until `/setup` creates one, and the "Restore from backup" button on Profile is unreachable pre-setup.
-- The API key step is optional — skippable with a "Skip for now" link, validated as starting with `sk-ant-` only if something was actually typed. A key can be added or changed anytime from Profile's API Key card; nothing about onboarding-completion depends on having one.
-- On finish (either path): client generates a UUID (`crypto.randomUUID()`), saves `cid_user_id` / `cid_api_key` / `cid_display_name` to `localStorage`, then `PUT`s the profile (and resume, if provided) or `POST`s the imported backup to the API with those values as headers.
-- Every later request goes through `lib/apiFetch.ts`, which auto-injects `x-user-id` and `x-api-key` headers from `localStorage`.
-- Server-side, `lib/user.ts`'s `getUserId`/`getApiKey` read `x-user-id`/`x-api-key` from every request. Neither fails open: a missing `x-api-key` only falls back to `process.env.ANTHROPIC_API_KEY` outside production (admin/dev convenience — production 401s instead of silently billing whatever key is configured on the deployment); a missing `x-user-id` gets a fresh `randomUUID()` per request rather than the old shared `'anonymous'` bucket, so two different header-less callers can no longer read or overwrite each other's data. Every route that takes an `[id]` param scopes both the write *and* any response lookup by `user_id` — a guessed/enumerated id should 404, never leak another user's record (see the IDOR fix in the roadmap).
-- API keys are never persisted server-side — they travel per-request only and live in the user's browser.
+- First visit with no `cid_user_id` in `localStorage` → `ClientRoot` (`app/ClientRoot.tsx`) redirects to `/welcome`.
+- `/welcome` (`app/welcome/page.tsx`) offers two paths: **Get Started** → `/setup`'s 3-step onboarding flow (**resume** → **identity** → **background**), or **"Already have a backup? Restore it instead"** — an inline panel (backup `.json` file) that skips the form entirely: generates a UUID, `POST`s straight to `/api/import` under that new id, and only persists the identity to `localStorage` once the import actually succeeds. This is the only way to reach a restore on a fresh browser/device — without it, `/api/import`'s target user_id doesn't exist until `/setup` creates one, and the "Restore from backup" button on Profile is unreachable pre-setup.
+- On finish (either path): client generates a UUID (`crypto.randomUUID()`), saves `cid_user_id` / `cid_display_name` to `localStorage`, then `PUT`s the profile (and resume, if provided) or `POST`s the imported backup to the API with those values as headers.
+- Every later request goes through `lib/apiFetch.ts`, which auto-injects the `x-user-id` header from `localStorage`.
+- Server-side, `lib/user.ts`'s `getUserId` reads `x-user-id` from every request. A missing `x-user-id` gets a fresh `randomUUID()` per request rather than the old shared `'anonymous'` bucket, so two different header-less callers can no longer read or overwrite each other's data. Every route that takes an `[id]` param scopes both the write *and* any response lookup by `user_id` — a guessed/enumerated id should 404, never leak another user's record (see the IDOR fix in the roadmap).
+- AI calls use the server-side `GROQ_API_KEY` env var only — no per-user key required. `isSystemUser()` gates AI routes to reject synthetic/health-check user IDs (those starting with `__`).
 
 ## How to run
 
@@ -27,7 +26,7 @@ npm run build   # production build check
 
 `.env.local` is optional for local dev — see `.env.local.example`:
 ```
-# ANTHROPIC_API_KEY=sk-ant-...     (admin/dev fallback only; real users supply their own key via /setup)
+# GROQ_API_KEY=gsk_...             (required for AI features; set on Vercel + in .env.local)
 # TURSO_DATABASE_URL=libsql://...  (omit to fall back to local file:./data/career.db)
 # TURSO_AUTH_TOKEN=...
 ```
@@ -85,10 +84,11 @@ app/
 
 lib/
 ├── db.ts              # Turso/libsql singleton
-├── user.ts            # getUserId / getApiKey from request headers — see Multi-user model for the fail-closed behavior
-├── apiFetch.ts         # Client fetch wrapper — injects x-user-id / x-api-key
+├── user.ts            # getUserId / isSystemUser from request headers — see Multi-user model
+├── apiFetch.ts         # Client fetch wrapper — injects x-user-id header
+├── gemini.ts           # Groq AI client (name is legacy). Exports getAIClient() (OpenAI-compat pointed at Groq), GEMINI_MODEL (= llama-3.3-70b-versatile), getModel(), geminiUsage()
 ├── ai-context.ts       # buildSystemPrompt(userId) — resume + profile + dated memories + jobs, scoped per user
-└── usage.ts            # computeCost() + logUsage() — every Claude call site awaits this after the response comes back
+└── usage.ts            # computeCost() + logUsage() — every AI call site awaits this after the response comes back
 
 scripts/
 └── migrate-multi-user.ts   # current schema — `npm run migrate`
@@ -153,7 +153,7 @@ Greeting + Priorities strip + stats + the job tracker table, top to bottom, one 
 
 - `PUT /api/jobs/[id]` — full update, requires all fields. `PATCH` — partial update (e.g. status only). Both scope the response lookup by `user_id`, not just the write — see Multi-user model.
 - `POST /api/jobs/import` — `{ url?, extraText?, imageBase64?, imageMediaType?, extraLink? }`, requires at least one of `url`/`extraText` → Haiku extraction, returns `{ company, title, location, type, deadline, salary_range, description, url, source, warning? }`. `url` in the response is `null` when none was given.
-- `POST /api/jobs/[id]/analyze` — 5-category fit scorecard, each category constrained to an enum of anchored values, weighted to a total out of 100: Explicit Requirements Met (0-25), Skills Match (0-20), Role Alignment (0-20), Industry Fit (0-20), Logistics/Location Fit (0-15). `claude-sonnet-4-6`, `temperature: 0`. Scores *fit for this specific posting*, not general candidate strength — scored against what's literally on the resume today, with explicit-requirement misses capped low regardless of overall strength. Color coding on the total: 80+ green, 60–79 amber, <60 red; per-category bars are colored by percent-of-that-category's-max, not the raw score. This is the per-job AI score the whole tracker is built around.
+- `POST /api/jobs/[id]/analyze` — 5-category fit scorecard, each category constrained to an enum of anchored values, weighted to a total out of 100: Explicit Requirements Met (0-25), Skills Match (0-20), Role Alignment (0-20), Industry Fit (0-20), Logistics/Location Fit (0-15). `qwen/qwen3-32b` (Groq reasoning model), `temperature: 0`. Scores *fit for this specific posting*, not general candidate strength — scored against what's literally on the resume today, with explicit-requirement misses capped low regardless of overall strength. Color coding on the total: 80+ green, 60–79 amber, <60 red; per-category bars are colored by percent-of-that-category's-max, not the raw score. This is the per-job AI score the whole tracker is built around.
 - `POST /api/jobs/[id]/gaps`, `POST /api/jobs/[id]/bullets`, `POST /api/jobs/[id]/cover-letter` — per-job AI panels, all read from `buildSystemPrompt(userId)` + the job record.
 - `GET /api/export` — full data dump for the current user across all active tables. `POST /api/import` — restores from that dump into the current user (upserts profile, appends everything else including resumes). Used by Profile's Backup & Restore card, and by `/welcome`'s restore shortcut for a fresh browser/device; the only recovery path since there are no accounts.
 - `GET /api/resumes` — list the user's resumes (default first). `POST /api/resumes` — create one (`{name, raw_text}`); the first resume for a user is auto-marked default. `PUT /api/resumes/[id]` — update `name`/`raw_text`, or pass `{set_default: true}` to make it the one AI features read (clears the previous default first to respect the partial unique index). `DELETE /api/resumes/[id]` — deletes it; if it was the default, the oldest remaining resume is auto-promoted.
@@ -177,11 +177,10 @@ Tokens defined in `app/globals.css`, all verified against WCAG AA on the `--bg` 
 
 ## AI model usage
 
-- Coach chat: `claude-sonnet-4-6`, streaming via `anthropic.messages.stream()`
-- Memory extraction, fit gaps, resume bullets, cover letter, job import parsing: `claude-haiku-4-5-20251001`, non-streaming
-- Per-job fit scorecard (`/api/jobs/[id]/analyze`): `claude-sonnet-4-6`, `temperature: 0`, structured outputs (`output_config.format` with an enum-constrained JSON schema) so each rubric sub-score can only land on one of its anchored values — see API notes above
+All AI calls go through Groq via the OpenAI-compatible client in `lib/gemini.ts`, using the server-side `GROQ_API_KEY`. Two models:
 
-Each call uses the requesting user's own API key (from `x-api-key`, via `lib/user.ts`). The `ANTHROPIC_API_KEY` env var is only a fallback for local dev, gated out of production entirely (see Multi-user model).
+- **Generative routes** (coach chat, memory extraction, fit gaps, resume bullets, cover letter, job import parsing): `llama-3.3-70b-versatile`, streaming where applicable via the OpenAI SDK's `.stream()` helper
+- **Fit scorecard** (`/api/jobs/[id]/analyze`): `qwen/qwen3-32b` — reasoning model, follows rubric anchors more literally. `temperature: 0`, structured JSON output so each rubric sub-score can only land on one of its anchored values — see API notes above. Reasoning models sometimes emit `<think>…</think>` before JSON; the route strips it before parsing.
 
 ## Priority roadmap
 

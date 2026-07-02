@@ -1,24 +1,18 @@
 import { getDb } from '@/lib/db';
 
-// $ per token. Source: platform.claude.com/docs/en/pricing — keep in sync if
-// the dashboard starts calling other models.
+// $ per token. Source: console.groq.com/docs/openai — keep in sync if models change.
 const PRICING: Record<string, { input: number; output: number }> = {
-  'claude-sonnet-4-6': { input: 3 / 1_000_000, output: 15 / 1_000_000 },
-  'claude-haiku-4-5-20251001': { input: 1 / 1_000_000, output: 5 / 1_000_000 },
-  'gemini-2.0-flash': { input: 0.10 / 1_000_000, output: 0.40 / 1_000_000 },
-  'meta-llama/llama-3.3-70b-instruct:free': { input: 0, output: 0 },
+  'llama-3.3-70b-versatile': { input: 0.59 / 1_000_000, output: 0.79 / 1_000_000 },
+  'qwen/qwen3-32b': { input: 0.29 / 1_000_000, output: 0.59 / 1_000_000 },
 };
 
-// Cache writes use the 5-minute TTL (the only TTL this app sets) at 1.25x
-// input price; cache reads are 0.1x input price. Web search is a flat fee
-// per call, billed separately from tokens.
-const CACHE_WRITE_MULTIPLIER = 1.25;
-const CACHE_READ_MULTIPLIER = 0.1;
-const WEB_SEARCH_COST_PER_CALL = 10 / 1000;
+// Groq does not charge for prompt caching or web search — these multipliers
+// are kept at neutral values so the schema stays consistent if providers change.
+const CACHE_WRITE_MULTIPLIER = 0;
+const CACHE_READ_MULTIPLIER = 0;
+const WEB_SEARCH_COST_PER_CALL = 0;
 
-// Loosely typed on purpose: some call sites go through `anthropic.beta.messages`
-// cast to `any` (web search beta), so `usage` won't always match the SDK's
-// strict `Usage` type. Duck-typing here keeps every call site a one-liner.
+// Loosely typed — duck-typing keeps every call site a one-liner.
 export interface UsageLike {
   input_tokens?: number | null;
   output_tokens?: number | null;
@@ -28,7 +22,7 @@ export interface UsageLike {
 }
 
 export function computeCost(model: string, usage: UsageLike): number {
-  const price = PRICING[model] ?? PRICING['claude-haiku-4-5-20251001'];
+  const price = PRICING[model] ?? PRICING['llama-3.3-70b-versatile'];
   const inputTokens = usage.input_tokens || 0;
   const outputTokens = usage.output_tokens || 0;
   const cacheWrite = usage.cache_creation_input_tokens || 0;
