@@ -6,11 +6,11 @@ product
 
 ## Users
 
-Any job seeker who lands on the live instance or self-hosts the project — no accounts, no passwords. A UUID identity is generated client-side at `/setup` and paired with the user's own Anthropic API key (BYOK), stored in `localStorage` only. Originally built by and for Nicholas Moffett (University of Miami junior, builder, CRE/AI intern); his daily-use habits are still the reference for feature priorities. As of the multi-user launch the product is no longer single-tenant — but the actual target user is still someone exactly like him: a college student, often not technical, who would otherwise be tracking applications in a spreadsheet. Design for that person specifically, not for a developer who'd be comfortable in a real terminal.
+Any job seeker who lands on the live instance or self-hosts the project — no accounts, no passwords. A UUID identity is generated client-side at `/setup` and stored in `localStorage`. AI runs server-side on a shared Groq key (`GROQ_API_KEY`); users do not supply their own key. Planned: ~$5/month via Stripe (August 2026) with per-user daily AI call caps to protect margins. Originally built by and for Nicholas Moffett (University of Miami junior, builder, CRE/AI intern); his daily-use habits are still the reference for feature priorities. As of the multi-user launch the product is no longer single-tenant — but the actual target user is still someone exactly like him: a college student, often not technical, who would otherwise be tracking applications in a spreadsheet. Design for that person specifically, not for a developer who'd be comfortable in a real terminal.
 
 ## Product Purpose
 
-A job tracker that feels like a great spreadsheet, with two AI features that earn their place: import a job posting and get an in-depth, brutally honest fit score, and a coach that knows your background. Each user brings their own resume and API key through setup, and the dashboard personalizes to them from that point on. Success = the user opens this instead of a spreadsheet, every time.
+A job tracker that feels like a great spreadsheet, with two AI features that earn their place: import a job posting and get an in-depth, brutally honest fit score, and a coach that knows your background. Each user brings their resume through setup, and the dashboard personalizes to them from that point on. Success = the user opens this instead of a spreadsheet, every time.
 
 ## Brand Personality
 

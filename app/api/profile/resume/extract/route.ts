@@ -3,7 +3,7 @@ import mammoth from 'mammoth';
 import { extractText } from 'unpdf';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/gemini';
+import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/groq';
 
 const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;

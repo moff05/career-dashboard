@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const db = getDb();
 
     const result = await db.execute({
-      sql: 'SELECT user_id, api_key, expires_at FROM device_codes WHERE code = ?',
+      sql: 'SELECT user_id, expires_at FROM device_codes WHERE code = ?',
       args: [code.replace(/\D/g, '')], // strip any formatting dashes
     });
 
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     });
     const displayName = (profile.rows[0]?.name as string) || '';
 
-    return NextResponse.json({ user_id: row.user_id, api_key: row.api_key, display_name: displayName });
+    return NextResponse.json({ user_id: row.user_id, display_name: displayName });
   } catch (error) {
     console.error('POST /api/device-code/redeem error:', error);
     return NextResponse.json({ error: 'Failed to redeem code' }, { status: 500 });

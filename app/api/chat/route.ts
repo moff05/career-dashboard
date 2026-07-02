@@ -3,7 +3,8 @@ import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getAIClient, geminiUsage, GEMINI_MODEL } from '@/lib/gemini';
+import { getAIClient, geminiUsage, GEMINI_MODEL } from '@/lib/groq';
+import { isRateLimited, RATE_LIMIT_RESPONSE } from '@/lib/rateLimit';
 
 export const maxDuration = 60;
 
@@ -13,6 +14,7 @@ export async function POST(request: NextRequest) {
   try {
     const userId = getUserId(request);
     if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
+    if (await isRateLimited(userId)) return NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 });
     const { message, session_id } = await request.json();
     if (!message) return NextResponse.json({ error: 'message is required' }, { status: 400 });
     const db = getDb();

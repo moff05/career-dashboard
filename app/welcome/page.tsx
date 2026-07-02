@@ -44,7 +44,7 @@ export default function WelcomePage() {
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Code not found.');
-      saveUser(data.user_id, '');
+      saveUser(data.user_id);
       localStorage.setItem('cid_display_name', data.display_name || '');
       router.push('/');
     } catch (err) {
@@ -86,14 +86,6 @@ export default function WelcomePage() {
               </div>
             </div>
           ))}
-        </div>
-
-        <div style={{
-          background: 'var(--surface)', border: '1px solid var(--border)',
-          borderRadius: 'var(--r-lg)', padding: '14px 16px', marginBottom: '24px',
-          color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.6,
-        }}>
-          No accounts, no signup. Your identity is browser-only — it never leaves your device.
         </div>
 
         {!showCode ? (

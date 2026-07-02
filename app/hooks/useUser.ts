@@ -23,8 +23,7 @@ export function useUser(): UserState {
   return state;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function saveUser(userId: string, _apiKey?: string) {
+export function saveUser(userId: string) {
   localStorage.setItem('cid_user_id', userId);
 }
 

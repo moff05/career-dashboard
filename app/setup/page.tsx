@@ -130,7 +130,7 @@ export default function SetupPage() {
     setSaving(true);
     try {
       const userId = generateUserId();
-      saveUser(userId, '');
+      saveUser(userId);
       localStorage.setItem('cid_display_name', form.name.trim());
 
       // Create profile in DB

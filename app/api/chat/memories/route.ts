@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/gemini';
+import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/groq';
 
 interface ExtractedMemory { content: string; category: string; }
 

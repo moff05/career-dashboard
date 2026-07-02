@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/gemini';
+import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/groq';
+import { isRateLimited, RATE_LIMIT_RESPONSE } from '@/lib/rateLimit';
 
 
 const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
   try {
     const userId = getUserId(request);
     if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
+    if (await isRateLimited(userId)) return NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 });
     const body = await request.json();
     const { url, extraText, imageBase64, imageMediaType, extraLink } = body as {
       url?: string;
