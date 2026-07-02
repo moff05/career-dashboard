@@ -26,11 +26,11 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
   const [coachPrefill, setCoachPrefill] = useState('');
   const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [connectionsPrefillCompany, setConnectionsPrefillCompany] = useState('');
-  const openCoach = useCallback((prefill?: string) => { setCoachPrefill(prefill || ''); setCoachOpen(true); }, []);
+  const openCoach = useCallback((prefill?: string) => { setCoachPrefill(prefill || ''); setProfileOpen(false); setConnectionsOpen(false); setCoachOpen(true); }, []);
   const closeCoach = useCallback(() => setCoachOpen(false), []);
-  const openProfile = useCallback((tab?: string) => { setProfileTab(tab || 'resume'); setProfileOpen(true); }, []);
+  const openProfile = useCallback((tab?: string) => { setProfileTab(tab || 'resume'); setCoachOpen(false); setConnectionsOpen(false); setProfileOpen(true); }, []);
   const closeProfile = useCallback(() => setProfileOpen(false), []);
-  const openConnections = useCallback((prefillCompany?: string) => { setConnectionsPrefillCompany(prefillCompany || ''); setConnectionsOpen(true); }, []);
+  const openConnections = useCallback((prefillCompany?: string) => { setConnectionsPrefillCompany(prefillCompany || ''); setCoachOpen(false); setProfileOpen(false); setConnectionsOpen(true); }, []);
   const closeConnections = useCallback(() => setConnectionsOpen(false), []);
   return (
     <OverlayContext.Provider value={{
