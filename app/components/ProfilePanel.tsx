@@ -31,6 +31,46 @@ function timeAgo(ts: string) {
 
 const fieldLabelStyle: React.CSSProperties = { color: 'var(--text-muted)', fontSize: '10px', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 };
 
+function EditableField({ field, label, value, multiline = false, isEditing, editValue, saving, saveFieldError, onStartEdit, onChangeValue, onSave, onCancel }: {
+  field: string; label: string; value: string | undefined; multiline?: boolean;
+  isEditing: boolean; editValue: string; saving: boolean; saveFieldError: string;
+  onStartEdit: (field: string, value: string) => void;
+  onChangeValue: (v: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div style={{ marginBottom: '14px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <span style={fieldLabelStyle}>{label}</span>
+        {!isEditing && (
+          <button onClick={() => onStartEdit(field, value || '')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '0 2px' }}>
+            <Edit2 size={12} />
+          </button>
+        )}
+      </div>
+      {isEditing ? (
+        <div>
+          {multiline
+            ? <textarea value={editValue} onChange={e => onChangeValue(e.target.value)} rows={3} autoFocus className="field-input" style={{ width: '100%', resize: 'vertical' }} />
+            : <input type="text" value={editValue} onChange={e => onChangeValue(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') onSave(); if (e.key === 'Escape') onCancel(); }} autoFocus className="field-input" style={{ width: '100%' }} />}
+          <div style={{ display: 'flex', gap: '8px', marginTop: '7px' }}>
+            <button onClick={onSave} disabled={saving} className="btn-primary" style={{ padding: '5px 14px', fontSize: '12px' }}>{saving ? 'Saving…' : 'Save'}</button>
+            <button onClick={onCancel} className="btn-ghost" style={{ padding: '5px 12px', fontSize: '12px' }}>Cancel</button>
+          </div>
+          {saveFieldError && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '5px' }}>{saveFieldError}</div>}
+        </div>
+      ) : (
+        <div style={{ color: 'var(--text)', fontSize: '13px', lineHeight: '1.5' }}>
+          {field === 'linkedin' && value
+            ? <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>{value} <ExternalLink size={11} /></a>
+            : value || <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Not set</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProfilePanel() {
   const { profileOpen, closeProfile, profileTab } = useOverlays();
   const [tab, setTab] = useState('resume');
@@ -270,40 +310,6 @@ export function ProfilePanel() {
     } catch { /* memory stays in list if delete fails */ }
   }
 
-  const EditableField = ({ field, label, value, multiline = false }: { field: string; label: string; value: string | undefined; multiline?: boolean }) => {
-    const isEditing = editField === field;
-    return (
-      <div style={{ marginBottom: '14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <span style={fieldLabelStyle}>{label}</span>
-          {!isEditing && (
-            <button onClick={() => startEdit(field, value || '')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: '0 2px' }}>
-              <Edit2 size={12} />
-            </button>
-          )}
-        </div>
-        {isEditing ? (
-          <div>
-            {multiline
-              ? <textarea value={editValue} onChange={e => setEditValue(e.target.value)} rows={3} autoFocus className="field-input" style={{ width: '100%', resize: 'vertical' }} />
-              : <input type="text" value={editValue} onChange={e => setEditValue(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') saveField(); if (e.key === 'Escape') setEditField(null); }} autoFocus className="field-input" style={{ width: '100%' }} />}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '7px' }}>
-              <button onClick={saveField} disabled={saving} className="btn-primary" style={{ padding: '5px 14px', fontSize: '12px' }}>{saving ? 'Saving…' : 'Save'}</button>
-              <button onClick={() => { setEditField(null); setSaveFieldError(''); }} className="btn-ghost" style={{ padding: '5px 12px', fontSize: '12px' }}>Cancel</button>
-            </div>
-            {saveFieldError && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '5px' }}>{saveFieldError}</div>}
-          </div>
-        ) : (
-          <div style={{ color: 'var(--text)', fontSize: '13px', lineHeight: '1.5' }}>
-            {field === 'linkedin' && value
-              ? <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>{value} <ExternalLink size={11} /></a>
-              : value || <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Not set</span>}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const card: React.CSSProperties ={ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '18px' };
 
   if (!profileOpen) return null;
@@ -337,7 +343,7 @@ export function ProfilePanel() {
               ].map(section => (
                 <div key={section.title} style={card}>
                   <h3 className="section-label" style={{ margin: '0 0 14px' }}>{section.title}</h3>
-                  {section.fields.map(f => <EditableField key={f.field} field={f.field} label={f.label} value={(profile as Record<string, string | undefined>)[f.field]} multiline={f.multiline} />)}
+                  {section.fields.map(f => <EditableField key={f.field} field={f.field} label={f.label} value={(profile as Record<string, string | undefined>)[f.field]} multiline={f.multiline} isEditing={editField === f.field} editValue={editValue} saving={saving} saveFieldError={saveFieldError} onStartEdit={startEdit} onChangeValue={setEditValue} onSave={saveField} onCancel={() => { setEditField(null); setSaveFieldError(''); }} />)}
                 </div>
               ))}
 
