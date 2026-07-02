@@ -1227,6 +1227,25 @@ export default function DashboardPage() {
                                   </div>
                                 );
                                 const g = gaps as GapsResult;
+                                // Hard client-side guard: a logistics score of 0 is a disqualifier
+                                // regardless of what the AI returned (handles stale gaps_data that
+                                // was generated before the scorecard existed).
+                                let shouldApply = g.should_apply;
+                                let applyReasoning = g.apply_reasoning;
+                                if (job.score_data) {
+                                  try {
+                                    const sd = JSON.parse(job.score_data) as AnalysisResult;
+                                    const logCat = sd.categories?.find(c => c.name === 'Logistics / Location Fit');
+                                    if (logCat && logCat.score === 0) {
+                                      shouldApply = false;
+                                      if (!applyReasoning?.toLowerCase().includes('location') &&
+                                          !applyReasoning?.toLowerCase().includes('schedul') &&
+                                          !applyReasoning?.toLowerCase().includes('conflict')) {
+                                        applyReasoning = `Location or scheduling conflict (0/15 on logistics). ${applyReasoning || ''}`.trim();
+                                      }
+                                    }
+                                  } catch { /* ignore */ }
+                                }
                                 return (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '20px' }}>
                                     <div style={{ backgroundColor: 'var(--success-bg)', border: '1px solid var(--success-bg)', borderRadius: 'var(--r-lg)', padding: '14px 16px' }}>
@@ -1247,11 +1266,11 @@ export default function DashboardPage() {
                                         ))}
                                       </div>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: g.should_apply ? 'var(--success-bg)' : 'var(--danger-bg)', border: `1px solid ${g.should_apply ? 'var(--success-bg)' : 'var(--danger-bg)'}`, borderRadius: 'var(--r-lg)', padding: '12px 16px' }}>
-                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: g.should_apply ? 'var(--success)' : 'var(--danger)', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
-                                        {g.should_apply ? <><Check size={13} /> Apply</> : <><X size={13} /> Skip</>}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: shouldApply ? 'var(--success-bg)' : 'var(--danger-bg)', border: `1px solid ${shouldApply ? 'var(--success-bg)' : 'var(--danger-bg)'}`, borderRadius: 'var(--r-lg)', padding: '12px 16px' }}>
+                                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: shouldApply ? 'var(--success)' : 'var(--danger)', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
+                                        {shouldApply ? <><Check size={13} /> Apply</> : <><X size={13} /> Skip</>}
                                       </span>
-                                      <span style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5 }}>{g.apply_reasoning}</span>
+                                      <span style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.5 }}>{applyReasoning}</span>
                                     </div>
                                     <div>
                                       <div style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '8px' }}>Quick Wins</div>
