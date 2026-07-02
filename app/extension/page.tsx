@@ -94,7 +94,7 @@ export default function ExtensionPage() {
 
         {/* Footer */}
         <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '11px' }}>
-          Chrome only · <Link href="/" style={{ color: 'inherit', textDecoration: 'underline' }}>Back to dashboard</Link>
+          Chrome only · <Link href="/" style={{ color: 'inherit', textDecoration: 'underline' }}>Back to dashboard</Link> · <Link href="/privacy" style={{ color: 'inherit', textDecoration: 'underline' }}>Privacy</Link>
         </p>
 
       </div>
