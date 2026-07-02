@@ -51,9 +51,9 @@ function Header() {
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isOnboarding = pathname === '/welcome' || pathname === '/setup';
+  const isStandalone = pathname === '/welcome' || pathname === '/setup' || pathname === '/extension' || pathname === '/privacy';
 
-  if (isOnboarding) return <>{children}</>;
+  if (isStandalone) return <>{children}</>;
 
   return (
     <>
