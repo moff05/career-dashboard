@@ -9,7 +9,7 @@ const STEPS = [
 
 export default function ExtensionPage() {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', boxSizing: 'border-box' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 24px 80px', boxSizing: 'border-box' }}>
       <div style={{ width: '100%', maxWidth: '600px' }}>
 
         {/* Wordmark */}
@@ -54,7 +54,7 @@ export default function ExtensionPage() {
             <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--accent)', background: 'var(--accent-bg)', border: '1px solid var(--accent-dim)', borderRadius: 'var(--r-sm)', padding: '2px 7px' }}>Coming soon</span>
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.55, margin: '0 0 14px' }}>
-            One-click install with automatic updates. Under review — check back shortly.
+            One-click install with automatic updates. Under review — usually 3–7 business days. In the meantime, just paste any job URL directly in the tracker.
           </p>
           <button disabled style={{ display: 'block', width: '100%', padding: '10px 16px', fontFamily: 'inherit', fontSize: '13px', fontWeight: 700, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'var(--border-dim)', color: 'var(--text-dim)', cursor: 'not-allowed' }}>
             Add to Chrome

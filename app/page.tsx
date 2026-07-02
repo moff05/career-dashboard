@@ -722,7 +722,7 @@ export default function DashboardPage() {
           <div style={{ color: 'var(--text-muted)', fontSize: '12px', marginBottom: '20px' }}>Paste a job link or description — the AI takes it from there.</div>
           <div style={{ display: 'inline-flex', flexDirection: 'column', gap: '6px', marginBottom: '28px', textAlign: 'left' }}>
             {[
-              'Scores your fit 0–100 across every requirement',
+              'Scores your fit 0–100 across every requirement (add your resume for best results)',
               'Pinpoints your skill gaps vs. the role',
               'Rewrites your resume bullets to match',
             ].map(line => (
