@@ -1,8 +1,9 @@
 'use client';
 
 import './globals.css';
+import React from 'react';
 import { usePathname } from 'next/navigation';
-import { User, MessageSquare, Users } from 'lucide-react';
+import { User, MessageSquare, Users, Share2, Check } from 'lucide-react';
 import { ClientRoot } from './ClientRoot';
 import { useUser } from './hooks/useUser';
 import { OverlayProvider, useOverlays } from './OverlayContext';
@@ -17,6 +18,12 @@ function Header() {
   const initials = displayName
     ? displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
     : '';
+  const [shared, setShared] = React.useState(false);
+  function handleShare() {
+    navigator.clipboard.writeText("hey I've been tracking my job apps with jobs_ — pretty clean if you're in the hunt: https://career-dashboard-ten.vercel.app");
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
+  }
 
   return (
     <header className="app-header">
@@ -24,6 +31,11 @@ function Header() {
         <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: '14px', letterSpacing: '-0.01em' }}>
           jobs<span style={{ color: 'var(--accent)' }}>_</span>
         </span>
+        <button onClick={handleShare} aria-label="Share" style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: shared ? 'var(--success)' : 'var(--text-dim)', display: 'flex', alignItems: 'center', transition: 'color 0.15s' }}
+          onMouseEnter={e => { if (!shared) e.currentTarget.style.color = 'var(--text-muted)'; }}
+          onMouseLeave={e => { if (!shared) e.currentTarget.style.color = 'var(--text-dim)'; }}>
+          {shared ? <Check size={13} /> : <Share2 size={13} />}
+        </button>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
