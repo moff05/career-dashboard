@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "jobs_",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Clip any job posting to your jobs_ tracker in one click.",
-  "permissions": ["activeTab"],
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://career-dashboard-ten.vercel.app/*"],
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
@@ -17,5 +18,13 @@
       "128": "icon128.png"
     },
     "default_title": "jobs_"
-  }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [{
+    "matches": ["https://career-dashboard-ten.vercel.app/*"],
+    "js": ["content.js"],
+    "run_at": "document_idle"
+  }]
 }

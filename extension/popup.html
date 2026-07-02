@@ -5,7 +5,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      width: 240px;
+      width: 280px;
       background: #101012;
       color: #F5F5F5;
       font-family: 'JetBrains Mono', 'Courier New', monospace;
@@ -24,28 +24,78 @@
     .muted { color: #7D838D; line-height: 1.55; }
 
     .btn {
-      display: block; width: 100%; padding: 8px 12px;
+      display: block; width: 100%; padding: 9px 12px;
       font-family: inherit; font-size: 12px; font-weight: 700;
       border-radius: 6px; cursor: pointer; border: none; text-align: center;
       background: #F97316; color: #101012;
       transition: background 0.12s;
     }
     .btn:hover { background: #FB923C; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    #s-dashboard { display: none; }
+    .btn-ghost {
+      display: block; width: 100%; padding: 8px 12px; margin-top: 8px;
+      font-family: inherit; font-size: 11px; font-weight: 600;
+      border-radius: 6px; cursor: pointer; text-align: center;
+      background: transparent; color: #7D838D; border: 1px solid #2A2A2A;
+      transition: color 0.12s, border-color 0.12s;
+    }
+    .btn-ghost:hover { color: #F5F5F5; border-color: #4A4A4A; }
+
+    .status-icon { font-size: 18px; margin-bottom: 6px; }
+    .status-label { font-weight: 700; margin-bottom: 4px; }
+    .status-sub {
+      font-size: 11px; margin-bottom: 12px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      color: #7D838D;
+    }
+
+    .spinner {
+      display: inline-block; width: 11px; height: 11px;
+      border: 2px solid #2A2A2A; border-top-color: #F97316;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .hidden { display: none; }
   </style>
 </head>
 <body>
   <div class="brand">jobs<span class="brand-accent">_</span></div>
 
-  <div id="s-clip">
+  <div id="s-no-user" class="hidden">
+    <p class="muted" style="margin-bottom: 12px;">Open your dashboard once to connect.</p>
+    <button class="btn" id="btn-open-dashboard">Open dashboard</button>
+  </div>
+
+  <div id="s-clip" class="hidden">
     <div class="domain" id="job-domain"></div>
     <div class="title" id="job-title"></div>
     <button class="btn" id="btn-clip">Add to tracker</button>
   </div>
 
-  <div id="s-dashboard">
+  <div id="s-dashboard" class="hidden">
     <p class="muted">You're on the dashboard.</p>
+  </div>
+
+  <div id="s-loading" class="hidden">
+    <p class="muted"><span class="spinner"></span>Importing job…</p>
+  </div>
+
+  <div id="s-success" class="hidden">
+    <div class="status-icon" style="color: #34D399;">✓</div>
+    <div class="status-label" style="color: #34D399;">Added to tracker</div>
+    <div class="status-sub" id="success-sub"></div>
+    <button class="btn" id="btn-open-tracker">Open tracker</button>
+  </div>
+
+  <div id="s-error" class="hidden">
+    <div class="status-icon" style="color: #F87171;">✕</div>
+    <div class="status-label" style="color: #F87171;">Could not import</div>
+    <div class="status-sub" id="error-msg"></div>
+    <button class="btn" id="btn-retry">Try again</button>
+    <button class="btn-ghost" id="btn-open-manual">Open tracker instead</button>
   </div>
 
   <script src="popup.js"></script>
