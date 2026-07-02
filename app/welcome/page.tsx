@@ -156,7 +156,7 @@ export default function WelcomePage() {
         )}
 
         <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '11px', marginTop: '20px' }}>
-          Open source · No account required
+          <a href="https://github.com/moff05/career-dashboard" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Open source</a> · No account required
         </p>
       </div>
     </div>
