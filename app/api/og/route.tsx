@@ -38,8 +38,8 @@ export async function GET() {
             maxWidth: '800px',
           }}
         >
-          A job tracker that feels like a spreadsheet,
-          with AI that actually earns its place.
+          A job tracker with AI fit scoring, cover letter
+          generation, and a coach that knows your resume.
         </div>
         <div
           style={{

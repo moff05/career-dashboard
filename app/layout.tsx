@@ -20,7 +20,7 @@ function Header() {
     : '';
   const [shared, setShared] = React.useState(false);
   function handleShare() {
-    navigator.clipboard.writeText("hey I've been tracking my job apps with jobs_ — pretty clean if you're in the hunt: https://career-dashboard-ten.vercel.app");
+    navigator.clipboard.writeText("been using jobs_ to track my applications — does AI fit scoring, cover letters, the whole thing. free: https://career-dashboard-ten.vercel.app");
     setShared(true);
     setTimeout(() => setShared(false), 2000);
   }
@@ -84,15 +84,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>jobs_</title>
-        <meta name="description" content="A job tracker that feels like a spreadsheet, with AI that actually earns its place." />
+        <meta name="description" content="A job tracker with AI fit scoring, cover letter generation, and a coach that knows your resume." />
         <meta property="og:title" content="jobs_" />
-        <meta property="og:description" content="A job tracker that feels like a spreadsheet, with AI that actually earns its place." />
+        <meta property="og:description" content="A job tracker with AI fit scoring, cover letter generation, and a coach that knows your resume." />
         <meta property="og:url" content={process.env.NEXT_PUBLIC_BASE_URL ?? 'https://career-dashboard-ten.vercel.app'} />
         <meta property="og:type" content="website" />
         <meta property="og:image" content={`${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://career-dashboard-ten.vercel.app'}/api/og`} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="jobs_" />
-        <meta name="twitter:description" content="A job tracker that feels like a spreadsheet, with AI that actually earns its place." />
+        <meta name="twitter:description" content="A job tracker with AI fit scoring, cover letter generation, and a coach that knows your resume." />
         <meta name="twitter:image" content={`${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://career-dashboard-ten.vercel.app'}/api/og`} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
