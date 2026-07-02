@@ -4,8 +4,18 @@
   "version": "1.1.0",
   "description": "Clip any job posting to your jobs_ tracker in one click.",
   "permissions": ["activeTab"],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
   "action": {
     "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    },
     "default_title": "jobs_"
   }
 }
