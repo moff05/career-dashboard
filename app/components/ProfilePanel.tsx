@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
-import { Edit2, ExternalLink, Loader, FileText, Check, Download, Upload, Plus, X, Trash2, Brain, Smartphone } from 'lucide-react';
+import { Edit2, ExternalLink, Loader, FileText, Check, Plus, X, Trash2, Brain, Smartphone } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
 import { useRef } from 'react';
 
@@ -95,11 +95,6 @@ export function ProfilePanel() {
   const [prefilledFields, setPrefilledFields] = useState<string[]>([]);
   const activeResume = resumes.find(r => r.id === activeResumeId) || null;
 
-  const [exporting, setExporting] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [backupMsg, setBackupMsg] = useState('');
-  const [backupErr, setBackupErr] = useState('');
-
   const [deviceCode, setDeviceCode] = useState('');
   const [deviceCodeExpiry, setDeviceCodeExpiry] = useState<Date | null>(null);
   const [deviceCodeLoading, setDeviceCodeLoading] = useState(false);
@@ -187,41 +182,6 @@ export function ProfilePanel() {
       setRedeemError(err instanceof Error ? err.message : 'Could not redeem code.');
     }
     setRedeemLoading(false);
-  }
-
-  async function handleExport() {
-    setExporting(true); setBackupErr('');
-    try {
-      const res = await apiFetch('/api/export');
-      const data = await res.json();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `career-dashboard-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      setBackupMsg('Downloaded.');
-    } catch { setBackupErr('Export failed. Try again.'); }
-    setExporting(false);
-  }
-
-  async function handleImportFile(file: File | undefined) {
-    if (!file) return;
-    setImporting(true); setBackupErr(''); setBackupMsg('');
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-      const res = await apiFetch('/api/import', { method: 'POST', body: JSON.stringify(parsed) });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Import failed');
-      setBackupMsg(`Restored ${data.imported} record${data.imported === 1 ? '' : 's'}.`);
-      setProfile(await apiFetch('/api/profile').then(r => r.json()));
-      await loadResumes();
-    } catch (err) {
-      setBackupErr(err instanceof Error ? err.message : 'That file could not be read.');
-    }
-    setImporting(false);
   }
 
   function startResumeEdit() {
@@ -396,24 +356,6 @@ export function ProfilePanel() {
                     </div>
                   </div>
                 ) : <p style={{ color: 'var(--text-dim)', fontSize: '12px', fontStyle: 'italic', margin: 0 }}>No resumes yet — click + to add one.</p>}
-              </div>
-
-              <div style={card}>
-                <h3 className="section-label" style={{ margin: '0 0 6px' }}>Backup &amp; Restore</h3>
-                <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 14px', lineHeight: 1.5 }}>
-                  Your jobs and profile are stored on our server. This backup protects your session ID — the browser key that links you to your account. If you lose it, restore from here to reconnect.
-                </p>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <button onClick={handleExport} disabled={exporting} className="btn-ghost">
-                    {exporting ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={12} />} Export my data
-                  </button>
-                  <input id="import-backup-file" type="file" accept="application/json" style={{ display: 'none' }} onChange={e => handleImportFile(e.target.files?.[0])} />
-                  <label htmlFor="import-backup-file" className="btn-ghost" style={{ cursor: importing ? 'wait' : 'pointer' }}>
-                    {importing ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Upload size={12} />} Restore from backup
-                  </label>
-                </div>
-                {backupMsg && <div style={{ color: 'var(--success)', fontSize: '11px', marginTop: '10px' }}>{backupMsg}</div>}
-                {backupErr && <div style={{ color: 'var(--danger)', fontSize: '11px', marginTop: '10px' }}>{backupErr}</div>}
               </div>
 
               <div style={card}>
