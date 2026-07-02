@@ -6,13 +6,6 @@ const STEPS = [
   { n: '3', title: 'Done', desc: 'The job is parsed, added to your tracker, and ready to score — no tab switching.' },
 ];
 
-const DEV_STEPS = [
-  'Download the extension folder from GitHub',
-  'Open chrome://extensions in a new tab',
-  'Enable Developer Mode (toggle, top right)',
-  'Click "Load unpacked" → select the extension folder',
-  'Pin the jobs_ icon to your toolbar',
-];
 
 export default function ExtensionPage() {
   return (
@@ -68,29 +61,6 @@ export default function ExtensionPage() {
           </button>
         </div>
 
-        {/* Install — Developer mode */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '22px', marginBottom: '24px' }}>
-          <div style={{ color: 'var(--text)', fontSize: '13px', fontWeight: 700, marginBottom: '4px' }}>Install manually (beta)</div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.55, margin: '0 0 16px' }}>
-            While the extension is pending review, you can load it directly from the source.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-            {DEV_STEPS.map((step, i) => (
-              <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                <span style={{ color: 'var(--accent)', fontSize: '11px', fontWeight: 700, flexShrink: 0, minWidth: '14px' }}>{i + 1}.</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.55 }}>{step}</span>
-              </div>
-            ))}
-          </div>
-          <a
-            href="https://github.com/moff05/career-dashboard/tree/main/extension"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: 'block', width: '100%', padding: '10px 16px', fontFamily: 'inherit', fontSize: '13px', fontWeight: 700, borderRadius: 'var(--r-lg)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text)', cursor: 'pointer', textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}
-          >
-            View on GitHub →
-          </a>
-        </div>
 
         {/* Footer */}
         <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '11px' }}>
