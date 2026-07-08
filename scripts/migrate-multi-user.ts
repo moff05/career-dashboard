@@ -193,6 +193,7 @@ async function migrate() {
 
   // Add resume_text to profile if not present
   await addColumn('profile', 'resume_text', 'TEXT');
+  await addColumn('profile', 'recovery_key', 'TEXT');
 
   // Add starred/status_updated_at to jobs if not present
   await addColumn('jobs', 'starred', 'INTEGER NOT NULL DEFAULT 0');
@@ -224,6 +225,7 @@ async function migrate() {
     'CREATE INDEX IF NOT EXISTS idx_usage_log_user ON usage_log(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_usage_log_user_route ON usage_log(user_id, route)',
     'CREATE INDEX IF NOT EXISTS idx_usage_log_user_date ON usage_log(user_id, created_at)',
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_profile_recovery_key ON profile(recovery_key) WHERE recovery_key IS NOT NULL',
   ];
 
   for (const idx of indexes) {

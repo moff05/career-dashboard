@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
-import { Edit2, ExternalLink, Loader, FileText, Check, Plus, X, Trash2, Brain, Smartphone } from 'lucide-react';
+import { Edit2, ExternalLink, FileText, Check, Plus, X, Trash2, Brain, Smartphone } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
-import { useRef } from 'react';
 
 interface ProfileData {
   id?: number; name?: string; email?: string; phone?: string; linkedin?: string;
@@ -95,15 +94,8 @@ export function ProfilePanel() {
   const [prefilledFields, setPrefilledFields] = useState<string[]>([]);
   const activeResume = resumes.find(r => r.id === activeResumeId) || null;
 
-  const [deviceCode, setDeviceCode] = useState('');
-  const [deviceCodeExpiry, setDeviceCodeExpiry] = useState<Date | null>(null);
-  const [deviceCodeLoading, setDeviceCodeLoading] = useState(false);
-  const [deviceCodeSecondsLeft, setDeviceCodeSecondsLeft] = useState(0);
-  const deviceCodeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [deviceCodeMode, setDeviceCodeMode] = useState<'generate' | 'redeem'>('generate');
-  const [redeemCode, setRedeemCode] = useState('');
-  const [redeemLoading, setRedeemLoading] = useState(false);
-  const [redeemError, setRedeemError] = useState('');
+  const [recoveryKey, setRecoveryKey] = useState('');
+  const [keyCopied, setKeyCopied] = useState(false);
 
   const [memories, setMemories] = useState<Memory[]>([]);
   const [memLoading, setMemLoading] = useState(true);
@@ -127,7 +119,7 @@ export function ProfilePanel() {
   useEffect(() => {
     if (!profileOpen || loaded.done) return;
     loaded.done = true;
-    apiFetch('/api/profile').then(r => r.json()).then(data => setProfile(data)).catch(() => {});
+    apiFetch('/api/profile').then(r => r.json()).then(data => { setProfile(data); if (data.recovery_key) setRecoveryKey(data.recovery_key); }).catch(() => {});
     loadResumes();
     fetchMemories();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,50 +131,6 @@ export function ProfilePanel() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [profileOpen, closeProfile]);
-
-  async function generateDeviceCode() {
-    setDeviceCodeLoading(true);
-    try {
-      const res = await apiFetch('/api/device-code', { method: 'POST' });
-      const data = await res.json();
-      if (data.error) return;
-      setDeviceCode(data.code);
-      const expiry = new Date(data.expires_at);
-      setDeviceCodeExpiry(expiry);
-      const tick = () => {
-        const left = Math.max(0, Math.round((expiry.getTime() - Date.now()) / 1000));
-        setDeviceCodeSecondsLeft(left);
-        if (left === 0) { setDeviceCode(''); setDeviceCodeExpiry(null); }
-      };
-      tick();
-      if (deviceCodeTimerRef.current) clearInterval(deviceCodeTimerRef.current);
-      deviceCodeTimerRef.current = setInterval(tick, 1000);
-    } finally {
-      setDeviceCodeLoading(false);
-    }
-  }
-
-  async function handleRedeemCode() {
-    setRedeemError('');
-    const clean = redeemCode.replace(/\D/g, '');
-    if (clean.length !== 6) { setRedeemError('Enter the full 6-digit code.'); return; }
-    setRedeemLoading(true);
-    try {
-      const res = await fetch('/api/device-code/redeem', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: clean }),
-      });
-      const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Code not found.');
-      localStorage.setItem('cid_user_id', data.user_id);
-      if (data.display_name) localStorage.setItem('cid_display_name', data.display_name);
-      window.location.reload();
-    } catch (err) {
-      setRedeemError(err instanceof Error ? err.message : 'Could not redeem code.');
-    }
-    setRedeemLoading(false);
-  }
 
   function startResumeEdit() {
     if (!activeResume) return;
@@ -361,77 +309,31 @@ export function ProfilePanel() {
               <div style={card}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                   <Smartphone size={12} color="var(--text-muted)" />
-                  <h3 className="section-label" style={{ margin: 0 }}>Connect another device</h3>
+                  <h3 className="section-label" style={{ margin: 0 }}>Account key</h3>
                 </div>
-
-                <div style={{ display: 'flex', gap: '0', marginBottom: '14px', border: '1px solid var(--border)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
-                  {(['generate', 'redeem'] as const).map(mode => (
-                    <button key={mode} onClick={() => { setDeviceCodeMode(mode); setRedeemError(''); setRedeemCode(''); }} style={{
-                      flex: 1, padding: '6px', fontSize: '11px', fontWeight: 600, fontFamily: 'inherit',
-                      border: 'none', cursor: 'pointer', transition: 'background 0.12s, color 0.12s',
-                      background: deviceCodeMode === mode ? 'var(--border-hi)' : 'transparent',
-                      color: deviceCodeMode === mode ? 'var(--text)' : 'var(--text-dim)',
+                <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 12px', lineHeight: 1.5 }}>
+                  Use this to access your account on any device or browser. Save it somewhere — this is your only recovery option.
+                </p>
+                {recoveryKey ? (
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{
+                      flex: 1, background: 'var(--bg)', border: '1px solid var(--border-hi)',
+                      borderRadius: 'var(--r)', padding: '10px 14px',
+                      fontSize: '16px', fontWeight: 700, letterSpacing: '0.15em', color: 'var(--accent)',
+                      textAlign: 'center', userSelect: 'all',
                     }}>
-                      {mode === 'generate' ? 'Get a code' : 'Enter a code'}
+                      {recoveryKey}
+                    </div>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(recoveryKey); setKeyCopied(true); setTimeout(() => setKeyCopied(false), 2000); }}
+                      className="btn-ghost"
+                      style={{ flexShrink: 0, padding: '8px 12px', color: keyCopied ? 'var(--success)' : undefined }}
+                    >
+                      {keyCopied ? <Check size={13} /> : 'Copy'}
                     </button>
-                  ))}
-                </div>
-
-                {deviceCodeMode === 'generate' ? (
-                  <>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 12px', lineHeight: 1.5 }}>
-                      Generate a code on this device, then enter it on your other device. Your data is temporarily stored server-side for up to 10 minutes to complete the transfer, then automatically deleted.
-                    </p>
-                    {deviceCode && deviceCodeSecondsLeft > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <div style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: 'var(--bg)', border: '1px solid var(--border-hi)',
-                          borderRadius: 'var(--r)', padding: '14px',
-                          fontSize: '28px', fontWeight: 700, letterSpacing: '0.18em', color: 'var(--accent)',
-                        }}>
-                          {deviceCode.slice(0, 3)}-{deviceCode.slice(3)}
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>
-                            Expires in {Math.floor(deviceCodeSecondsLeft / 60)}:{String(deviceCodeSecondsLeft % 60).padStart(2, '0')}
-                          </span>
-                          <button onClick={generateDeviceCode} disabled={deviceCodeLoading} className="btn-ghost" style={{ fontSize: '11px', padding: '4px 10px' }}>
-                            New code
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button onClick={generateDeviceCode} disabled={deviceCodeLoading} className="btn-ghost">
-                        {deviceCodeLoading ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Smartphone size={12} />}
-                        Get sync code
-                      </button>
-                    )}
-                  </>
+                  </div>
                 ) : (
-                  <>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '0 0 12px', lineHeight: 1.5 }}>
-                      Enter the code from your other device. This will switch this device to that account.
-                    </p>
-                    <input
-                      value={redeemCode}
-                      onChange={e => { setRedeemCode(e.target.value); setRedeemError(''); }}
-                      placeholder="000-000"
-                      maxLength={7}
-                      style={{
-                        width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
-                        borderRadius: 'var(--r)', padding: '10px', color: 'var(--accent)',
-                        fontSize: '22px', fontWeight: 700, letterSpacing: '0.12em', textAlign: 'center',
-                        outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '10px',
-                      }}
-                      onKeyDown={e => { if (e.key === 'Enter') handleRedeemCode(); }}
-                    />
-                    {redeemError && <div style={{ color: 'var(--danger)', fontSize: '11px', marginBottom: '10px' }}>{redeemError}</div>}
-                    <button onClick={handleRedeemCode} disabled={redeemLoading} className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-                      {redeemLoading ? <Loader size={12} style={{ animation: 'spin 1s linear infinite' }} /> : null}
-                      {redeemLoading ? 'Connecting…' : 'Connect'}
-                    </button>
-                  </>
+                  <div style={{ color: 'var(--text-dim)', fontSize: '12px', fontStyle: 'italic' }}>Loading…</div>
                 )}
               </div>
 

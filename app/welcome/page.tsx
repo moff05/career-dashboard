@@ -26,29 +26,29 @@ const LABEL: React.CSSProperties = {
 
 export default function WelcomePage() {
   const router = useRouter();
-  const [showCode, setShowCode] = useState(false);
+  const [showKey, setShowKey] = useState(false);
   const [error, setError] = useState('');
-  const [syncCode, setSyncCode] = useState('');
+  const [accountKey, setAccountKey] = useState('');
   const [syncing, setSyncing] = useState(false);
 
-  async function handleSync() {
+  async function handleKey() {
     setError('');
-    const clean = syncCode.replace(/\D/g, '');
-    if (clean.length !== 6) return setError('Enter the full 6-digit code.');
+    const normalized = accountKey.trim().toUpperCase();
+    if (!normalized) return setError('Enter your account key.');
     setSyncing(true);
     try {
-      const res = await fetch('/api/device-code/redeem', {
+      const res = await fetch('/api/account-key/redeem', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: clean }),
+        body: JSON.stringify({ key: normalized }),
       });
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Code not found.');
+      if (!res.ok || data.error) throw new Error(data.error || 'Key not found.');
       saveUser(data.user_id);
       localStorage.setItem('cid_display_name', data.display_name || '');
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not redeem code.');
+      setError(err instanceof Error ? err.message : 'Could not connect.');
     }
     setSyncing(false);
   }
@@ -88,7 +88,7 @@ export default function WelcomePage() {
           ))}
         </div>
 
-        {!showCode ? (
+        {!showKey ? (
           <>
             <Link href="/setup" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -99,14 +99,14 @@ export default function WelcomePage() {
               Get Started <ArrowRight size={15} />
             </Link>
 
-            <button onClick={() => { setShowCode(true); setError(''); }} style={{
+            <button onClick={() => { setShowKey(true); setError(''); }} style={{
               display: 'block', width: '100%', textAlign: 'center', marginTop: '16px',
               background: 'none', border: 'none', color: 'var(--text-muted)',
               fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', padding: '4px',
             }}
               onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
               onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
-              Have a sync code? Enter it here
+              Already have an account? Enter your key
             </button>
           </>
         ) : (
@@ -116,15 +116,15 @@ export default function WelcomePage() {
             padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px',
           }}>
             <div>
-              <label style={LABEL}>Sync code</label>
+              <label style={LABEL}>Account key</label>
               <input
-                value={syncCode}
-                onChange={e => { setSyncCode(e.target.value); setError(''); }}
-                placeholder="000-000"
-                maxLength={7}
-                style={{ ...INPUT, fontSize: '22px', letterSpacing: '0.12em', textAlign: 'center' }}
+                value={accountKey}
+                onChange={e => { setAccountKey(e.target.value); setError(''); }}
+                placeholder="XXXX-XXXX-XXXX"
+                maxLength={14}
+                style={{ ...INPUT, fontSize: '18px', letterSpacing: '0.1em', textAlign: 'center', textTransform: 'uppercase' }}
                 autoFocus
-                onKeyDown={e => { if (e.key === 'Enter') handleSync(); }}
+                onKeyDown={e => { if (e.key === 'Enter') handleKey(); }}
               />
             </div>
 
@@ -133,7 +133,7 @@ export default function WelcomePage() {
             )}
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={handleSync} disabled={syncing} style={{
+              <button onClick={handleKey} disabled={syncing} style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 background: 'var(--accent)', color: '#0A0A0A',
                 border: 'none', borderRadius: 'var(--r-lg)',
@@ -141,15 +141,15 @@ export default function WelcomePage() {
                 cursor: syncing ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: syncing ? 0.7 : 1,
               }}>
                 {syncing ? <Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> : null}
-                {syncing ? 'Syncing…' : 'Connect'}
+                {syncing ? 'Connecting…' : 'Connect'}
               </button>
-              <button onClick={() => { setShowCode(false); setError(''); setSyncCode(''); }} disabled={syncing} style={{
+              <button onClick={() => { setShowKey(false); setError(''); setAccountKey(''); }} disabled={syncing} style={{
                 background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)',
                 borderRadius: 'var(--r-lg)', padding: '12px 18px', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
               }}>Cancel</button>
             </div>
             <p style={{ color: 'var(--text-dim)', fontSize: '11px', margin: 0, lineHeight: 1.5 }}>
-              The sync code temporarily stores your user ID server-side for up to 10 minutes to complete the transfer, then it&apos;s automatically deleted.
+              Find your account key in Profile → Account key. Works from any browser or device.
             </p>
           </div>
 
