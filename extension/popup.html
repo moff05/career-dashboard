@@ -59,6 +59,10 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .hidden { display: none; }
+
+    .footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid #2A2A2A; text-align: center; }
+    .footer-link { color: #7D838D; font-size: 10px; text-decoration: underline; cursor: pointer; }
+    .footer-link:hover { color: #F5F5F5; }
   </style>
 </head>
 <body>
@@ -96,6 +100,10 @@
     <div class="status-sub" id="error-msg"></div>
     <button class="btn" id="btn-retry">Try again</button>
     <button class="btn-ghost" id="btn-open-manual">Open tracker instead</button>
+  </div>
+
+  <div class="footer">
+    <a href="#" id="link-privacy" class="footer-link">Privacy Policy</a>
   </div>
 
   <script src="popup.js"></script>

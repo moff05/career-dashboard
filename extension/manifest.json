@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "jobs_",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Clip any job posting to your jobs_ tracker in one click.",
   "permissions": ["activeTab", "storage"],
   "host_permissions": ["https://career-dashboard-ten.vercel.app/*"],

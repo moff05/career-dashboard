@@ -91,5 +91,9 @@ document.getElementById('btn-open-tracker').addEventListener('click', () => open
 document.getElementById('btn-open-manual').addEventListener('click', () =>
   openTab(`${DASHBOARD}?import=${encodeURIComponent(currentUrl)}`)
 );
+document.getElementById('link-privacy').addEventListener('click', (e) => {
+  e.preventDefault();
+  openTab(`${DASHBOARD}/privacy`);
+});
 
 init();
