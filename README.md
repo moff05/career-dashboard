@@ -1,10 +1,10 @@
 # Career Dashboard
 
-A job tracker built to feel like a great spreadsheet, with two AI features that actually earn their place: import any job posting and get an in-depth AI fit score, and a coach that knows your background. Black canvas, one orange accent, monospace type — looks like a terminal, operates like consumer software; there's no command input anywhere. Built with Next.js, TypeScript, and Claude.
+A job tracker built to feel like a great spreadsheet, with two AI features that actually earn their place: import any job posting and get an in-depth AI fit score, and a coach that knows your background. Black canvas, one orange accent, monospace type — looks like a terminal, operates like consumer software; there's no command input anywhere. Built with Next.js, TypeScript, and Groq.
 
-> **Note:** Multi-user, no accounts. A 4-step setup flow (name → background → resume → your own Anthropic API key) creates a local identity stored in your browser; every visitor gets their own scoped data. Your API key is stored client-side only and sent per-request via headers — it's never saved on the server.
+> **Note:** Multi-user, no accounts, no API key required. A 3-step setup flow (resume → identity → background) creates a local identity stored in your browser; every visitor gets their own scoped data. AI runs server-side on a shared key — there's nothing to bring or configure. A persistent account key (shown in Profile) recovers your data on any other browser or device.
 
-**Live:** [career-dashboard-ten.vercel.app](https://career-dashboard-ten.vercel.app) — visit and run through setup to use it with your own data and API key, or restore from a backup file straight from the landing page.
+**Live:** [career-dashboard-ten.vercel.app](https://career-dashboard-ten.vercel.app) — visit and run through setup to start tracking with your own data. Already have an account? Enter your account key on the landing page to pick up where you left off on any device.
 
 ---
 
@@ -36,11 +36,11 @@ One page, plus two summonable overlays — no sidebar, no separate nav destinati
 - Quick-action prefills: "What should I apply to?", "Interview prep" (a conversation, not a simulation), "Cold outreach"
 
 ### Profile (overlay)
-- A centered panel summoned from the header, tabbed: **Profile** (personal/education/target fields, multi-resume management, backup & restore), **Strength**, **Usage**, **Memory**
+- A centered panel summoned from the header, tabbed: **Profile** (personal/education/target fields, multi-resume management, account key), **Strength**, **Usage**, **Memory**
 - **Candidate Strength** — a brutal, rubric-scored readiness assessment (relevant experience, quantified impact, technical depth, academic credibility, differentiation). Each category is constrained to an explicit set of anchored point values via structured outputs, so repeat scoring stays consistent instead of swinging a point or more between clicks
-- **Usage & Cost** — running total of what your own Anthropic API key has spent on this dashboard, with a per-feature cost breakdown (estimated from token counts and published pricing, including the web search per-call fee)
+- **Usage & Cost** — running total of what this dashboard has spent on your behalf, with a per-feature cost breakdown (estimated from token counts and published Groq pricing)
 - **Memory** — the facts the AI has extracted about you from Coach conversations, browsable and editable
-- **Backup & Restore** — full data export/import; also reachable from a fresh browser via the landing page's restore shortcut, no need to complete setup first
+- **Account Key** — a persistent key generated once per profile. Enter it on the landing page from any other browser or device to pick your account back up — the only recovery path, since there are no logins
 
 ---
 
@@ -64,14 +64,14 @@ This app went through a reshape (June 2026) to cut everything that wasn't pullin
 | Framework | Next.js 16 App Router |
 | Language | TypeScript |
 | Database | SQLite (local file by default, Turso/libsql for cloud deploys) |
-| AI | Anthropic Claude (Sonnet 4.6 + Haiku 4.5) |
+| AI | Groq (Llama 3.3 70B for generative routes, Qwen3 32B for fit scoring) |
 | Deployment | Vercel |
 
 ---
 
 ## Running locally
 
-No environment variables are required to get started — your Anthropic API key is entered in the in-app setup flow, not a config file.
+The app boots with no environment variables, but AI features (import parsing, fit scoring, Coach, cover letters, etc.) need a `GROQ_API_KEY` — get a free one at [console.groq.com](https://console.groq.com).
 
 ```bash
 git clone https://github.com/moff05/career-dashboard.git
@@ -81,13 +81,18 @@ npm run dev   # http://localhost:3000 — walks you through setup on first visit
 npm run build # production check
 ```
 
+```
+# .env.local
+GROQ_API_KEY=gsk_...
+```
+
 By default the app uses a local SQLite file at `data/career.db`. For a cloud-hosted deployment (e.g. Vercel), add a free [Turso](https://turso.tech) database via `.env.local`:
 ```
 TURSO_DATABASE_URL=libsql://...
 TURSO_AUTH_TOKEN=...
 ```
 
-An optional `ANTHROPIC_API_KEY` in `.env.local` can serve as a server-side fallback for local/admin use — gated out of production entirely, so it never substitutes for a real visitor's own key on the live deployment. See `.env.local.example`.
+There's no per-user API key model — every visitor's AI calls run on the same server-side `GROQ_API_KEY`. See `.env.local.example`.
 
 ---
 
@@ -96,18 +101,19 @@ An optional `ANTHROPIC_API_KEY` in `.env.local` can serve as a server-side fallb
 ```
 app/
 ├── page.tsx            # THE app — greeting, Priorities, stats, the full job tracker table + detail panel
-├── welcome/            # Landing page — get started, or restore from backup
-├── setup/              # 4-step onboarding
+├── welcome/            # Landing page — get started, or enter your account key to restore
+├── setup/              # 3-step onboarding (resume → identity → background)
 ├── components/
 │   ├── CoachPanel.tsx       # Coach overlay (general chat)
 │   ├── ProfilePanel.tsx     # Profile + Strength + Usage + Memory, tabbed overlay
 │   └── ConnectionsPanel.tsx # All connections, independent of any tracked job
 ├── OverlayContext.tsx  # useOverlays() — opens/closes all three overlays from anywhere
-└── api/                # All backend routes (jobs, connections, chat, usage, …)
+└── api/                # All backend routes (jobs, connections, chat, usage, account-key, …)
 
 lib/
 ├── db.ts           # SQLite/Turso client singleton + schema
-├── user.ts         # getUserId / getApiKey — fail-closed in production
+├── user.ts         # getUserId / isSystemUser from request headers
+├── gemini.ts        # Groq AI client (OpenAI-compatible SDK; name is legacy)
 ├── ai-context.ts   # Builds system prompt from resume + dated memories + jobs
 ├── usage.ts        # Per-call cost computation and logging
 └── resume-parser.ts
