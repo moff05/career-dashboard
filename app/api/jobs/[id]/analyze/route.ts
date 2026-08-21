@@ -140,7 +140,12 @@ CRITICAL: Return valid JSON only — no markdown, no code blocks, no text before
       // for this model's reasoning on a rubric this long; it was silently
       // truncating mid-reasoning before ever emitting the JSON, which Groq's
       // own json_object validation then rejected with an empty failed_generation.
-      max_completion_tokens: 6000,
+      // 4000 (not higher): this account's Groq tier caps at 8000 tokens/min
+      // for this model, and the limit is prompt_tokens + max_completion_tokens
+      // combined — a real request here ran ~2800 prompt tokens, so 6000 blew
+      // through the 8000 ceiling with a 413 even though far fewer completion
+      // tokens were actually used (~3300 observed in testing).
+      max_completion_tokens: 4000,
       // reasoning_format is a Groq-only extension the OpenAI SDK's types
       // don't know about — still a real, honored request field at runtime.
       reasoning_format: 'parsed',
