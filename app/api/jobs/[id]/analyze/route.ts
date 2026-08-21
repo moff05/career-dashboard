@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { ChatCompletionCreateParamsNonStreaming } from 'openai/resources/chat/completions';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, isSystemUser } from '@/lib/user';
@@ -133,11 +134,21 @@ CRITICAL: Return valid JSON only — no markdown, no code blocks, no text before
       model: ANALYZE_MODEL,
       temperature: 0,
       response_format: { type: 'json_object' },
+      // qwen3.6-27b's reasoning must be kept out of `content` in JSON mode
+      // (Groq requires 'parsed' or 'hidden' here, not the 'raw' default) —
+      // and Groq's default max_completion_tokens (1024) isn't enough headroom
+      // for this model's reasoning on a rubric this long; it was silently
+      // truncating mid-reasoning before ever emitting the JSON, which Groq's
+      // own json_object validation then rejected with an empty failed_generation.
+      max_completion_tokens: 6000,
+      // reasoning_format is a Groq-only extension the OpenAI SDK's types
+      // don't know about — still a real, honored request field at runtime.
+      reasoning_format: 'parsed',
       messages: [
         ...(systemInstruction ? [{ role: 'system' as const, content: systemInstruction }] : []),
         { role: 'user' as const, content: prompt },
       ],
-    });
+    } as ChatCompletionCreateParamsNonStreaming & { reasoning_format: 'parsed' | 'hidden' | 'raw' });
     await logUsage(userId, 'fit_scorecard', ANALYZE_MODEL, geminiUsage(response.usage));
 
     // Reasoning models sometimes emit <think>...</think> before JSON — strip it
