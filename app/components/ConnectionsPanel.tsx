@@ -128,10 +128,12 @@ export function ConnectionsPanel() {
     setLoading(false);
   }
 
-  const loaded = useState(() => ({ done: false }))[0];
   useEffect(() => {
     if (!connectionsOpen) return;
-    if (!loaded.done) { loaded.done = true; fetchAll(); }
+    // Refetch on every open, not just the first — otherwise a company added
+    // from the Companies panel (or a contact added, then this panel closed
+    // and reopened) keeps showing stale data until a full page reload.
+    fetchAll();
     // A prefill company means we got here from a job's Network tab "+ Add" —
     // open straight into the add form with that company already filled in.
     if (connectionsPrefillCompany) {

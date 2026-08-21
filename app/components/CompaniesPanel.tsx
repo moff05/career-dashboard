@@ -61,10 +61,12 @@ export function CompaniesPanel() {
     setLoading(false);
   }
 
-  const loaded = useState(() => ({ done: false }))[0];
   useEffect(() => {
     if (!companiesOpen) return;
-    if (!loaded.done) { loaded.done = true; fetchAll(); }
+    // Refetch on every open, not just the first — a contact added from the
+    // Connections panel (which can create a new company) shouldn't need a
+    // full page reload to show up here.
+    fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companiesOpen]);
 
