@@ -12,10 +12,20 @@ import { ProfilePanel } from './components/ProfilePanel';
 import { ConnectionsPanel } from './components/ConnectionsPanel';
 import { CompaniesPanel } from './components/CompaniesPanel';
 import { FeedbackWidget } from './components/FeedbackWidget';
+import { apiFetch } from '@/lib/apiFetch';
+
+function CountBadge({ count }: { count: number | null }) {
+  if (!count) return null;
+  return (
+    <span style={{ background: 'var(--surface-2)', color: 'var(--text-dim)', fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '10px', lineHeight: '14px' }}>
+      {count}
+    </span>
+  );
+}
 
 function Header() {
   const { displayName } = useUser();
-  const { openCoach, openProfile, openConnections, openCompanies } = useOverlays();
+  const { openCoach, openProfile, openConnections, openCompanies, connectionsOpen, companiesOpen } = useOverlays();
   const initials = displayName
     ? displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
     : '';
@@ -25,6 +35,22 @@ function Header() {
     setShared(true);
     setTimeout(() => setShared(false), 2000);
   }
+
+  const [companiesCount, setCompaniesCount] = React.useState<number | null>(null);
+  const [connectionsCount, setConnectionsCount] = React.useState<number | null>(null);
+  const refreshCounts = React.useCallback(() => {
+    apiFetch('/api/companies').then(r => r.json()).then(d => setCompaniesCount(Array.isArray(d) ? d.length : null)).catch(() => {});
+    apiFetch('/api/connections').then(r => r.json()).then(d => setConnectionsCount(Array.isArray(d) ? d.length : null)).catch(() => {});
+  }, []);
+  React.useEffect(() => { refreshCounts(); }, [refreshCounts]);
+  // Adding a connection can create a company too, so either panel closing
+  // might have changed either count — just refresh both when either closes.
+  const wasOverlayOpen = React.useRef(false);
+  React.useEffect(() => {
+    const isOpen = connectionsOpen || companiesOpen;
+    if (wasOverlayOpen.current && !isOpen) refreshCounts();
+    wasOverlayOpen.current = isOpen;
+  }, [connectionsOpen, companiesOpen, refreshCounts]);
 
   return (
     <header className="app-header">
@@ -41,10 +67,10 @@ function Header() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <button onClick={() => openCompanies()} className="header-btn" aria-label="Companies">
-          <Building2 size={14} /> <span className="header-btn-label">Companies</span>
+          <Building2 size={14} /> <span className="header-btn-label">Companies</span> <CountBadge count={companiesCount} />
         </button>
         <button onClick={() => openConnections()} className="header-btn" aria-label="Connections">
-          <Users size={14} /> <span className="header-btn-label">Connections</span>
+          <Users size={14} /> <span className="header-btn-label">Connections</span> <CountBadge count={connectionsCount} />
         </button>
         <button onClick={() => openCoach()} className="header-btn" aria-label="Coach">
           <MessageSquare size={14} /> <span className="header-btn-label">Coach</span>
