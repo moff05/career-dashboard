@@ -26,9 +26,46 @@ type FormData = typeof EMPTY_FORM;
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '16px' };
 const label: React.CSSProperties = { display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' };
 
-function ConnectionForm({ form, setForm, onSave, onCancel, saving }: {
+// Type a new company or pick an existing one from the dropdown — either way
+// the backend resolves/creates the matching companies row (see
+// findOrCreateCompany), so this never needs its own separate save step.
+function CompanyField({ value, onChange, companyNames }: {
+  value: string; onChange: (v: string) => void; companyNames: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const q = value.trim().toLowerCase();
+  const filtered = (q ? companyNames.filter(n => n.toLowerCase().includes(q)) : companyNames).slice(0, 6);
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        value={value}
+        onChange={e => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 120)}
+        className="field-input" style={{ width: '100%' }}
+        placeholder="Type or pick existing..."
+        autoComplete="off"
+      />
+      {open && filtered.length > 0 && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', boxShadow: '0 8px 24px rgba(0,0,0,0.35)', zIndex: 20, maxHeight: '160px', overflowY: 'auto' }}>
+          {filtered.map(name => (
+            <div
+              key={name}
+              onMouseDown={() => { onChange(name); setOpen(false); }}
+              style={{ padding: '7px 10px', fontSize: '12px', color: 'var(--text)', cursor: 'pointer' }}
+            >
+              {name}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConnectionForm({ form, setForm, onSave, onCancel, saving, companyNames }: {
   form: FormData; setForm: React.Dispatch<React.SetStateAction<FormData>>;
-  onSave: () => void; onCancel: () => void; saving: boolean;
+  onSave: () => void; onCancel: () => void; saving: boolean; companyNames: string[];
 }) {
   return (
     <div style={{ ...card, marginBottom: '16px' }}>
@@ -39,7 +76,7 @@ function ConnectionForm({ form, setForm, onSave, onCancel, saving }: {
         </div>
         <div>
           <label style={label}>Company *</label>
-          <input value={form.company} onChange={e => setForm(p => ({ ...p, company: e.target.value }))} className="field-input" style={{ width: '100%' }} />
+          <CompanyField value={form.company} onChange={v => setForm(p => ({ ...p, company: v }))} companyNames={companyNames} />
         </div>
         <div>
           <label style={label}>Email</label>
@@ -73,6 +110,7 @@ function ConnectionForm({ form, setForm, onSave, onCancel, saving }: {
 export function ConnectionsPanel() {
   const { connectionsOpen, closeConnections, connectionsPrefillCompany } = useOverlays();
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [companyNames, setCompanyNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState<FormData>(EMPTY_FORM);
@@ -81,8 +119,12 @@ export function ConnectionsPanel() {
   const [saving, setSaving] = useState(false);
 
   async function fetchAll() {
-    const data = await apiFetch('/api/connections').then(r => r.json()).catch(() => []);
-    setConnections(Array.isArray(data) ? data : []);
+    const [connData, companyData] = await Promise.all([
+      apiFetch('/api/connections').then(r => r.json()).catch(() => []),
+      apiFetch('/api/companies').then(r => r.json()).catch(() => []),
+    ]);
+    setConnections(Array.isArray(connData) ? connData : []);
+    setCompanyNames(Array.isArray(companyData) ? companyData.map((c: { name: string }) => c.name) : []);
     setLoading(false);
   }
 
@@ -110,6 +152,9 @@ export function ConnectionsPanel() {
     setSaving(true);
     const created = await apiFetch('/api/connections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(addForm) }).then(r => r.json());
     setConnections(prev => [created, ...prev]);
+    // Adding a contact at a brand-new company should let that company show
+    // up in the dropdown immediately, without waiting for a full refetch.
+    setCompanyNames(prev => prev.some(n => n.toLowerCase() === addForm.company.trim().toLowerCase()) ? prev : [...prev, addForm.company.trim()]);
     setSaving(false);
     setShowAddForm(false);
     setAddForm(EMPTY_FORM);
@@ -174,7 +219,7 @@ export function ConnectionsPanel() {
           {showAddForm && <div style={{ marginBottom: '4px' }} />}
 
           {showAddForm && (
-            <ConnectionForm form={addForm} setForm={setAddForm} onSave={saveAdd} onCancel={() => setShowAddForm(false)} saving={saving} />
+            <ConnectionForm form={addForm} setForm={setAddForm} onSave={saveAdd} onCancel={() => setShowAddForm(false)} saving={saving} companyNames={companyNames} />
           )}
 
           {loading ? (
@@ -197,7 +242,7 @@ export function ConnectionsPanel() {
                     {grouped[company].map(conn => {
                       const cs = CONN_STATUS[conn.status] || CONN_STATUS.not_reached_out;
                       if (editingId === conn.id) {
-                        return <ConnectionForm key={conn.id} form={editForm} setForm={setEditForm} onSave={saveEdit} onCancel={() => setEditingId(null)} saving={saving} />;
+                        return <ConnectionForm key={conn.id} form={editForm} setForm={setEditForm} onSave={saveEdit} onCancel={() => setEditingId(null)} saving={saving} companyNames={companyNames} />;
                       }
                       return (
                         <div key={conn.id} style={card}>

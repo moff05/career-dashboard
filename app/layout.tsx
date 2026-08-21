@@ -3,18 +3,19 @@
 import './globals.css';
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { User, MessageSquare, Users, Share2, Check } from 'lucide-react';
+import { User, MessageSquare, Users, Building2, Share2, Check } from 'lucide-react';
 import { ClientRoot } from './ClientRoot';
 import { useUser } from './hooks/useUser';
 import { OverlayProvider, useOverlays } from './OverlayContext';
 import { CoachPanel } from './components/CoachPanel';
 import { ProfilePanel } from './components/ProfilePanel';
 import { ConnectionsPanel } from './components/ConnectionsPanel';
+import { CompaniesPanel } from './components/CompaniesPanel';
 import { FeedbackWidget } from './components/FeedbackWidget';
 
 function Header() {
   const { displayName } = useUser();
-  const { openCoach, openProfile, openConnections } = useOverlays();
+  const { openCoach, openProfile, openConnections, openCompanies } = useOverlays();
   const initials = displayName
     ? displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
     : '';
@@ -39,6 +40,9 @@ function Header() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button onClick={() => openCompanies()} className="header-btn" aria-label="Companies">
+          <Building2 size={14} /> <span className="header-btn-label">Companies</span>
+        </button>
         <button onClick={() => openConnections()} className="header-btn" aria-label="Connections">
           <Users size={14} /> <span className="header-btn-label">Connections</span>
         </button>
@@ -73,6 +77,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <CoachPanel />
       <ProfilePanel />
       <ConnectionsPanel />
+      <CompaniesPanel />
       <FeedbackWidget />
     </>
   );

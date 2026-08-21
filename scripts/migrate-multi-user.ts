@@ -70,6 +70,44 @@ async function migrateResumeTable() {
   console.log('  ✓ resume table recreated — existing resumes preserved as each user\'s default');
 }
 
+// The companies table is new — seed it from company names already sitting
+// on jobs and connections (case-insensitive per user) so the Companies list
+// isn't empty on day one, then link existing connections to their row.
+async function backfillCompanies() {
+  const jobCos = await db.execute(`SELECT DISTINCT user_id, company FROM jobs WHERE company IS NOT NULL AND trim(company) != ''`);
+  const connCos = await db.execute(`SELECT DISTINCT user_id, company FROM connections WHERE company IS NOT NULL AND trim(company) != ''`);
+  const seen = new Map<string, { userId: string; name: string }>();
+  for (const row of [...jobCos.rows, ...connCos.rows] as unknown as { user_id: string; company: string }[]) {
+    const userId = row.user_id;
+    const name = String(row.company || '').trim();
+    if (!name) continue;
+    const key = `${userId}::${name.toLowerCase()}`;
+    if (!seen.has(key)) seen.set(key, { userId, name });
+  }
+  let created = 0;
+  for (const { userId, name } of seen.values()) {
+    const existing = await db.execute({
+      sql: 'SELECT id FROM companies WHERE user_id = ? AND name = ? COLLATE NOCASE',
+      args: [userId, name],
+    });
+    if (existing.rows.length === 0) {
+      await db.execute({ sql: 'INSERT INTO companies (user_id, name) VALUES (?, ?)', args: [userId, name] });
+      created++;
+    }
+  }
+  console.log(`  ✓ companies backfilled (${created} created from existing jobs/connections)`);
+
+  await db.execute(`
+    UPDATE connections
+    SET company_id = (
+      SELECT c.id FROM companies c
+      WHERE c.user_id = connections.user_id AND c.name = connections.company COLLATE NOCASE
+    )
+    WHERE company_id IS NULL
+  `);
+  console.log('  ✓ connections linked to companies');
+}
+
 async function migrate() {
   console.log('Multi-user migration starting…');
   console.log('DB:', process.env.TURSO_DATABASE_URL || 'file:./data/career.db');
@@ -139,6 +177,15 @@ async function migrate() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS companies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL DEFAULT 'anonymous',
+      name TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'researching',
+      notes TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS leads (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT NOT NULL DEFAULT 'anonymous',
@@ -190,6 +237,7 @@ async function migrate() {
   await addColumn('leads', 'user_id', "TEXT NOT NULL DEFAULT 'anonymous'");
   await addColumn('leads', 'liveness_status', "TEXT NOT NULL DEFAULT 'unverified'");
   await addColumn('leads', 'liveness_checked_at', 'TEXT');
+  await addColumn('connections', 'company_id', 'INTEGER REFERENCES companies(id)');
 
   // Add resume_text to profile if not present
   await addColumn('profile', 'resume_text', 'TEXT');
@@ -210,6 +258,7 @@ async function migrate() {
   console.log('  ✓ Internship type values normalized');
 
   await migrateResumeTable();
+  await backfillCompanies();
 
   // Create indexes for performance
   const indexes = [
@@ -226,6 +275,9 @@ async function migrate() {
     'CREATE INDEX IF NOT EXISTS idx_usage_log_user_route ON usage_log(user_id, route)',
     'CREATE INDEX IF NOT EXISTS idx_usage_log_user_date ON usage_log(user_id, created_at)',
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_profile_recovery_key ON profile(recovery_key) WHERE recovery_key IS NOT NULL',
+    'CREATE INDEX IF NOT EXISTS idx_companies_user ON companies(user_id)',
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_companies_user_name ON companies(user_id, name COLLATE NOCASE)',
+    'CREATE INDEX IF NOT EXISTS idx_connections_company_id ON connections(company_id)',
   ];
 
   for (const idx of indexes) {
