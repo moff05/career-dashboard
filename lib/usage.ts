@@ -1,9 +1,14 @@
 import { getDb } from '@/lib/db';
 
 // $ per token. Source: console.groq.com/docs/openai — keep in sync if models change.
+// llama-3.3-70b-versatile and qwen/qwen3-32b were both removed from Groq's
+// lineup 2026-08-21 (404 model_not_found) — replaced below. Third-party
+// aggregator pricing (Groq's own pricing page wasn't fetchable to confirm
+// directly) — worth double-checking against console.groq.com/docs/models
+// once real usage volume makes accuracy matter.
 const PRICING: Record<string, { input: number; output: number }> = {
-  'llama-3.3-70b-versatile': { input: 0.59 / 1_000_000, output: 0.79 / 1_000_000 },
-  'qwen/qwen3-32b': { input: 0.29 / 1_000_000, output: 0.59 / 1_000_000 },
+  'openai/gpt-oss-120b': { input: 0.15 / 1_000_000, output: 0.60 / 1_000_000 },
+  'qwen/qwen3.6-27b': { input: 0.60 / 1_000_000, output: 3.00 / 1_000_000 },
 };
 
 // Groq does not charge for prompt caching or web search — these multipliers
@@ -22,7 +27,7 @@ export interface UsageLike {
 }
 
 export function computeCost(model: string, usage: UsageLike): number {
-  const price = PRICING[model] ?? PRICING['llama-3.3-70b-versatile'];
+  const price = PRICING[model] ?? PRICING['openai/gpt-oss-120b'];
   const inputTokens = usage.input_tokens || 0;
   const outputTokens = usage.output_tokens || 0;
   const cacheWrite = usage.cache_creation_input_tokens || 0;

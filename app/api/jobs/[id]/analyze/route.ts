@@ -7,8 +7,14 @@ import { getModel, geminiUsage } from '@/lib/groq';
 import { isRateLimited, RATE_LIMIT_RESPONSE } from '@/lib/rateLimit';
 
 // Reasoning model — thinks step-by-step, follows rubrics more literally.
-// Generative routes (cover letter, bullets, coach) stay on llama-3.3-70b.
-const ANALYZE_MODEL = 'qwen/qwen3-32b';
+// Generative routes (cover letter, bullets, coach) stay on the general model
+// in lib/groq.ts. qwen/qwen3-32b was removed from Groq's lineup (404
+// model_not_found as of 2026-08-21) — replaced with qwen/qwen3.6-27b,
+// verified compatible with the JSON-mode scoring pattern below. Its
+// reasoning is noticeably more verbose (900+ reasoning tokens per call in
+// testing vs. a fraction of that before) — costs more per analyze call than
+// the old model did, worth watching once real usage volume shows up.
+const ANALYZE_MODEL = 'qwen/qwen3.6-27b';
 
 export const maxDuration = 60;
 

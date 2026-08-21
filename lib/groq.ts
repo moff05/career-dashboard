@@ -1,6 +1,9 @@
 import OpenAI from 'openai';
 
-export const GEMINI_MODEL = 'llama-3.3-70b-versatile';
+// llama-3.3-70b-versatile was removed from Groq's lineup (404 model_not_found
+// as of 2026-08-21) — replaced with openai/gpt-oss-120b, verified compatible
+// with the JSON-mode extraction pattern every route here relies on.
+export const GEMINI_MODEL = 'openai/gpt-oss-120b';
 
 let client: OpenAI | null = null;
 
