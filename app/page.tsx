@@ -8,7 +8,7 @@ import { useOverlays } from '@/app/OverlayContext';
 import { type Job, type AnalysisResult, type AnalysisState, type GapsResult, type GapsState, type BulletsResult, type BulletsState, type CoverLetterResult, type CoverLetterState, type Priority, LEVEL_CFG, TYPE_OPTIONS, TYPE_COLORS, STATUS_OPTIONS, scoreColor, greeting, getPriorities, typeLabel, PostedDisplay, DeadlineDisplay } from '@/app/lib/jobUtils';
 import { StatusBadge } from '@/app/components/StatusBadge';
 import { ConnStatusRow } from '@/app/components/ConnStatusRow';
-import { type Connection, CONN_STATUS, CONN_CYCLE } from '@/app/components/ConnectionsPanel';
+import { type Connection, CONN_STATUS } from '@/app/components/ConnectionsPanel';
 
 // ─── Animated number — counts up from 0 to value with ease-out ───────────────
 function AnimatedNumber({ value, duration = 550 }: { value: number; duration?: number }) {
@@ -248,13 +248,6 @@ export default function DashboardPage() {
     wasConnectionsOpen.current = connectionsOpen;
   }, [connectionsOpen, connectionsPrefillCompany, fetchConnections]);
 
-  const cycleConnStatus = async (company: string, connId: number, current: string) => {
-    const next = CONN_CYCLE[(CONN_CYCLE.indexOf(current) + 1) % CONN_CYCLE.length];
-    await apiFetch(`/api/connections/${connId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
-    const updated = (connectionsMap[company] || []).map(c => c.id === connId ? { ...c, status: next } : c);
-    connectionsCacheRef.current[company] = updated;
-    setConnectionsMap(prev => ({ ...prev, [company]: updated }));
-  };
   const setConnStatus = async (company: string, connId: number, status: string) => {
     await apiFetch(`/api/connections/${connId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
     const updated = (connectionsMap[company] || []).map(c => c.id === connId ? { ...c, status } : c);

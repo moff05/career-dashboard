@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import { X, Plus, Trash2, Edit2, ExternalLink } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
+import { StatusDropdown } from '@/app/components/StatusDropdown';
+import { ConnectionLog } from '@/app/components/ConnectionLog';
 
 export interface Connection {
   id: number; company: string; name: string;
@@ -16,9 +18,10 @@ export const CONN_STATUS: Record<string, { label: string; color: string; bg: str
   not_reached_out: { label: 'Not reached out', color: 'var(--text-muted)', bg: 'rgba(148,163,184,0.1)' },
   reached_out:     { label: 'Reached out',     color: 'var(--accent)', bg: 'var(--accent-bg)' },
   responded:       { label: 'Responded',       color: 'var(--success)', bg: 'var(--success-bg)' },
+  talked:          { label: 'Talked',          color: '#38bdf8', bg: 'rgba(56,189,248,0.08)' },
   warm:            { label: 'Warm',             color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
 };
-export const CONN_CYCLE = ['not_reached_out', 'reached_out', 'responded', 'warm'];
+export const CONN_CYCLE = ['not_reached_out', 'reached_out', 'responded', 'talked', 'warm'];
 
 const EMPTY_FORM = { name: '', company: '', email: '', role: '', linkedin: '', relationship: '', notes: '' };
 type FormData = typeof EMPTY_FORM;
@@ -176,10 +179,9 @@ export function ConnectionsPanel() {
     setEditingId(null);
   }
 
-  async function cycleStatus(conn: Connection) {
-    const next = CONN_CYCLE[(CONN_CYCLE.indexOf(conn.status) + 1) % CONN_CYCLE.length];
-    setConnections(prev => prev.map(c => c.id === conn.id ? { ...c, status: next } : c));
-    await apiFetch(`/api/connections/${conn.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
+  async function setStatus(conn: Connection, status: string) {
+    setConnections(prev => prev.map(c => c.id === conn.id ? { ...c, status } : c));
+    await apiFetch(`/api/connections/${conn.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
   }
 
   async function remove(id: number) {
@@ -242,7 +244,6 @@ export function ConnectionsPanel() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {grouped[company].map(conn => {
-                      const cs = CONN_STATUS[conn.status] || CONN_STATUS.not_reached_out;
                       if (editingId === conn.id) {
                         return <ConnectionForm key={conn.id} form={editForm} setForm={setEditForm} onSave={saveEdit} onCancel={() => setEditingId(null)} saving={saving} companyNames={companyNames} />;
                       }
@@ -253,9 +254,7 @@ export function ConnectionsPanel() {
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                 <span style={{ color: 'var(--text)', fontSize: '13px', fontWeight: 700 }}>{conn.name}</span>
                                 {conn.role && <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{conn.role}</span>}
-                                <button onClick={() => cycleStatus(conn)} style={{ backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '2px 9px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', lineHeight: '16px' }} title="Click to update status">
-                                  {cs.label}
-                                </button>
+                                <StatusDropdown value={conn.status} options={CONN_STATUS} order={CONN_CYCLE} onChange={status => setStatus(conn, status)} />
                               </div>
                               {conn.relationship && <div style={{ color: 'var(--text-dim)', fontSize: '11px', marginTop: '3px' }}>{conn.relationship}</div>}
                               <div style={{ display: 'flex', gap: '12px', marginTop: '6px', flexWrap: 'wrap' }}>
@@ -267,6 +266,7 @@ export function ConnectionsPanel() {
                                 )}
                               </div>
                               {conn.notes && <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '6px', lineHeight: 1.5 }}>{conn.notes}</div>}
+                              <ConnectionLog connectionId={conn.id} />
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
                               <button onClick={() => startEdit(conn)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '5px', display: 'flex', borderRadius: 'var(--r-sm)' }}><Edit2 size={12} /></button>

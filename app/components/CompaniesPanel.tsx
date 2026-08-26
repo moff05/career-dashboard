@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import { X, Plus, Trash2, Edit2, Users } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
+import { StatusDropdown } from '@/app/components/StatusDropdown';
 
 export interface Company {
   id: number; name: string; status: string; notes: string | null;
@@ -100,10 +101,9 @@ export function CompaniesPanel() {
     setEditingId(null);
   }
 
-  async function cycleStatus(company: Company) {
-    const next = COMPANY_CYCLE[(COMPANY_CYCLE.indexOf(company.status) + 1) % COMPANY_CYCLE.length];
-    setCompanies(prev => prev.map(c => c.id === company.id ? { ...c, status: next } : c));
-    await apiFetch(`/api/companies/${company.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) });
+  async function setStatus(company: Company, status: string) {
+    setCompanies(prev => prev.map(c => c.id === company.id ? { ...c, status } : c));
+    await apiFetch(`/api/companies/${company.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
   }
 
   async function remove(id: number) {
@@ -149,7 +149,6 @@ export function CompaniesPanel() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {companies.map(company => {
-                const cs = COMPANY_STATUS[company.status] || COMPANY_STATUS.researching;
                 if (editingId === company.id) {
                   return <CompanyForm key={company.id} form={editForm} setForm={setEditForm} onSave={saveEdit} onCancel={() => setEditingId(null)} saving={saving} />;
                 }
@@ -159,9 +158,7 @@ export function CompaniesPanel() {
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <span style={{ color: 'var(--text)', fontSize: '13px', fontWeight: 700 }}>{company.name}</span>
-                          <button onClick={() => cycleStatus(company)} style={{ backgroundColor: cs.bg, color: cs.color, border: 'none', borderRadius: '20px', padding: '2px 9px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', lineHeight: '16px' }} title="Click to update status">
-                            {cs.label}
-                          </button>
+                          <StatusDropdown value={company.status} options={COMPANY_STATUS} order={COMPANY_CYCLE} onChange={status => setStatus(company, status)} />
                         </div>
                         {company.notes && <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '6px', lineHeight: 1.5 }}>{company.notes}</div>}
                         <button
