@@ -39,11 +39,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       'summer-internship': 'Summer Internship', 'full-time': 'Full-Time / New Grad',
     };
 
+    // Industry Fit dropped 20 -> 10 (2026-09-02): a strict "no credit for
+    // transferable skills" category at 20% weight was structurally close to
+    // unwinnable for a graduating senior applying across industries, and it
+    // was doing so on both of Nicholas's real tracked jobs (0/20 on Anduril,
+    // 4/20 on Deloitte) despite decent Skills Match/Role Alignment on both.
+    // The 10 points moved off it went to Skills Match and Role Alignment,
+    // which are more predictive and more within a candidate's control at
+    // this career stage than "have you already worked in this exact
+    // industry" is.
     const CATEGORY = {
       explicit_requirements: { max: 25, label: 'Explicit Requirements Met' },
-      skills_match:           { max: 20, label: 'Skills Match' },
-      role_alignment:         { max: 20, label: 'Role Alignment' },
-      industry_fit:           { max: 20, label: 'Industry Fit' },
+      skills_match:           { max: 25, label: 'Skills Match' },
+      role_alignment:         { max: 25, label: 'Role Alignment' },
+      industry_fit:           { max: 10, label: 'Industry Fit' },
       logistics_fit:          { max: 15, label: 'Logistics / Location Fit' },
     } as const;
 
@@ -68,6 +77,8 @@ Score each category with any integer from 0 to its maximum. The anchors below ar
 
 Read only what the posting explicitly states is required: degree level, GPA cutoff, enrollment status, class year, required years of experience, named required certifications or tools.
 
+If a requirement lists alternative qualifying paths ("X, Y, or Z"), credit the candidate for satisfying ANY ONE path — do not penalize for lacking a different listed alternative.
+
 0  = fails one or more explicit stated requirements. Full stop. Do not rationalize around it.
 ~5 = meets most but misses or only ambiguously satisfies one minor stated one
 ~10 = meets all stated requirements, but barely — only by a generous or uncertain reading
@@ -76,40 +87,40 @@ Read only what the posting explicitly states is required: degree level, GPA cuto
 25 = clearly meets every stated requirement and demonstrably exceeds multiple, or exceeds a major one
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-2. SKILLS MATCH — integer 0 to 20
+2. SKILLS MATCH — integer 0 to 25
 
 Judge only demonstrated skills — tools and techniques used in real jobs or internships. Coursework and class projects are weak signal. A student who "used Python in a class" is not the same as someone who built a production system with it.
 
 0  = no meaningful overlap with what this role does day-to-day
-~4 = one or two relevant skills, coursework or side project only
-~8 = relevant skills but almost entirely via coursework — no real applied track record
-~12 = real applied experience for some core skills, multiple gaps in role-specific tools
-~16 = solid real experience, one or two specific gaps remaining
-20 = strong direct overlap across all core skills — done this exact work in a real context
+~5 = one or two relevant skills, coursework or side project only
+~10 = relevant skills but almost entirely via coursework — no real applied track record
+~15 = real applied experience for some core skills, multiple gaps in role-specific tools
+~20 = solid real experience, one or two specific gaps remaining
+25 = strong direct overlap across all core skills — done this exact work in a real context
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-3. ROLE ALIGNMENT — integer 0 to 20
+3. ROLE ALIGNMENT — integer 0 to 25
 
 Is this the right level AND right function for where this candidate actually is right now?
 
 0  = wrong level (requires experience the candidate doesn't have) OR wrong function entirely
-~4 = major mismatch in level or function — not just a stretch
-~8 = plausible on paper, but a real and noticeable stretch
-~12 = right general level and function, meaningful mismatch in one dimension
-~16 = good fit, only a minor mismatch
-20 = exactly the right level and function for this candidate's current stage
+~5 = major mismatch in level or function — not just a stretch
+~10 = plausible on paper, but a real and noticeable stretch
+~15 = right general level and function, meaningful mismatch in one dimension
+~20 = good fit, only a minor mismatch
+25 = exactly the right level and function for this candidate's current stage
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-4. INDUSTRY FIT — integer 0 to 20
+4. INDUSTRY FIT — integer 0 to 10
 
 STRICT. "Transferable skills" are not industry experience. The fact that skills learned elsewhere are broadly useful does NOT qualify for anything above 0. Relevant exposure must be direct and documented.
 
 0  = no documented experience in this industry or a recognized adjacent sub-sector
-~4 = peripheral connection only — one class, brief mention, or purely theoretical
-~8 = documented experience in a genuinely neighboring industry (shared customers, workflows, or regulatory context — not just "also uses spreadsheets")
-~12 = documented experience in a recognized adjacent sub-sector with real structural overlap
-~16 = at least one internship, job, or sustained real project in this exact industry
-20 = multiple roles or sustained projects in this exact industry with depth
+~2 = peripheral connection only — one class, brief mention, or purely theoretical
+~4 = documented experience in a genuinely neighboring industry (shared customers, workflows, or regulatory context — not just "also uses spreadsheets")
+~6 = documented experience in a recognized adjacent sub-sector with real structural overlap
+~8 = at least one internship, job, or sustained real project in this exact industry
+10 = multiple roles or sustained projects in this exact industry with depth
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 5. LOGISTICS / LOCATION FIT — integer 0 to 15
@@ -162,14 +173,29 @@ CRITICAL: Return valid JSON only — no markdown, no code blocks, no text before
     const match = text.match(/\{[\s\S]*\}/);
     if (!match) return NextResponse.json({ error: 'Parse failed' }, { status: 500 });
 
-    const parsed = JSON.parse(match[0]) as { categories: Record<string, { score: number; rationale: string }>; summary: string };
+    const parsed = JSON.parse(match[0]) as { categories: Record<string, { score: number; rationale: string }>; summary?: string };
+
+    // A truncated response (hit finish_reason: 'length' - this model can burn
+    // most of its completion budget on hidden reasoning tokens before ever
+    // writing the JSON) still parses as valid JSON since Groq's constrained
+    // decoder force-closes braces on cutoff - it's just missing keys.
+    // Silently defaulting a missing category to a score of 0 would write a
+    // wrong, artificially low total straight to the DB with no error shown.
+    // Caught exactly this happening in testing: 2 of 5 categories present,
+    // finish_reason 'length', 3812 of 4000 completion tokens spent on
+    // reasoning alone. Fail loud instead.
+    const missingKeys = Object.keys(CATEGORY).filter((key) => !parsed.categories?.[key]?.rationale);
+    if (missingKeys.length > 0 || !parsed.summary) {
+      console.error('POST /api/jobs/[id]/analyze truncated response, missing:', missingKeys, response.choices[0]?.finish_reason);
+      return NextResponse.json({ error: 'Analysis was cut off before finishing — try again' }, { status: 500 });
+    }
 
     let total = 0;
     const categories = Object.entries(CATEGORY).map(([key, c]) => {
-      const entry = parsed.categories?.[key];
-      const score = Math.min(Math.max(Number(entry?.score) || 0, 0), c.max);
+      const entry = parsed.categories[key];
+      const score = Math.min(Math.max(Number(entry.score) || 0, 0), c.max);
       total += score;
-      return { name: c.label, score, max: c.max, rationale: entry?.rationale || '' };
+      return { name: c.label, score, max: c.max, rationale: entry.rationale };
     });
 
     await db.execute({
