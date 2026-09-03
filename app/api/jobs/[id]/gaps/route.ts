@@ -22,15 +22,28 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Read the scorecard so we can enforce hard disqualifiers server-side
     let logisticsScore: number | null = null;
+    let logisticsRationale = '';
     let totalScore: number | null = null;
     if (job.score_data) {
       try {
-        const sd = JSON.parse(job.score_data) as { categories?: { name: string; score: number }[]; total?: number };
+        const sd = JSON.parse(job.score_data) as { categories?: { name: string; score: number; rationale?: string }[]; total?: number };
         totalScore = sd.total ?? null;
         const logCat = sd.categories?.find(c => c.name === 'Logistics / Location Fit');
-        if (logCat) logisticsScore = logCat.score;
+        if (logCat) {
+          logisticsScore = logCat.score;
+          logisticsRationale = logCat.rationale || '';
+        }
       } catch { /* ignore */ }
     }
+    // A 0 on this category should mean a real scheduling/graduation/visa
+    // conflict (see the rubric in analyze/route.ts), not just "city isn't on
+    // the candidate's target list" — Nicholas is genuinely location-flexible
+    // ("I have a preference on location but the job matters so much more")
+    // and a preference mismatch alone shouldn't be able to force a
+    // should-not-apply verdict. Belt-and-suspenders against the model still
+    // mis-scoring a preference mismatch as 0: only treat it as a hard
+    // conflict if the category's own rationale actually describes one.
+    const isRealLogisticsConflict = logisticsScore === 0 && /semester|enrolled|graduat|visa|clearance|authorization/i.test(logisticsRationale);
 
     const systemPrompt = await buildSystemPrompt(userId);
     const { client, systemInstruction } = getModel(systemPrompt);
@@ -47,7 +60,8 @@ Gap severity definitions:
 "how_to_address": Be specific. Name the exact course, certification, or action and realistic timeline. "Take an online course" is too vague.
 
 Rules for should_apply:
-- false when ANY hard structural disqualifier exists: location/scheduling conflict (can't be in that city during that semester due to school), wrong graduation year, missing required credential, visa issue, required years of experience the candidate lacks. Strong skills do NOT override a hard gate — if the candidate can't physically be there or doesn't meet a stated requirement, it's false.
+- false when ANY hard structural disqualifier exists: a genuine scheduling conflict (can't physically be in that city during that semester due to school enrollment), a graduation-timeline conflict, missing required credential, a stated visa/work-authorization issue the candidate doesn't meet, required years of experience the candidate lacks. Strong skills do NOT override a hard gate — if the candidate can't physically be there or doesn't meet a stated requirement, it's false.
+- The job's city simply not matching the candidate's stated location preference is NOT, by itself, a hard disqualifier — candidates are generally more location-flexible than a preference list suggests. Only treat location as disqualifying when there's an actual scheduling/enrollment conflict, not a bare preference mismatch.
 - true only when the candidate legitimately clears all stated requirements with no hard blockers.
 - apply_reasoning: Name the deciding factor plainly. If false, state exactly what the disqualifier is.
 
@@ -76,14 +90,15 @@ Return ONLY valid JSON, no other text:
       should_apply: boolean; apply_reasoning: string;
     };
 
-    // Hard server-side overrides — model can't talk its way out of a 0 on logistics
-    // or a very low total score
-    if (logisticsScore === 0) {
+    // Hard server-side overrides — model can't talk its way out of a real
+    // conflict on logistics, or a very low total score
+    if (isRealLogisticsConflict) {
       parsed.should_apply = false;
-      if (!parsed.apply_reasoning?.toLowerCase().includes('location') &&
-          !parsed.apply_reasoning?.toLowerCase().includes('schedul') &&
-          !parsed.apply_reasoning?.toLowerCase().includes('conflict')) {
-        parsed.apply_reasoning = `Location or scheduling conflict: the scorecard flagged a hard logistics disqualifier (0/15). ${parsed.apply_reasoning || ''}`.trim();
+      if (!parsed.apply_reasoning?.toLowerCase().includes('schedul') &&
+          !parsed.apply_reasoning?.toLowerCase().includes('conflict') &&
+          !parsed.apply_reasoning?.toLowerCase().includes('visa') &&
+          !parsed.apply_reasoning?.toLowerCase().includes('graduat')) {
+        parsed.apply_reasoning = `Scheduling/graduation/visa conflict: the scorecard flagged a hard logistics disqualifier (0/10). ${parsed.apply_reasoning || ''}`.trim();
       }
     }
     if (totalScore !== null && totalScore < 30) {

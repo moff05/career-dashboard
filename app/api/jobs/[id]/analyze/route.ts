@@ -48,12 +48,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // which are more predictive and more within a candidate's control at
     // this career stage than "have you already worked in this exact
     // industry" is.
+    //
+    // Logistics/Location Fit dropped 15 -> 10, same day: Nicholas is
+    // genuinely location-flexible ("I have a preference on location but the
+    // job matters so much more") and the rubric was treating "city not in
+    // target list" as equivalent to a real scheduling conflict - both landed
+    // at a hard 0, which the gaps route then read as a should-not-apply
+    // signal (see gaps/route.ts). See the rewritten category 5 below: 0 is
+    // now reserved for an actual conflict (semester scheduling, graduation
+    // timeline, visa), not a location preference mismatch. The 5 points
+    // freed up went to Explicit Requirements Met - the most literal,
+    // verifiable, in-the-candidate's-control category.
     const CATEGORY = {
-      explicit_requirements: { max: 25, label: 'Explicit Requirements Met' },
+      explicit_requirements: { max: 30, label: 'Explicit Requirements Met' },
       skills_match:           { max: 25, label: 'Skills Match' },
       role_alignment:         { max: 25, label: 'Role Alignment' },
       industry_fit:           { max: 10, label: 'Industry Fit' },
-      logistics_fit:          { max: 15, label: 'Logistics / Location Fit' },
+      logistics_fit:          { max: 10, label: 'Logistics / Location Fit' },
     } as const;
 
     const prompt = `You are a brutal, unsentimental job fit screener. Your job is accuracy — not encouragement. False optimism wastes the candidate's time and makes the tool useless. When in doubt, score lower. It is better to undersell a real fit than to oversell a weak one.
@@ -73,18 +84,18 @@ ${job.description ? `Description:\n${job.description}` : '(No description)'}
 Score each category with any integer from 0 to its maximum. The anchors below are reference points — use judgment to land between them when the situation calls for it.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. EXPLICIT REQUIREMENTS MET — integer 0 to 25
+1. EXPLICIT REQUIREMENTS MET — integer 0 to 30
 
 Read only what the posting explicitly states is required: degree level, GPA cutoff, enrollment status, class year, required years of experience, named required certifications or tools.
 
 If a requirement lists alternative qualifying paths ("X, Y, or Z"), credit the candidate for satisfying ANY ONE path — do not penalize for lacking a different listed alternative.
 
 0  = fails one or more explicit stated requirements. Full stop. Do not rationalize around it.
-~5 = meets most but misses or only ambiguously satisfies one minor stated one
-~10 = meets all stated requirements, but barely — only by a generous or uncertain reading
-~15 = clearly meets every stated requirement with nothing left ambiguous
-~20 = clearly meets every stated requirement and demonstrably exceeds at least one minor one
-25 = clearly meets every stated requirement and demonstrably exceeds multiple, or exceeds a major one
+~6 = meets most but misses or only ambiguously satisfies one minor stated one
+~12 = meets all stated requirements, but barely — only by a generous or uncertain reading
+~18 = clearly meets every stated requirement with nothing left ambiguous
+~24 = clearly meets every stated requirement and demonstrably exceeds at least one minor one
+30 = clearly meets every stated requirement and demonstrably exceeds multiple, or exceeds a major one
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 2. SKILLS MATCH — integer 0 to 25
@@ -123,17 +134,20 @@ STRICT. "Transferable skills" are not industry experience. The fact that skills 
 10 = multiple roles or sustained projects in this exact industry with depth
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-5. LOGISTICS / LOCATION FIT — integer 0 to 15
+5. LOGISTICS / LOCATION FIT — integer 0 to 10
 
-CRITICAL: "target cities" in the candidate profile = cities they are OPEN TO working in. It does NOT mean they currently live there. Current location and availability come ONLY from resume, school enrollment, graduation date, and profile notes.
+CRITICAL: "target cities" in the candidate profile = cities they are OPEN TO working in, weighted by preference — not a hard requirement, and not where they currently live. Current location and availability come ONLY from resume, school enrollment, graduation date, and profile notes. Candidates are generally more location-flexible than their stated preferences alone suggest, especially for full-time/post-grad roles — a city outside the target list is a real signal, not a wall.
 
-SCHEDULING RULE: If the candidate is enrolled at a university in a different city than the job, AND the role runs during an academic semester (fall or spring co-op/internship), this IS a direct scheduling conflict → 0.
-GRADUATION RULE: If a multi-semester co-op would push graduation past the candidate's stated date → 0.
+Reserve 0 for an ACTUAL conflict, never for a bare preference mismatch:
+SCHEDULING RULE: candidate enrolled at a university in a different city than the job, AND the role runs during an academic semester (fall or spring co-op/internship) → 0.
+GRADUATION RULE: a multi-semester co-op would push graduation past the candidate's stated date → 0.
+VISA RULE: the posting states a work-authorization/visa requirement the candidate's profile contradicts or doesn't clearly meet → 0.
+The job's city simply not being on the candidate's target list, with none of the three conflicts above present, is NOT a 0 — score it in the ~3 band.
 
-0   = concrete conflict: semester scheduling, graduation timeline, city not in target list, or visa conflict
-~5  = real logistical constraint that the profile neither confirms nor rules out
-~10 = mostly clear, minor logistical question remains
-15  = no conflict — posting silent on logistics, OR location matches target cities with no scheduling conflict evident
+0  = one of the three conflicts above — an actual scheduling/graduation/visa impossibility, not a preference mismatch
+~3 = city outside the candidate's target list, no scheduling/graduation/visa conflict — a real preference mismatch, not disqualifying
+~7 = mostly clear, minor logistical question remains (e.g. unclear semester timing)
+10 = no conflict — posting silent on logistics, location matches target cities, or a full-time role with no scheduling constraint evident
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SUMMARY: State plainly whether this is a realistic shot or a long shot and exactly why. Do not soften. Do not say what the candidate "could" do to fix gaps — that is handled separately.
