@@ -102,6 +102,8 @@ If a requirement lists alternative qualifying paths ("X, Y, or Z"), credit the c
 
 Judge only demonstrated skills — tools and techniques used in real jobs or internships. Coursework and class projects are weak signal. A student who "used Python in a class" is not the same as someone who built a production system with it.
 
+When a candidate has applied a general-purpose skill (AI/automation tooling, programming, data analysis) TO a specific domain across multiple real roles — e.g., automating real-estate rent-roll analysis, building a healthcare scheduling tool — that IS demonstrated domain skill, not a generic tech background that happens to touch the domain. Don't discount domain-specific work just because the resume also names the tool or mechanism used to do it.
+
 0  = no meaningful overlap with what this role does day-to-day
 ~5 = one or two relevant skills, coursework or side project only
 ~10 = relevant skills but almost entirely via coursework — no real applied track record
@@ -113,6 +115,8 @@ Judge only demonstrated skills — tools and techniques used in real jobs or int
 3. ROLE ALIGNMENT — integer 0 to 25
 
 Is this the right level AND right function for where this candidate actually is right now?
+
+A candidate's actual, repeated work history in one domain is stronger signal than a broad or generic target-roles list in their profile. If they have real experience across multiple roles/projects in the same industry or function, a new role in that same domain is NOT a "stretch" just because they also have a technical or automation skill layered on top of that domain work — that skill is additive, not evidence of a competing trajectory pulling them elsewhere. Weight a candidate's own stated career goal (profile notes, if present) as real signal too — don't let a broad or scattershot target-roles list override a clearly and specifically stated goal.
 
 0  = wrong level (requires experience the candidate doesn't have) OR wrong function entirely
 ~5 = major mismatch in level or function — not just a stretch
