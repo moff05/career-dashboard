@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getAIClient, geminiUsage, GEMINI_MODEL } from '@/lib/groq';
+import { getAIClient, geminiUsage, GEMINI_MODEL, createChatCompletionStream } from '@/lib/groq';
 
 export const maxDuration = 60;
 
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     ];
 
     const openai = getAIClient();
-    const stream = await openai.chat.completions.create({
+    const stream = await createChatCompletionStream(openai, {
       model: GEMINI_MODEL,
       messages,
       stream: true,

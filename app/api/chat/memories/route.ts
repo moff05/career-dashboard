@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/groq';
+import { getModel, geminiUsage, GEMINI_MODEL, createChatCompletion } from '@/lib/groq';
 
 interface ExtractedMemory { content: string; category: string; }
 
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     const { message, response, session_id } = await request.json();
 
     const { client } = getModel();
-    const completion = await client.chat.completions.create({
+    const completion = await createChatCompletion(client, {
       model: GEMINI_MODEL,
       temperature: 0,
       response_format: { type: 'json_object' },
