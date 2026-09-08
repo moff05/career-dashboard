@@ -3,7 +3,7 @@ import mammoth from 'mammoth';
 import { extractText } from 'unpdf';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/groq';
+import { getModel, geminiUsage, GEMINI_MODEL, createChatCompletion } from '@/lib/groq';
 
 const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
@@ -24,7 +24,7 @@ interface ParsedProfile {
 async function restoreFormatting(text: string, userId: string): Promise<string> {
   try {
     const { client } = getModel();
-    const res = await client.chat.completions.create({
+    const res = await createChatCompletion(client, {
       model: GEMINI_MODEL,
       messages: [{
         role: 'user' as const,
@@ -47,7 +47,7 @@ Return ONLY the reformatted text, no commentary.`,
 async function extractProfileFields(text: string, userId: string): Promise<ParsedProfile | null> {
   try {
     const { client } = getModel();
-    const res = await client.chat.completions.create({
+    const res = await createChatCompletion(client, {
       model: GEMINI_MODEL,
       temperature: 0,
       response_format: { type: 'json_object' },
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
       // Little/no text means it's a scanned or image-only PDF — fall back to vision.
       if (text.length < 80) {
         const { client } = getModel();
-        const res = await client.chat.completions.create({
+        const res = await createChatCompletion(client, {
           model: GEMINI_MODEL,
           messages: [{
             role: 'user' as const,
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     } else if (IMAGE_TYPES.includes(fileType as ImageType) || /\.(jpe?g|png|gif|webp)$/.test(name)) {
       const mediaType = (IMAGE_TYPES.includes(fileType as ImageType) ? fileType : 'image/jpeg') as ImageType;
       const { client } = getModel();
-      const res = await client.chat.completions.create({
+      const res = await createChatCompletion(client, {
         model: GEMINI_MODEL,
         messages: [{
           role: 'user' as const,
@@ -150,11 +150,11 @@ export async function POST(request: NextRequest) {
 
     if (!text) return NextResponse.json({ error: 'Could not find any text in that file.' }, { status: 422 });
 
-    // Run concurrently — field extraction doesn't need the reformatted version.
-    const [formattedText, profile] = await Promise.all([
-      !usedVision ? restoreFormatting(text, userId) : Promise.resolve(text),
-      extractProfileFields(text, userId),
-    ]);
+    // Sequenced, not concurrent — both share Groq's per-org tokens-per-minute
+    // budget, and firing them at once was cascading into 429s (see lib/groq.ts
+    // and the same fix applied to the per-job AI routes).
+    const formattedText = !usedVision ? await restoreFormatting(text, userId) : text;
+    const profile = await extractProfileFields(text, userId);
     return NextResponse.json({ text: formattedText, profile });
   } catch (error) {
     console.error('POST /api/profile/resume/extract error:', error);
