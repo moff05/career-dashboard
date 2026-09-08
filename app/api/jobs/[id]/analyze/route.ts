@@ -1,21 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { ChatCompletionCreateParamsNonStreaming } from 'openai/resources/chat/completions';
 import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getModel, geminiUsage } from '@/lib/groq';
+import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/groq';
 import { isRateLimited, RATE_LIMIT_RESPONSE } from '@/lib/rateLimit';
 
-// Reasoning model — thinks step-by-step, follows rubrics more literally.
-// Generative routes (cover letter, bullets, coach) stay on the general model
-// in lib/groq.ts. qwen/qwen3-32b was removed from Groq's lineup (404
-// model_not_found as of 2026-08-21) — replaced with qwen/qwen3.6-27b,
-// verified compatible with the JSON-mode scoring pattern below. Its
-// reasoning is noticeably more verbose (900+ reasoning tokens per call in
-// testing vs. a fraction of that before) — costs more per analyze call than
-// the old model did, worth watching once real usage volume shows up.
-const ANALYZE_MODEL = 'qwen/qwen3.6-27b';
+// qwen/qwen3.6-27b (used here 2026-08-21 through 2026-09-08) is retired from
+// this route: Groq imposed a separate, much stricter output-tokens-per-minute
+// cap on it (observed 1000 OTPM) on top of the normal 8000 shared TPM pool,
+// and this route's reasoning + 5-category rationale output regularly needs
+// 1300-3700+ tokens per call — over that cap on its own, so calls failed with
+// 429s even with a full TPM budget available. It also intermittently returned
+// invalid JSON (400 json_validate_failed) and truncated mid-summary before
+// hitting its own 4000-token budget (900+ tokens routinely went to hidden
+// reasoning alone). Switched to the same model the other AI routes already
+// use reliably — verified against the full rubric prompt: ~450 completion
+// tokens, finish_reason 'stop', no separate OTPM restriction observed.
+const ANALYZE_MODEL = GEMINI_MODEL;
 
 export const maxDuration = 60;
 
@@ -163,26 +165,11 @@ CRITICAL: Return valid JSON only — no markdown, no code blocks, no text before
       model: ANALYZE_MODEL,
       temperature: 0,
       response_format: { type: 'json_object' },
-      // qwen3.6-27b's reasoning must be kept out of `content` in JSON mode
-      // (Groq requires 'parsed' or 'hidden' here, not the 'raw' default) —
-      // and Groq's default max_completion_tokens (1024) isn't enough headroom
-      // for this model's reasoning on a rubric this long; it was silently
-      // truncating mid-reasoning before ever emitting the JSON, which Groq's
-      // own json_object validation then rejected with an empty failed_generation.
-      // 4000 (not higher): this account's Groq tier caps at 8000 tokens/min
-      // for this model, and the limit is prompt_tokens + max_completion_tokens
-      // combined — a real request here ran ~2800 prompt tokens, so 6000 blew
-      // through the 8000 ceiling with a 413 even though far fewer completion
-      // tokens were actually used (~3300 observed in testing).
-      max_completion_tokens: 4000,
-      // reasoning_format is a Groq-only extension the OpenAI SDK's types
-      // don't know about — still a real, honored request field at runtime.
-      reasoning_format: 'parsed',
       messages: [
         ...(systemInstruction ? [{ role: 'system' as const, content: systemInstruction }] : []),
         { role: 'user' as const, content: prompt },
       ],
-    } as ChatCompletionCreateParamsNonStreaming & { reasoning_format: 'parsed' | 'hidden' | 'raw' });
+    });
     await logUsage(userId, 'fit_scorecard', ANALYZE_MODEL, geminiUsage(response.usage));
 
     // Reasoning models sometimes emit <think>...</think> before JSON — strip it
