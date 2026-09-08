@@ -3,8 +3,7 @@ import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/groq';
-import { isRateLimited, RATE_LIMIT_RESPONSE } from '@/lib/rateLimit';
+import { getModel, geminiUsage, GEMINI_MODEL, createChatCompletion } from '@/lib/groq';
 
 export const maxDuration = 60;
 
@@ -12,7 +11,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const userId = getUserId(request);
     if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
-    if (await isRateLimited(userId)) return NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 });
     const { id } = await params;
     const db = getDb();
     const job = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ? AND user_id = ?', args: [parseInt(id), userId] })).rows[0] as unknown as {
@@ -43,7 +41,7 @@ Produce:
 Return ONLY valid JSON, no other text:
 {"lead_with":[{"experience":"name of the experience/role","why":"why it's the strongest fit signal"}],"tailored_bullets":[{"original":"original bullet text","tailored":"rewritten bullet","why":"what changed and why"}],"keywords_to_add":["keyword1","keyword2"],"deprioritize":["section or experience to deprioritize"]}`;
 
-    const response = await client.chat.completions.create({
+    const response = await createChatCompletion(client, {
       model: GEMINI_MODEL,
       temperature: 0,
       response_format: { type: 'json_object' },

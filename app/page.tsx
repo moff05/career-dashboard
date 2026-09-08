@@ -153,7 +153,7 @@ export default function DashboardPage() {
   const runAnalysis = useCallback((id: number) => {
     analysisCacheRef.current[id] = 'loading';
     setAnalysisResults(prev => ({ ...prev, [id]: 'loading' }));
-    apiFetch(`/api/jobs/${id}/analyze`, { method: 'POST' })
+    return apiFetch(`/api/jobs/${id}/analyze`, { method: 'POST' })
       .then(r => r.json())
       .then(data => {
         const result: AnalysisState = data.error ? 'error' : data;
@@ -174,7 +174,7 @@ export default function DashboardPage() {
   const runGaps = useCallback((id: number) => {
     gapsCacheRef.current[id] = 'loading';
     setGapsResults(prev => ({ ...prev, [id]: 'loading' }));
-    apiFetch(`/api/jobs/${id}/gaps`, { method: 'POST' })
+    return apiFetch(`/api/jobs/${id}/gaps`, { method: 'POST' })
       .then(r => r.json())
       .then(data => {
         const result: GapsState = data.error ? 'error' : data;
@@ -188,7 +188,7 @@ export default function DashboardPage() {
   const runBullets = useCallback((id: number) => {
     bulletsCacheRef.current[id] = 'loading';
     setBulletsResults(prev => ({ ...prev, [id]: 'loading' }));
-    apiFetch(`/api/jobs/${id}/bullets`, { method: 'POST' })
+    return apiFetch(`/api/jobs/${id}/bullets`, { method: 'POST' })
       .then(r => r.json())
       .then(data => {
         const result: BulletsState = data.error ? 'error' : data;
@@ -199,13 +199,29 @@ export default function DashboardPage() {
       .catch(() => { bulletsCacheRef.current[id] = 'error'; setBulletsResults(prev => ({ ...prev, [id]: 'error' })); });
   }, []);
 
+  // Runs whichever of analysis/gaps/bullets aren't already cached for this
+  // job, one after another. All three share Groq's per-org tokens-per-minute
+  // budget and this model's reasoning can burn several thousand tokens per
+  // call, so firing them at once reliably cascaded into 429s across all
+  // three (confirmed in production runtime logs, matching timestamps).
+  const runMissing = useCallback((id: number, includeAnalysis: boolean) => {
+    const steps: Array<() => Promise<unknown>> = [];
+    if (includeAnalysis) steps.push(() => runAnalysis(id));
+    if (!gapsCacheRef.current[id]) steps.push(() => runGaps(id));
+    if (!bulletsCacheRef.current[id]) steps.push(() => runBullets(id));
+    steps.reduce((p, step) => p.then(step), Promise.resolve<unknown>(undefined));
+  }, [runAnalysis, runGaps, runBullets]);
+
   const refreshAnalysis = useCallback((id: number) => {
     delete analysisCacheRef.current[id];
     delete gapsCacheRef.current[id];
     delete bulletsCacheRef.current[id];
-    runAnalysis(id);
-    runGaps(id);
-    runBullets(id);
+    // Sequenced, not concurrent: all three routes share Groq's per-org
+    // tokens-per-minute budget, and each call alone can burn several
+    // thousand tokens on this model's reasoning — firing them at once
+    // reliably blew the shared budget and cascaded into 429s across all
+    // three (confirmed in production runtime logs, matching timestamps).
+    runAnalysis(id).then(() => runGaps(id)).then(() => runBullets(id));
   }, [runAnalysis, runGaps, runBullets]);
 
   const runCoverLetter = useCallback((id: number, tone: string, angle: string) => {
@@ -419,22 +435,13 @@ export default function DashboardPage() {
           } catch { /* ignore corrupt data */ }
         }
         const neverRun = !analysisCacheRef.current[id] && !thisJob?.match_score;
-        if (neverRun) {
-          // First time — fire all three simultaneously
-          runAnalysis(id);
-          if (!gapsCacheRef.current[id]) runGaps(id);
-          if (!bulletsCacheRef.current[id]) runBullets(id);
-        } else {
-          // Previously scored — backfill gaps/bullets if not persisted yet
-          if (!gapsCacheRef.current[id]) runGaps(id);
-          if (!bulletsCacheRef.current[id]) runBullets(id);
-        }
+        runMissing(id, neverRun);
         fetchConnections(thisJob?.company || '');
       }
       return n;
     });
     setJobTabs(prev => prev[id] ? prev : { ...prev, [id]: 'overview' });
-  }, [runAnalysis, runGaps, runBullets, fetchConnections, jobs]);
+  }, [runMissing, fetchConnections, jobs]);
 
   const setTab = (id: number, tab: string) => {
     setJobTabs(prev => ({ ...prev, [id]: tab }));
@@ -509,14 +516,7 @@ export default function DashboardPage() {
       try { const p = JSON.parse(job.cover_letter_data) as CoverLetterResult; coverLetterCacheRef.current[jobId] = p; setCoverLetterResults(prev => ({ ...prev, [jobId]: p })); if (p.tone) setCoverLetterTones(prev => ({ ...prev, [jobId]: p.tone })); } catch { /* ignore */ }
     }
     const neverRun = !analysisCacheRef.current[jobId] && !job.match_score;
-    if (neverRun) {
-      runAnalysis(jobId);
-      if (!gapsCacheRef.current[jobId]) runGaps(jobId);
-      if (!bulletsCacheRef.current[jobId]) runBullets(jobId);
-    } else {
-      if (!gapsCacheRef.current[jobId]) runGaps(jobId);
-      if (!bulletsCacheRef.current[jobId]) runBullets(jobId);
-    }
+    runMissing(jobId, neverRun);
     fetchConnections(job.company);
     setTimeout(() => document.getElementById(`job-row-${jobId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
   };

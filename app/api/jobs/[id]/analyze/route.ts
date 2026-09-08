@@ -3,8 +3,7 @@ import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/groq';
-import { isRateLimited, RATE_LIMIT_RESPONSE } from '@/lib/rateLimit';
+import { getModel, geminiUsage, GEMINI_MODEL, createChatCompletion } from '@/lib/groq';
 
 // qwen/qwen3.6-27b (used here 2026-08-21 through 2026-09-08) is retired from
 // this route: Groq imposed a separate, much stricter output-tokens-per-minute
@@ -25,7 +24,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const userId = getUserId(request);
     if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
-    if (await isRateLimited(userId)) return NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 });
     const { id } = await params;
     const db = getDb();
     const job = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ? AND user_id = ?', args: [parseInt(id), userId] })).rows[0] as unknown as {
@@ -161,7 +159,7 @@ SUMMARY: State plainly whether this is a realistic shot or a long shot and exact
 CRITICAL: Return valid JSON only — no markdown, no code blocks, no text before or after.
 {"categories":{"explicit_requirements":{"score":0,"rationale":"2-3 sentences"},"skills_match":{"score":0,"rationale":"2-3 sentences"},"role_alignment":{"score":0,"rationale":"2-3 sentences"},"industry_fit":{"score":0,"rationale":"2-3 sentences"},"logistics_fit":{"score":0,"rationale":"1-2 sentences"}},"summary":"2-3 sentences, direct and unsentimental"}`;
 
-    const response = await client.chat.completions.create({
+    const response = await createChatCompletion(client, {
       model: ANALYZE_MODEL,
       temperature: 0,
       response_format: { type: 'json_object' },

@@ -3,8 +3,7 @@ import { getDb } from '@/lib/db';
 import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/groq';
-import { isRateLimited, RATE_LIMIT_RESPONSE } from '@/lib/rateLimit';
+import { getModel, geminiUsage, GEMINI_MODEL, createChatCompletion } from '@/lib/groq';
 
 export const maxDuration = 60;
 
@@ -12,7 +11,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const userId = getUserId(request);
     if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
-    if (await isRateLimited(userId)) return NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 });
     const { id } = await params;
     const db = getDb();
     const job = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ? AND user_id = ?', args: [parseInt(id), userId] })).rows[0] as unknown as {
@@ -71,7 +69,7 @@ Rules for should_apply:
 Return ONLY valid JSON, no other text:
 {"gaps":[{"skill":"specific gap name","severity":"major or minor","how_to_address":"specific actionable step"}],"positioning":"2-3 sentences","quick_wins":["action 1","action 2"],"should_apply":true,"apply_reasoning":"direct explanation"}`;
 
-    const response = await client.chat.completions.create({
+    const response = await createChatCompletion(client, {
       model: GEMINI_MODEL,
       temperature: 0,
       response_format: { type: 'json_object' },

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
-import { getModel, geminiUsage, GEMINI_MODEL } from '@/lib/groq';
-import { isRateLimited, RATE_LIMIT_RESPONSE } from '@/lib/rateLimit';
+import { getModel, geminiUsage, GEMINI_MODEL, createChatCompletion } from '@/lib/groq';
 
+export const maxDuration = 60;
 
 const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
 type ImageMediaType = typeof VALID_IMAGE_TYPES[number];
@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
   try {
     const userId = getUserId(request);
     if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
-    if (await isRateLimited(userId)) return NextResponse.json(RATE_LIMIT_RESPONSE, { status: 429 });
     const body = await request.json();
     const { url, extraText, imageBase64, imageMediaType, extraLink } = body as {
       url?: string;
@@ -102,7 +101,7 @@ export async function POST(request: NextRequest) {
     if (imageBase64 && imageMediaType && VALID_IMAGE_TYPES.includes(imageMediaType as ImageMediaType)) {
       try {
         const { client } = getModel();
-        const visionRes = await client.chat.completions.create({
+        const visionRes = await createChatCompletion(client, {
           model: GEMINI_MODEL,
           messages: [{
             role: 'user' as const,
@@ -138,7 +137,7 @@ export async function POST(request: NextRequest) {
     const combinedContext = contextParts.join('\n\n---\n\n').slice(0, 18000);
 
     const { client } = getModel();
-    const response = await client.chat.completions.create({
+    const response = await createChatCompletion(client, {
       model: GEMINI_MODEL,
       temperature: 0,
       response_format: { type: 'json_object' },
