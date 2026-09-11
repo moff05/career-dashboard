@@ -31,10 +31,9 @@ function AnimatedNumber({ value, duration = 550 }: { value: number; duration?: n
 
 // ─── Form helpers ─────────────────────────────────────────────────────────────
 const EMPTY_FORM = {
-  company: '', title: '', type: 'fall-internship', status: 'saved',
+  company: '', title: '', type: 'full-time', status: 'saved',
   match_score: '', location: '', source: '', posting_date: '',
   deadline: '', url: '', salary_range: '', notes: '', description: '',
-  type_year: '',
 };
 type FormData = typeof EMPTY_FORM;
 
@@ -118,7 +117,6 @@ export default function DashboardPage() {
   const [loadError, setLoadError] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
-  const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
   const [expandedJobs, setExpandedJobs] = useState<Set<number>>(new Set());
   const [jobTabs, setJobTabs] = useState<Record<number, string>>({});
 
@@ -319,7 +317,7 @@ export default function DashboardPage() {
       const data = await res.json();
       if (data.error) { setImportFetchError(data.error); setImportStep('input'); return; }
       setImportWarning(data.warning || '');
-      setImportForm({ company: data.company||'', title: data.title||'', type: data.type||'fall-internship', status: 'saved', match_score: '', location: data.location||'', source: data.source||'Pasted', posting_date: data.posting_date||'', deadline: data.deadline||'', url: data.url||trimmedUrl, salary_range: data.salary_range||'', notes: '', description: data.description||'', type_year: '' });
+      setImportForm({ company: data.company||'', title: data.title||'', type: data.type||'full-time', status: 'saved', match_score: '', location: data.location||'', source: data.source||'Pasted', posting_date: data.posting_date||'', deadline: data.deadline||'', url: data.url||trimmedUrl, salary_range: data.salary_range||'', notes: '', description: data.description||'' });
       setImportStep('review');
     } catch { setImportFetchError('Request failed.'); setImportStep('input'); }
   };
@@ -328,7 +326,7 @@ export default function DashboardPage() {
     setSaving(true);
     setImportFetchError('');
     try {
-      await apiFetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...importForm, match_score: importForm.match_score ? parseInt(importForm.match_score) : null, type_year: importForm.type_year ? parseInt(importForm.type_year) : null }) });
+      await apiFetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...importForm, match_score: importForm.match_score ? parseInt(importForm.match_score) : null }) });
       closeImport(); fetchJobs();
     } catch {
       setImportFetchError('Save failed — check your connection and try again.');
@@ -343,7 +341,6 @@ export default function DashboardPage() {
     try {
       const data = await apiFetch('/api/jobs').then(r => r.json());
       setJobs(data);
-      setExpandedCompanies(new Set([...new Set(data.map((j: Job) => j.company))] as string[]));
     } catch {
       setJobs([]);
       setLoadError(true);
@@ -357,7 +354,7 @@ export default function DashboardPage() {
   const handleSave = async () => {
     setSaving(true);
     setSaveError('');
-    const payload = { ...form, match_score: form.match_score ? parseInt(form.match_score) : null, type_year: form.type_year ? parseInt(form.type_year) : null };
+    const payload = { ...form, match_score: form.match_score ? parseInt(form.match_score) : null };
     try {
       if (editingJob) {
         await apiFetch(`/api/jobs/${editingJob.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -449,7 +446,7 @@ export default function DashboardPage() {
 
   const openEdit = (job: Job) => {
     setEditingJob(job);
-    setForm({ company: job.company, title: job.title, type: job.type, status: job.status, match_score: job.match_score?.toString()||'', location: job.location||'', source: job.source||'', posting_date: job.posting_date||'', deadline: job.deadline||'', url: job.url||'', salary_range: job.salary_range||'', notes: job.notes||'', description: job.description||'', type_year: job.type_year?.toString()||'' });
+    setForm({ company: job.company, title: job.title, type: job.type, status: job.status, match_score: job.match_score?.toString()||'', location: job.location||'', source: job.source||'', posting_date: job.posting_date||'', deadline: job.deadline||'', url: job.url||'', salary_range: job.salary_range||'', notes: job.notes||'', description: job.description||'' });
     setSaveError('');
     setShowModal(true);
   };
@@ -475,15 +472,10 @@ export default function DashboardPage() {
     else if (sortBy === 'deadline') { if (!a.deadline && !b.deadline) cmp = 0; else if (!a.deadline) cmp = 1; else if (!b.deadline) cmp = -1; else cmp = new Date(a.deadline).getTime() - new Date(b.deadline).getTime(); }
     else if (sortBy === 'posting_date') { if (!a.posting_date && !b.posting_date) cmp = 0; else if (!a.posting_date) cmp = 1; else if (!b.posting_date) cmp = -1; else cmp = new Date(a.posting_date).getTime() - new Date(b.posting_date).getTime(); }
     else if (sortBy === 'title') cmp = a.title.localeCompare(b.title);
+    else if (sortBy === 'company') cmp = a.company.localeCompare(b.company) || a.title.localeCompare(b.title);
     else if (sortBy === 'status') cmp = a.status.localeCompare(b.status);
     return sortDir === 'asc' ? cmp : -cmp;
   });
-
-  const grouped = sortedJobs.reduce((acc, job) => {
-    if (!acc[job.company]) acc[job.company] = [];
-    acc[job.company].push(job);
-    return acc;
-  }, {} as Record<string, Job[]>);
 
   const stats = {
     total: jobs.length,
@@ -500,7 +492,6 @@ export default function DashboardPage() {
   const jumpToJob = (jobId: number) => {
     const job = jobs.find(j => j.id === jobId);
     if (!job) return;
-    setExpandedCompanies(prev => new Set(prev).add(job.company));
     setExpandedJobs(prev => new Set(prev).add(jobId));
     setJobTabs(prev => prev[jobId] ? prev : { ...prev, [jobId]: 'overview' });
     if (job.score_data && !analysisCacheRef.current[jobId]) {
@@ -524,7 +515,7 @@ export default function DashboardPage() {
   const SortIcon = ({ col }: { col: string }) => sortBy !== col ? null : <span style={{ marginLeft: '3px', fontSize: '9px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
   const colHdr = (col: string): React.CSSProperties => ({ cursor: 'pointer', userSelect: 'none', color: sortBy === col ? 'var(--accent-hi)' : 'var(--text-muted)', display: 'flex', alignItems: 'center' });
 
-  const GRID = '28px 1fr 90px 95px 68px 90px 90px 72px';
+  const GRID = '28px 130px minmax(0,1fr) 90px 95px 68px 90px 90px 72px';
   const GAP = '0 8px';
 
   const isStale = (job: Job) => job.status === 'applied' && !!job.status_updated_at && (Date.now() - new Date(job.status_updated_at).getTime()) / 86400000 >= 14;
@@ -650,6 +641,8 @@ export default function DashboardPage() {
               style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '4px 8px', color: 'var(--text)', fontSize: '12px', outline: 'none', fontFamily: 'inherit' }}
             >
               <option value="">Default (starred first)</option>
+              <option value="company-asc">Company A–Z</option>
+              <option value="company-desc">Company Z–A</option>
               <option value="title-asc">Title A–Z</option>
               <option value="title-desc">Title Z–A</option>
               <option value="match_score-desc">Score: High first</option>
@@ -738,11 +731,12 @@ export default function DashboardPage() {
               works on mobile via the filter pills above the table. */}
           {!isMobile && (
             <div style={{
-              display: 'grid', gridTemplateColumns: GRID, gap: GAP, minWidth: '720px',
+              display: 'grid', gridTemplateColumns: GRID, gap: GAP, minWidth: '800px',
               padding: '9px 16px', borderBottom: '1px solid var(--border)',
               fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em',
             }}>
               <div />
+              <div style={colHdr('company')} onClick={() => handleSort('company')}>Company <SortIcon col="company" /></div>
               <div style={colHdr('title')} onClick={() => handleSort('title')}>Title <SortIcon col="title" /></div>
               <div style={colHdr('type')} onClick={() => handleSort('type')}>Type <SortIcon col="type" /></div>
               <div style={colHdr('status')} onClick={() => handleSort('status')}>Status <SortIcon col="status" /></div>
@@ -753,33 +747,11 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {Object.entries(grouped).map(([company, companyJobs], groupIdx) => {
-            const isExpanded = expandedCompanies.has(company);
-            const isLast = groupIdx === Object.entries(grouped).length - 1;
-            return (
-              <div key={company}>
-                {/* Company header */}
-                <div onClick={() => setExpandedCompanies(prev => { const n = new Set(prev); n.has(company) ? n.delete(company) : n.add(company); return n; })}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '10px', minWidth: isMobile ? undefined : '720px',
-                    padding: '11px 16px', backgroundColor: 'var(--surface)',
-                    borderTop: groupIdx > 0 ? '1px solid var(--border)' : undefined,
-                    borderBottom: isExpanded ? '1px solid var(--border)' : (!isLast ? '1px solid var(--border)' : undefined),
-                    cursor: 'pointer', userSelect: 'none',
-                  }}>
-                  {isExpanded ? <ChevronDown size={11} color="var(--text-muted)" /> : <ChevronRight size={11} color="var(--text-muted)" />}
-                  <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{company}</span>
-                  <span style={{ backgroundColor: 'var(--border-dim)', color: 'var(--text-muted)', borderRadius: '20px', padding: '1px 7px', fontSize: '11px', fontWeight: 500, flexShrink: 0 }}>
-                    {companyJobs.length} {companyJobs.length === 1 ? 'role' : 'roles'}
-                  </span>
-                  {companyJobs.some(j => j.starred) && <Star size={11} color="var(--accent)" fill="var(--accent)" style={{ flexShrink: 0 }} />}
-                </div>
-
-                {isExpanded && companyJobs.map((job, idx) => {
+          {sortedJobs.map((job, idx) => {
                   const isJobExpanded = expandedJobs.has(job.id);
                   const activeTab = jobTabs[job.id] || 'overview';
                   const analysis = analysisResults[job.id];
-                  const isLastInGroup = idx === companyJobs.length - 1;
+                  const isLastInGroup = idx === sortedJobs.length - 1;
                   return (
                     <div key={job.id}>
                       {/* Job row — a stacked flex layout under 768px, the
@@ -803,7 +775,10 @@ export default function DashboardPage() {
                             </div>
 
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {job.company}
+                              </div>
+                              <div style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {job.title}
                               </div>
                               {isStale(job) && (
@@ -837,7 +812,7 @@ export default function DashboardPage() {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '8px', paddingLeft: '21px' }}>
                             <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.02em' }}>
-                              {typeLabel(job.type, job.type_year)}
+                              {typeLabel(job.type)}
                             </span>
                             <div onClick={e => e.stopPropagation()}>
                               <StatusBadge job={job} onStatusChange={handleStatusChange} />
@@ -879,7 +854,7 @@ export default function DashboardPage() {
                           id={`job-row-${job.id}`}
                           onClick={() => toggleJob(job.id)}
                           style={{
-                            display: 'grid', gridTemplateColumns: GRID, gap: GAP, alignItems: 'center', minWidth: '720px',
+                            display: 'grid', gridTemplateColumns: GRID, gap: GAP, alignItems: 'center', minWidth: '800px',
                             padding: '12px 16px',
                             borderBottom: (isJobExpanded || !isLastInGroup) ? '1px solid var(--border)' : undefined,
                             cursor: 'pointer', transition: 'background 0.1s',
@@ -894,9 +869,14 @@ export default function DashboardPage() {
                               style={{ transition: 'all 0.15s' }} />
                           </div>
 
+                          {/* Company */}
+                          <div style={{ minWidth: 0, color: 'var(--text)', fontWeight: 700, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {job.company}
+                          </div>
+
                           {/* Title */}
-                          <div>
-                            <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {job.title}
                             </div>
                             {isStale(job) && (
@@ -910,7 +890,7 @@ export default function DashboardPage() {
                           {/* Type */}
                           <div>
                             <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontSize: '11px', fontWeight: 700, letterSpacing: '0.02em' }}>
-                              {typeLabel(job.type, job.type_year)}
+                              {typeLabel(job.type)}
                             </span>
                           </div>
 
@@ -1039,7 +1019,7 @@ export default function DashboardPage() {
                                   { label: 'Location', value: job.location },
                                   { label: 'Deadline', value: job.deadline ? <><span style={{ color: 'var(--text-muted)' }}>{job.deadline}</span> <DeadlineDisplay deadline={job.deadline} /></> : null },
                                   { label: 'Salary', value: job.salary_range },
-                                  { label: 'Type', value: job.type ? <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontWeight: 700 }}>{typeLabel(job.type, job.type_year)}</span> : null },
+                                  { label: 'Type', value: job.type ? <span style={{ color: TYPE_COLORS[job.type] || 'var(--text-muted)', fontWeight: 700 }}>{typeLabel(job.type)}</span> : null },
                                   { label: 'Source', value: job.source },
                                   { label: 'Posted', value: job.posting_date },
                                 ].map(({ label, value }) => (
@@ -1486,9 +1466,6 @@ export default function DashboardPage() {
                     </div>
                   );
                 })}
-              </div>
-            );
-          })}
         </div>
       )}
 
@@ -1570,14 +1547,9 @@ export default function DashboardPage() {
                   <Field label="Match Score (1–10)" field="match_score" form={importForm} setForm={setImportForm} type="number" />
                   <div>
                     <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <select value={importForm.type} onChange={e => setImportForm(p => ({ ...p, type: e.target.value }))} style={{ ...formInput, flex: 2 }}>
-                        {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                      </select>
-                      {(importForm.type === 'fall-internship' || importForm.type === 'spring-internship') && (
-                        <input type="number" value={importForm.type_year} onChange={e => setImportForm(p => ({ ...p, type_year: e.target.value }))} placeholder="Year" min="2024" max="2035" style={{ ...formInput, flex: 1, minWidth: 0 }} />
-                      )}
-                    </div>
+                    <select value={importForm.type} onChange={e => setImportForm(p => ({ ...p, type: e.target.value }))} style={formInput}>
+                      {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Source</label>
@@ -1632,14 +1604,9 @@ export default function DashboardPage() {
               <Field label="Source" field="source" form={form} setForm={setForm} />
               <div>
                 <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Type</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} style={{ ...formInput, flex: 2 }}>
-                    {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                  {(form.type === 'fall-internship' || form.type === 'spring-internship') && (
-                    <input type="number" value={form.type_year} onChange={e => setForm(p => ({ ...p, type_year: e.target.value }))} placeholder="Year" min="2024" max="2035" style={{ ...formInput, flex: 1, minWidth: 0 }} />
-                  )}
-                </div>
+                <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} style={formInput}>
+                  {TYPE_OPTIONS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
               </div>
               <div>
                 <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' }}>Status</label>

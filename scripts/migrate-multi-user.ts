@@ -257,6 +257,13 @@ async function migrate() {
   await db.execute({ sql: "UPDATE jobs SET type = 'spring-internship', type_year = 2027 WHERE type = 'spring-2027-internship'" });
   console.log('  ✓ Internship type values normalized');
 
+  // Condensed job type down to full-time / part-time / internship (2026-09-11)
+  // — the fall/spring/summer season split added noise without adding value
+  // once someone is only tracking full-time roles. type_year is no longer
+  // collected but the column stays for old rows.
+  await db.execute({ sql: "UPDATE jobs SET type = 'internship' WHERE type IN ('fall-internship', 'spring-internship', 'summer-internship')" });
+  console.log('  ✓ Internship type values condensed to a single "internship" type');
+
   await migrateResumeTable();
   await backfillCompanies();
 

@@ -11,7 +11,6 @@ export interface Job {
   location: string | null; source: string | null; notes: string | null;
   created_at: string; status_updated_at: string | null; starred: number;
   score_data?: string | null; gaps_data?: string | null; bullets_data?: string | null; cover_letter_data?: string | null;
-  type_year?: number | null;
 }
 
 export interface AnalysisCategory { name: string; score: number; max: number; rationale: string; }
@@ -50,15 +49,13 @@ export const LEVEL_CFG = {
 };
 
 export const TYPE_OPTIONS = [
-  { value: 'fall-internship',   label: 'Fall Internship' },
-  { value: 'spring-internship', label: 'Spring Internship' },
-  { value: 'summer-internship', label: 'Summer Intern' },
-  { value: 'full-time',         label: 'Full-Time' },
+  { value: 'full-time', label: 'Full-Time' },
+  { value: 'part-time', label: 'Part-Time' },
+  { value: 'internship', label: 'Internship' },
 ];
 
 export const TYPE_COLORS: Record<string, string> = {
-  'fall-internship': '#7c3aed', 'spring-internship': '#0891b2',
-  'summer-internship': 'var(--success)', 'full-time': 'var(--accent-hi)',
+  'full-time': 'var(--accent-hi)', 'part-time': '#0891b2', 'internship': 'var(--success)',
 };
 
 export const STATUS_OPTIONS = ['saved', 'applied', 'interviewing', 'offer', 'rejected'];
@@ -78,9 +75,7 @@ export function deadlineDays(deadline: string) {
   return Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000);
 }
 
-export function typeLabel(type: string, year?: number | null): string {
-  if (type === 'fall-internship') return year ? `Fall '${String(year).slice(2)}` : 'Fall Intern';
-  if (type === 'spring-internship') return year ? `Spring '${String(year).slice(2)}` : 'Spring Intern';
+export function typeLabel(type: string): string {
   return TYPE_OPTIONS.find(t => t.value === type)?.label || type;
 }
 

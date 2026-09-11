@@ -26,7 +26,7 @@ export const CONN_CYCLE = ['not_reached_out', 'reached_out', 'responded', 'talke
 const EMPTY_FORM = { name: '', company: '', email: '', role: '', linkedin: '', relationship: '', notes: '' };
 type FormData = typeof EMPTY_FORM;
 
-const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '16px' };
+const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '12px 14px' };
 const label: React.CSSProperties = { display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' };
 
 // Type a new company or pick an existing one from the dropdown — either way
@@ -120,6 +120,8 @@ export function ConnectionsPanel() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<FormData>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   async function fetchAll() {
     const [connData, companyData] = await Promise.all([
@@ -191,7 +193,14 @@ export function ConnectionsPanel() {
 
   if (!connectionsOpen) return null;
 
-  const grouped = connections.reduce((acc, c) => {
+  const filteredConnections = connections.filter(c => {
+    if (statusFilter !== 'all' && c.status !== statusFilter) return false;
+    const q = searchText.trim().toLowerCase();
+    if (q && !c.name.toLowerCase().includes(q) && !c.company.toLowerCase().includes(q) && !(c.role || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const grouped = filteredConnections.reduce((acc, c) => {
     if (!acc[c.company]) acc[c.company] = [];
     acc[c.company].push(c);
     return acc;
@@ -219,6 +228,26 @@ export function ConnectionsPanel() {
           </div>
         </div>
 
+        {connections.length > 0 && (
+          <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <input
+              type="text" placeholder="Search by name, company, or role..."
+              value={searchText} onChange={e => setSearchText(e.target.value)}
+              className="field-input" style={{ width: '100%' }}
+            />
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              {['all', ...CONN_CYCLE].map(s => (
+                <button key={s} onClick={() => setStatusFilter(s)} style={{
+                  backgroundColor: statusFilter === s ? 'var(--accent-bg)' : 'var(--surface)',
+                  color: statusFilter === s ? 'var(--accent-hi)' : 'var(--text-muted)',
+                  border: `1px solid ${statusFilter === s ? 'var(--accent-dim)' : 'var(--border)'}`,
+                  borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                }}>{s === 'all' ? 'All' : CONN_STATUS[s].label}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px 24px' }}>
           {showAddForm && <div style={{ marginBottom: '4px' }} />}
 
@@ -228,11 +257,13 @@ export function ConnectionsPanel() {
 
           {loading ? (
             <div style={{ color: 'var(--text-muted)', fontSize: '13px', padding: '30px 0' }}>Loading…</div>
-          ) : companies.length === 0 ? (
+          ) : connections.length === 0 ? (
             <div style={{ ...card, padding: '40px 24px', textAlign: 'center' }}>
               <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '6px' }}>No connections yet.</div>
               <div style={{ color: 'var(--text-dim)', fontSize: '12px' }}>Add recruiters, alumni, or anyone at a company you're targeting.</div>
             </div>
+          ) : companies.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: '12px', padding: '24px 0', textAlign: 'center' }}>No connections match.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {companies.map(company => (

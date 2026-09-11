@@ -21,7 +21,7 @@ export const COMPANY_CYCLE = ['researching', 'reaching_out', 'applied'];
 const EMPTY_FORM = { name: '', status: 'researching', notes: '' };
 type FormData = typeof EMPTY_FORM;
 
-const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '16px' };
+const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '12px 14px' };
 const label: React.CSSProperties = { display: 'block', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 500, marginBottom: '5px' };
 
 function CompanyForm({ form, setForm, onSave, onCancel, saving }: {
@@ -55,6 +55,8 @@ export function CompaniesPanel() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<FormData>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   async function fetchAll() {
     const data = await apiFetch('/api/companies').then(r => r.json()).catch(() => []);
@@ -113,6 +115,12 @@ export function CompaniesPanel() {
 
   if (!companiesOpen) return null;
 
+  const filteredCompanies = companies.filter(c => {
+    if (statusFilter !== 'all' && c.status !== statusFilter) return false;
+    if (searchText.trim() && !c.name.toLowerCase().includes(searchText.trim().toLowerCase())) return false;
+    return true;
+  });
+
   return (
     <>
       <div className="overlay-backdrop" onClick={closeCompanies} />
@@ -134,6 +142,26 @@ export function CompaniesPanel() {
           </div>
         </div>
 
+        {companies.length > 0 && (
+          <div style={{ padding: '12px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <input
+              type="text" placeholder="Search companies..."
+              value={searchText} onChange={e => setSearchText(e.target.value)}
+              className="field-input" style={{ width: '100%' }}
+            />
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              {['all', ...COMPANY_CYCLE].map(s => (
+                <button key={s} onClick={() => setStatusFilter(s)} style={{
+                  backgroundColor: statusFilter === s ? 'var(--accent-bg)' : 'var(--surface)',
+                  color: statusFilter === s ? 'var(--accent-hi)' : 'var(--text-muted)',
+                  border: `1px solid ${statusFilter === s ? 'var(--accent-dim)' : 'var(--border)'}`,
+                  borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                }}>{s === 'all' ? 'All' : COMPANY_STATUS[s].label}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px 24px' }}>
           {showAddForm && (
             <CompanyForm form={addForm} setForm={setAddForm} onSave={saveAdd} onCancel={() => setShowAddForm(false)} saving={saving} />
@@ -146,9 +174,11 @@ export function CompaniesPanel() {
               <div style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '6px' }}>No companies yet.</div>
               <div style={{ color: 'var(--text-dim)', fontSize: '12px' }}>Brainstorm every company you'd want to work at — add them here before there's even a job posting.</div>
             </div>
+          ) : filteredCompanies.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: '12px', padding: '24px 0', textAlign: 'center' }}>No companies match.</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {companies.map(company => {
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {filteredCompanies.map(company => {
                 if (editingId === company.id) {
                   return <CompanyForm key={company.id} form={editForm} setForm={setEditForm} onSave={saveEdit} onCancel={() => setEditingId(null)} saving={saving} />;
                 }

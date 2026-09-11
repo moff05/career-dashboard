@@ -163,7 +163,7 @@ Rules:
 - company: the hiring company name (not the job board)
 - title: exact job title as written
 - location: city/state or "Remote" — empty if not stated
-- type: one of "fall-2026-internship" | "spring-2027-internship" | "summer-internship" | "full-time" | "" — infer from context
+- type: one of "full-time" | "part-time" | "internship" | "" — infer from context
 - deadline: YYYY-MM-DD application deadline — empty if not found
 - posting_date: YYYY-MM-DD date the job was posted — empty if not found
 - salary_range: compensation as written — empty if not found

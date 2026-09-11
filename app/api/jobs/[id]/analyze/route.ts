@@ -35,8 +35,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const systemPrompt = await buildSystemPrompt(userId);
     const { client, systemInstruction } = getModel(systemPrompt);
     const typeLabel: Record<string, string> = {
-      'fall-2026-internship': 'Fall 2026 Internship', 'spring-2027-internship': 'Spring 2027 Internship',
-      'summer-internship': 'Summer Internship', 'full-time': 'Full-Time / New Grad',
+      'full-time': 'Full-Time / New Grad', 'part-time': 'Part-Time', 'internship': 'Internship',
     };
 
     // Industry Fit dropped 20 -> 10 (2026-09-02): a strict "no credit for
