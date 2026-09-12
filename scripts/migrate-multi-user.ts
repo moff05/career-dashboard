@@ -208,6 +208,16 @@ async function migrate() {
 
     -- One row per Groq API call, written by lib/usage.ts. Powers the
     -- /api/admin/usage operator endpoint and the per-user rate limit check.
+    CREATE TABLE IF NOT EXISTS discovered_jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      company TEXT NOT NULL, title TEXT NOT NULL, type TEXT NOT NULL,
+      location TEXT, url TEXT NOT NULL, description TEXT, posting_date TEXT, source TEXT,
+      match_score INTEGER, score_data TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS usage_log (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT NOT NULL DEFAULT 'anonymous',
@@ -251,6 +261,7 @@ async function migrate() {
   await addColumn('jobs', 'bullets_data', 'TEXT');
   await addColumn('jobs', 'cover_letter_data', 'TEXT');
   await addColumn('jobs', 'type_year', 'INTEGER');
+  await addColumn('companies', 'career_url', 'TEXT');
 
   // Rename year-baked type values to generic equivalents, backfill type_year
   await db.execute({ sql: "UPDATE jobs SET type = 'fall-internship', type_year = 2026 WHERE type = 'fall-2026-internship'" });
@@ -285,6 +296,10 @@ async function migrate() {
     'CREATE INDEX IF NOT EXISTS idx_companies_user ON companies(user_id)',
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_companies_user_name ON companies(user_id, name COLLATE NOCASE)',
     'CREATE INDEX IF NOT EXISTS idx_connections_company_id ON connections(company_id)',
+    // (user_id, url) uniqueness doubles as same-posting dedup across scan
+    // runs — a posting that already exists (any status) is never re-scored.
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_discovered_jobs_user_url ON discovered_jobs(user_id, url)',
+    'CREATE INDEX IF NOT EXISTS idx_discovered_jobs_user_status ON discovered_jobs(user_id, status)',
   ];
 
   for (const idx of indexes) {

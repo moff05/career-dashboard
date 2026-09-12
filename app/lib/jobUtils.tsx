@@ -13,6 +13,12 @@ export interface Job {
   score_data?: string | null; gaps_data?: string | null; bullets_data?: string | null; cover_letter_data?: string | null;
 }
 
+export interface DiscoveredJob {
+  id: number; company: string; title: string; type: string; location: string | null;
+  url: string; description: string | null; posting_date: string | null; source: string | null;
+  match_score: number | null; score_data: string | null; status: string; created_at: string;
+}
+
 export interface AnalysisCategory { name: string; score: number; max: number; rationale: string; }
 export interface AnalysisResult { categories: AnalysisCategory[]; total: number; summary: string; }
 export type AnalysisState = AnalysisResult | 'loading' | 'error';

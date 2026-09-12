@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/apiFetch';
 import { Star, Trash2, ExternalLink, ChevronDown, ChevronRight, Plus, LinkIcon, Loader, AlertCircle, ArrowLeft, ImageIcon, Edit2, RotateCcw, X, Check } from 'lucide-react';
 import { useUser } from '@/app/hooks/useUser';
 import { useOverlays } from '@/app/OverlayContext';
-import { type Job, type AnalysisResult, type AnalysisState, type GapsResult, type GapsState, type BulletsResult, type BulletsState, type CoverLetterResult, type CoverLetterState, type Priority, LEVEL_CFG, TYPE_OPTIONS, TYPE_COLORS, STATUS_OPTIONS, scoreColor, greeting, getPriorities, typeLabel, PostedDisplay, DeadlineDisplay } from '@/app/lib/jobUtils';
+import { type Job, type DiscoveredJob, type AnalysisResult, type AnalysisState, type GapsResult, type GapsState, type BulletsResult, type BulletsState, type CoverLetterResult, type CoverLetterState, type Priority, LEVEL_CFG, TYPE_OPTIONS, TYPE_COLORS, STATUS_OPTIONS, scoreColor, greeting, getPriorities, typeLabel, PostedDisplay, DeadlineDisplay } from '@/app/lib/jobUtils';
 import { StatusBadge } from '@/app/components/StatusBadge';
 import { ConnStatusRow } from '@/app/components/ConnStatusRow';
 import { type Connection, CONN_STATUS } from '@/app/components/ConnectionsPanel';
@@ -351,6 +351,32 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
+  // Daily board-scan review queue — up to 10 new candidates a day, sitting
+  // here until explicitly added or dismissed (see app/api/cron/scan-boards
+  // and app/api/discovered). Hidden entirely when empty.
+  const [discoveredJobs, setDiscoveredJobs] = useState<DiscoveredJob[]>([]);
+  const [discoveredBusyId, setDiscoveredBusyId] = useState<number | null>(null);
+
+  const fetchDiscovered = useCallback(async () => {
+    try {
+      const data = await apiFetch('/api/discovered').then(r => r.json());
+      setDiscoveredJobs(data);
+    } catch { /* non-critical — just don't show the section */ }
+  }, []);
+
+  useEffect(() => { fetchDiscovered(); }, [fetchDiscovered]);
+
+  const handleDiscoveredAction = async (id: number, action: 'add' | 'dismiss') => {
+    setDiscoveredBusyId(id);
+    try {
+      await apiFetch(`/api/discovered/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
+      setDiscoveredJobs(prev => prev.filter(d => d.id !== id));
+      if (action === 'add') fetchJobs();
+    } finally {
+      setDiscoveredBusyId(null);
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     setSaveError('');
@@ -565,6 +591,38 @@ export default function DashboardPage() {
               </button>
             );
           })}
+        </div>
+      )}
+
+      {discoveredJobs.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '8px' }}>
+            <span style={{ color: 'var(--text)', fontSize: '12px', fontWeight: 700 }}>Discovered</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>from today&apos;s board scan — review and add the ones worth tracking</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {discoveredJobs.map((d) => {
+              const busy = discoveredBusyId === d.id;
+              return (
+                <div key={d.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                  backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)',
+                  padding: '9px 14px', opacity: busy ? 0.5 : 1,
+                }}>
+                  {d.match_score != null && (
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: scoreColor(d.match_score), flexShrink: 0, width: '28px', textAlign: 'right' }}>{d.match_score}</span>
+                  )}
+                  <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ minWidth: 0, flex: 1, textDecoration: 'none' }}>
+                    <span style={{ color: 'var(--text)', fontSize: '12px', fontWeight: 600 }}>{d.title}</span>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '8px' }}>{d.company}{d.location ? ` · ${d.location}` : ''}</span>
+                  </a>
+                  {d.source && <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-dim)', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{d.source}</span>}
+                  <button disabled={busy} onClick={() => handleDiscoveredAction(d.id, 'dismiss')} className="btn-ghost" title="Dismiss" style={{ padding: '4px 8px', fontSize: '11px', flexShrink: 0 }}><X size={13} /></button>
+                  <button disabled={busy} onClick={() => handleDiscoveredAction(d.id, 'add')} className="btn-primary" title="Add to tracker" style={{ padding: '4px 10px', fontSize: '11px', flexShrink: 0 }}><Check size={13} /> Add</button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

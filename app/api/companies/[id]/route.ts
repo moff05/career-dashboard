@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getUserId } from '@/lib/user';
 
-const EDITABLE_FIELDS = ['name', 'status', 'notes'] as const;
+const EDITABLE_FIELDS = ['name', 'status', 'notes', 'career_url'] as const;
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

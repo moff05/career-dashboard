@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "migrate": "npx tsx scripts/migrate-multi-user.ts"
+    "migrate": "npx tsx scripts/migrate-multi-user.ts",
+    "backfill-career-urls": "npx tsx scripts/backfill-career-urls.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",

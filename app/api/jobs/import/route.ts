@@ -21,6 +21,7 @@ function detectSource(url: string): string {
     if (host.includes('glassdoor')) return 'Glassdoor';
     if (host.includes('smartrecruiters')) return 'SmartRecruiters';
     if (host.includes('icims')) return 'iCIMS';
+    if (host.includes('ashbyhq')) return 'Ashby';
   } catch { /* ignore */ }
   return 'company site';
 }
