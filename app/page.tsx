@@ -121,7 +121,14 @@ export default function DashboardPage() {
   const [jobTabs, setJobTabs] = useState<Record<number, string>>({});
 
   const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  // Multi-select — empty set means no status filter (show everything).
+  // Each pill toggles independently like a checkbox, e.g. Applied + Interviewing at once.
+  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
+  const toggleStatusFilter = (s: string) => setStatusFilter(prev => {
+    const next = new Set(prev);
+    if (next.has(s)) next.delete(s); else next.add(s);
+    return next;
+  });
   const [typeFilter, setTypeFilter] = useState('all');
   const [starFilter, setStarFilter] = useState(false);
   const [sortBy, setSortBy] = useState<string | null>(null);
@@ -485,7 +492,7 @@ export default function DashboardPage() {
 
   const filteredJobs = jobs.filter(job => {
     if (searchText.trim() && !job.company.toLowerCase().includes(searchText.toLowerCase()) && !job.title.toLowerCase().includes(searchText.toLowerCase())) return false;
-    if (statusFilter !== 'all' && job.status !== statusFilter) return false;
+    if (statusFilter.size > 0 && !statusFilter.has(job.status)) return false;
     if (typeFilter !== 'all' && job.type !== typeFilter) return false;
     if (starFilter && !job.starred) return false;
     return true;
@@ -630,7 +637,7 @@ export default function DashboardPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '18px', flexWrap: 'wrap' }}>
         {[
           { label: 'tracked', value: stats.total, color: 'var(--text)', always: true },
-          { label: 'applied', value: stats.applied, color: 'var(--text-muted)', always: false },
+          { label: 'applied', value: stats.applied, color: 'var(--accent)', always: true },
           { label: 'interviewing', value: stats.interviewing, color: 'var(--accent)', always: false },
           { label: stats.offers === 1 ? 'offer' : 'offers', value: stats.offers, color: 'var(--success)', always: false },
           { label: 'starred', value: stats.starred, color: 'var(--accent)', always: false },
@@ -652,14 +659,34 @@ export default function DashboardPage() {
             style={{ backgroundColor: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '6px 12px', color: 'var(--text)', fontSize: '12px', outline: 'none', width: '160px', flexShrink: 0 }}
           />
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-            {['all','saved','applied','interviewing','offer','rejected'].map(s => (
-              <button key={s} onClick={() => setStatusFilter(s)} style={{
-                backgroundColor: statusFilter === s ? 'var(--accent-bg)' : 'var(--surface)',
-                color: statusFilter === s ? 'var(--accent-hi)' : 'var(--text-muted)',
-                border: `1px solid ${statusFilter === s ? 'var(--accent-dim)' : 'var(--border)'}`,
-                borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize', transition: 'all 0.1s',
-              }}>{s === 'all' ? 'All' : s}</button>
-            ))}
+            <button onClick={() => setStatusFilter(new Set())} style={{
+              backgroundColor: statusFilter.size === 0 ? 'var(--accent-bg)' : 'var(--surface)',
+              color: statusFilter.size === 0 ? 'var(--accent-hi)' : 'var(--text-muted)',
+              border: `1px solid ${statusFilter.size === 0 ? 'var(--accent-dim)' : 'var(--border)'}`,
+              borderRadius: '20px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.1s',
+            }}>All</button>
+            {['saved','applied','interviewing','offer','rejected'].map(s => {
+              const active = statusFilter.has(s);
+              return (
+                <button key={s} onClick={() => toggleStatusFilter(s)} style={{
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                  backgroundColor: active ? 'var(--accent-bg)' : 'var(--surface)',
+                  color: active ? 'var(--accent-hi)' : 'var(--text-muted)',
+                  border: `1px solid ${active ? 'var(--accent-dim)' : 'var(--border)'}`,
+                  borderRadius: '20px', padding: '4px 10px 4px 8px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize', transition: 'all 0.1s',
+                }}>
+                  <span style={{
+                    width: '11px', height: '11px', flexShrink: 0, borderRadius: '3px',
+                    border: `1px solid ${active ? 'var(--accent)' : 'var(--text-dim)'}`,
+                    backgroundColor: active ? 'var(--accent)' : 'transparent',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {active && <Check size={8} color="var(--bg)" strokeWidth={3} />}
+                  </span>
+                  {s}
+                </button>
+              );
+            })}
           </div>
         </div>
         {/* Row 2: type + starred */}
@@ -712,7 +739,7 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-      {(searchText || statusFilter !== 'all' || typeFilter !== 'all' || starFilter) && (
+      {(searchText || statusFilter.size > 0 || typeFilter !== 'all' || starFilter) && (
         <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginBottom: '10px' }}>
           {sortedJobs.length} result{sortedJobs.length !== 1 ? 's' : ''}
         </div>
