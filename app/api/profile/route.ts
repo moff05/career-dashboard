@@ -54,17 +54,18 @@ export async function PUT(request: NextRequest) {
     // libsql rejects `undefined` bind params outright (throws, no helpful message) —
     // any field missing from the body must be coalesced to null before binding,
     // or the whole update silently fails even though the other fields were fine.
-    const { name, email, phone, linkedin, university, degree, graduation_date, gpa, honors, minors, target_roles, target_cities, notes, resume_text } = body;
-    const args = [userId, name, email, phone, linkedin, university, degree, graduation_date, gpa, honors, minors, target_roles, target_cities, notes, resume_text]
+    const { name, email, phone, linkedin, university, degree, graduation_date, gpa, honors, minors, target_roles, target_cities, work_authorization, notes, resume_text } = body;
+    const args = [userId, name, email, phone, linkedin, university, degree, graduation_date, gpa, honors, minors, target_roles, target_cities, work_authorization, notes, resume_text]
       .map(v => (v === undefined ? null : v));
     await db.execute({
-      sql: `INSERT INTO profile (user_id, name, email, phone, linkedin, university, degree, graduation_date, gpa, honors, minors, target_roles, target_cities, notes, resume_text)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      sql: `INSERT INTO profile (user_id, name, email, phone, linkedin, university, degree, graduation_date, gpa, honors, minors, target_roles, target_cities, work_authorization, notes, resume_text)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
               name=excluded.name, email=excluded.email, phone=excluded.phone,
               linkedin=excluded.linkedin, university=excluded.university, degree=excluded.degree,
               graduation_date=excluded.graduation_date, gpa=excluded.gpa, honors=excluded.honors,
               minors=excluded.minors, target_roles=excluded.target_roles, target_cities=excluded.target_cities,
+              work_authorization=excluded.work_authorization,
               notes=excluded.notes, resume_text=excluded.resume_text`,
       args,
     });

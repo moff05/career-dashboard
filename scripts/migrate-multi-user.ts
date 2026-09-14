@@ -262,6 +262,7 @@ async function migrate() {
   await addColumn('jobs', 'cover_letter_data', 'TEXT');
   await addColumn('jobs', 'type_year', 'INTEGER');
   await addColumn('companies', 'career_url', 'TEXT');
+  await addColumn('profile', 'work_authorization', 'TEXT');
 
   // Rename year-baked type values to generic equivalents, backfill type_year
   await db.execute({ sql: "UPDATE jobs SET type = 'fall-internship', type_year = 2026 WHERE type = 'fall-2026-internship'" });

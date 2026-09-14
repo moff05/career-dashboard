@@ -9,7 +9,7 @@ import { useOverlays } from '@/app/OverlayContext';
 interface ProfileData {
   id?: number; name?: string; email?: string; phone?: string; linkedin?: string;
   university?: string; degree?: string; graduation_date?: string; gpa?: string;
-  honors?: string; minors?: string; target_roles?: string; target_cities?: string; notes?: string;
+  honors?: string; minors?: string; target_roles?: string; target_cities?: string; work_authorization?: string; notes?: string;
 }
 interface Resume { id: number; name: string; raw_text: string | null; parsed_at: string | null; is_default: number; }
 interface Memory { id: number; content: string; category: string; source: string; created_at: string; }
@@ -247,7 +247,7 @@ export function ProfilePanel() {
               {[
                 { title: 'Personal', fields: [{ field: 'name', label: 'Full Name' }, { field: 'email', label: 'Email (optional — used to sign cover letters)' }, { field: 'phone', label: 'Phone (optional)' }, { field: 'linkedin', label: 'LinkedIn (optional — used to sign cover letters)' }] },
                 { title: 'Education', fields: [{ field: 'university', label: 'University' }, { field: 'degree', label: 'Degree' }, { field: 'graduation_date', label: 'Graduation' }, { field: 'gpa', label: 'GPA' }, { field: 'minors', label: 'Minors' }, { field: 'honors', label: 'Honors', multiline: true }] },
-                { title: 'Targets', fields: [{ field: 'target_roles', label: 'Target Roles', multiline: true }, { field: 'target_cities', label: 'Target Cities', multiline: true }, { field: 'notes', label: 'Notes', multiline: true }] },
+                { title: 'Targets', fields: [{ field: 'target_roles', label: 'Target Roles', multiline: true }, { field: 'target_cities', label: 'Target Cities', multiline: true }, { field: 'work_authorization', label: 'Work Authorization (optional — e.g. "U.S. citizen, dual U.S./Brazil"; used so a posting requiring citizenship isn\'t scored as unmet just because your resume is silent on it)', multiline: true }, { field: 'notes', label: 'Notes', multiline: true }] },
               ].map(section => (
                 <div key={section.title} style={card}>
                   <h3 className="section-label" style={{ margin: '0 0 14px' }}>{section.title}</h3>

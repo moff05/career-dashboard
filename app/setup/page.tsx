@@ -47,7 +47,7 @@ export default function SetupPage() {
   const [form, setForm] = useState({
     name: '', email: '', linkedin: '', phone: '',
     university: '', degree: '', graduation_date: '', gpa: '', honors: '', minors: '',
-    target_roles: '', target_cities: '', notes: '',
+    target_roles: '', target_cities: '', work_authorization: '', notes: '',
     resume_text: '',
   });
 
@@ -153,6 +153,7 @@ export default function SetupPage() {
           minors: form.minors.trim(),
           target_roles: form.target_roles.trim(),
           target_cities: form.target_cities.trim(),
+          work_authorization: form.work_authorization.trim(),
           notes: form.notes.trim(),
           resume_text: form.resume_text.trim() || null,
         }),
@@ -287,6 +288,13 @@ export default function SetupPage() {
                 <label style={LABEL}>Target cities / locations</label>
                 <input value={form.target_cities} onChange={e => set('target_cities', e.target.value)}
                   placeholder="New York, San Francisco, Remote" style={INPUT}
+                  onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
+              </div>
+              <div>
+                <label style={LABEL}>Work authorization (optional)</label>
+                <input value={form.work_authorization} onChange={e => set('work_authorization', e.target.value)}
+                  placeholder="e.g. U.S. citizen, dual U.S./Brazil citizenship, needs sponsorship" style={INPUT}
                   onFocus={e => (e.target.style.borderColor = 'var(--accent)')}
                   onBlur={e => (e.target.style.borderColor = 'var(--border)')} />
               </div>

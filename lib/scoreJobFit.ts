@@ -75,6 +75,8 @@ Read only what the posting explicitly states is required: degree level, GPA cuto
 
 If a requirement lists alternative qualifying paths ("X, Y, or Z"), credit the candidate for satisfying ANY ONE path — do not penalize for lacking a different listed alternative.
 
+CITIZENSHIP / WORK AUTHORIZATION RULE: resumes conventionally omit citizenship and work-authorization status — its absence from the resume is NOT evidence the candidate lacks it. Check the candidate's stated work authorization in PREFERENCES & CONTEXT above, not the resume, for this specific requirement. If it states the candidate meets what the posting requires (e.g. posting requires U.S. citizenship and the candidate is a U.S. citizen, dual or otherwise), treat this requirement as satisfied — do not fail it just because the resume itself is silent. Only fail it if the stated work authorization actually contradicts the requirement, or if work authorization is truly unstated anywhere (profile AND resume) AND the posting requires something unusual enough (e.g. an active security clearance) that silence is meaningful evidence against it.
+
 0  = fails one or more explicit stated requirements. Full stop. Do not rationalize around it.
 ~6 = meets most but misses or only ambiguously satisfies one minor stated one
 ~12 = meets all stated requirements, but barely — only by a generous or uncertain reading
@@ -130,7 +132,7 @@ CRITICAL: "target cities" in the candidate profile = cities they are OPEN TO wor
 Reserve 0 for an ACTUAL conflict, never for a bare preference mismatch:
 SCHEDULING RULE: candidate enrolled at a university in a different city than the job, AND the role runs during an academic semester (fall or spring co-op/internship) → 0.
 GRADUATION RULE: a multi-semester co-op would push graduation past the candidate's stated date → 0.
-VISA RULE: the posting states a work-authorization/visa requirement the candidate's profile contradicts or doesn't clearly meet → 0.
+VISA RULE: the posting states a work-authorization/visa requirement that the candidate's stated work authorization (PREFERENCES & CONTEXT above) actually contradicts → 0. If work authorization is unstated in the profile, this is NOT automatically a 0 — see the CITIZENSHIP / WORK AUTHORIZATION RULE under Explicit Requirements Met above; the same reasoning applies here.
 The job's city simply not being on the candidate's target list, with none of the three conflicts above present, is NOT a 0 — score it in the ~3 band.
 
 0  = one of the three conflicts above — an actual scheduling/graduation/visa impossibility, not a preference mismatch
