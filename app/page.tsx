@@ -29,6 +29,22 @@ function AnimatedNumber({ value, duration = 550 }: { value: number; duration?: n
   return <>{display}</>;
 }
 
+// ─── Relative time for the Discovered tab's "last scanned" label ─────────────
+function LastScanned({ date }: { date: string }) {
+  // Turso's datetime('now') comes back as "YYYY-MM-DD HH:MM:SS" (space, no
+  // zone) — always UTC, but not reliably parsed as such across browsers
+  // unless normalized to ISO 8601 first.
+  const iso = date.includes('T') ? date : `${date.replace(' ', 'T')}Z`;
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(diffMs / 60000);
+  if (mins < 1) return <>just now</>;
+  if (mins < 60) return <>{mins}m ago</>;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return <>{hours}h ago</>;
+  const days = Math.round(hours / 24);
+  return <>{days}d ago</>;
+}
+
 // ─── Form helpers ─────────────────────────────────────────────────────────────
 const EMPTY_FORM = {
   company: '', title: '', type: 'full-time', status: 'saved',
@@ -358,16 +374,23 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
-  // Daily board-scan review queue — up to 10 new candidates a day, sitting
-  // here until explicitly added or dismissed (see app/api/cron/scan-boards
-  // and app/api/discovered). Hidden entirely when empty.
+  // Weekly board-scan review queue — sits in its own tab until explicitly
+  // added or dismissed (see app/api/cron/scan-boards and app/api/discovered).
+  // A manual refresh (app/api/discovered/refresh) is only allowed once this
+  // queue is fully cleared — see handleRefresh below.
+  const [activeTab, setActiveTab] = useState<'tracker' | 'discovered'>('tracker');
   const [discoveredJobs, setDiscoveredJobs] = useState<DiscoveredJob[]>([]);
   const [discoveredBusyId, setDiscoveredBusyId] = useState<number | null>(null);
+  const [expandedDiscovered, setExpandedDiscovered] = useState<Set<number>>(new Set());
+  const [lastScanAt, setLastScanAt] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState('');
 
   const fetchDiscovered = useCallback(async () => {
     try {
       const data = await apiFetch('/api/discovered').then(r => r.json());
-      setDiscoveredJobs(data);
+      setDiscoveredJobs(data.jobs);
+      setLastScanAt(data.lastScanAt);
     } catch { /* non-critical — just don't show the section */ }
   }, []);
 
@@ -378,9 +401,33 @@ export default function DashboardPage() {
     try {
       await apiFetch(`/api/discovered/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
       setDiscoveredJobs(prev => prev.filter(d => d.id !== id));
+      setExpandedDiscovered(prev => { const n = new Set(prev); n.delete(id); return n; });
       if (action === 'add') fetchJobs();
     } finally {
       setDiscoveredBusyId(null);
+    }
+  };
+
+  const toggleDiscovered = (id: number) => {
+    setExpandedDiscovered(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setRefreshError('');
+    try {
+      const res = await apiFetch('/api/discovered/refresh', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) { setRefreshError(data.error || 'Refresh failed.'); return; }
+      await fetchDiscovered();
+    } catch {
+      setRefreshError('Refresh failed — check your connection and try again.');
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -601,38 +648,123 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {discoveredJobs.length > 0 && (
+      {/* Tabs — Tracker (the flat job list + search/filter) and Discovered
+          (the weekly board-scan review queue). Discovered gets a count
+          badge so a fresh batch is noticeable without switching over. */}
+      <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border)', marginBottom: '20px' }}>
+        {([['tracker', 'Tracker'], ['discovered', 'Discovered']] as const).map(([key, label]) => (
+          <button key={key} onClick={() => setActiveTab(key)} style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+            padding: '8px 4px', marginBottom: '-1px',
+            borderBottom: `2px solid ${activeTab === key ? 'var(--accent)' : 'transparent'}`,
+            color: activeTab === key ? 'var(--text)' : 'var(--text-muted)',
+            fontSize: '13px', fontWeight: 700,
+          }}>
+            {label}
+            {key === 'discovered' && discoveredJobs.length > 0 && (
+              <span style={{
+                backgroundColor: 'var(--accent-bg)', color: 'var(--accent-hi)', borderRadius: '20px',
+                padding: '1px 7px', fontSize: '11px', fontWeight: 700,
+              }}>{discoveredJobs.length}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'discovered' && (
         <div style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '8px' }}>
-            <span style={{ color: 'var(--text)', fontSize: '12px', fontWeight: 700 }}>Discovered</span>
-            <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>from today&apos;s board scan — review and add the ones worth tracking</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+              {lastScanAt ? <>Last scanned <LastScanned date={lastScanAt} /></> : 'No scans yet'}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {refreshError && <span style={{ color: 'var(--danger)', fontSize: '11px' }}>{refreshError}</span>}
+              <button
+                disabled={refreshing || discoveredJobs.length > 0}
+                onClick={handleRefresh}
+                title={discoveredJobs.length > 0 ? 'Review or dismiss everything below first' : 'Pull a fresh batch now'}
+                className="btn-ghost" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', padding: '5px 10px' }}
+              >
+                <RotateCcw size={11} style={refreshing ? { animation: 'spin 1s linear infinite' } : undefined} /> {refreshing ? 'Scanning...' : 'Refresh'}
+              </button>
+            </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {discoveredJobs.map((d) => {
-              const busy = discoveredBusyId === d.id;
-              return (
-                <div key={d.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
-                  backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)',
-                  padding: '9px 14px', opacity: busy ? 0.5 : 1,
-                }}>
-                  {d.match_score != null && (
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: scoreColor(d.match_score), flexShrink: 0, width: '28px', textAlign: 'right' }}>{d.match_score}</span>
-                  )}
-                  <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ minWidth: 0, flex: 1, textDecoration: 'none' }}>
-                    <span style={{ color: 'var(--text)', fontSize: '12px', fontWeight: 600 }}>{d.title}</span>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '8px' }}>{d.company}{d.location ? ` · ${d.location}` : ''}</span>
-                  </a>
-                  {d.source && <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-dim)', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{d.source}</span>}
-                  <button disabled={busy} onClick={() => handleDiscoveredAction(d.id, 'dismiss')} className="btn-ghost" title="Dismiss" style={{ padding: '4px 8px', fontSize: '11px', flexShrink: 0 }}><X size={13} /></button>
-                  <button disabled={busy} onClick={() => handleDiscoveredAction(d.id, 'add')} className="btn-primary" title="Add to tracker" style={{ padding: '4px 10px', fontSize: '11px', flexShrink: 0 }}><Check size={13} /> Add</button>
-                </div>
-              );
-            })}
-          </div>
+
+          {discoveredJobs.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--text-muted)', fontSize: '12px' }}>
+              No pending matches. New picks land here every Monday, or hit Refresh for an early batch.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {discoveredJobs.map((d) => {
+                const busy = discoveredBusyId === d.id;
+                const expanded = expandedDiscovered.has(d.id);
+                let scoreData: AnalysisResult | null = null;
+                if (d.score_data) { try { scoreData = JSON.parse(d.score_data) as AnalysisResult; } catch { /* ignore corrupt data */ } }
+                return (
+                  <div key={d.id} style={{
+                    backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)',
+                    opacity: busy ? 0.5 : 1, overflow: 'hidden',
+                  }}>
+                    <div onClick={() => toggleDiscovered(d.id)} style={{
+                      display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '9px 14px', cursor: 'pointer', flexWrap: 'wrap',
+                    }}>
+                      <div style={{ flexShrink: 0, color: 'var(--text-muted)', display: 'flex' }}>{expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</div>
+                      {d.match_score != null && (
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: scoreColor(d.match_score), flexShrink: 0, width: '28px', textAlign: 'right' }}>{d.match_score}</span>
+                      )}
+                      <div style={{ minWidth: 0, flex: '1 1 160px' }}>
+                        <span style={{ color: 'var(--text)', fontSize: '12px', fontWeight: 600 }}>{d.title}</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '8px' }}>{d.company}{d.location ? ` · ${d.location}` : ''}</span>
+                      </div>
+                      {d.source && <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-dim)', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{d.source}</span>}
+                      <a href={d.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} title="Open posting" className="btn-ghost" style={{ padding: '4px 8px', fontSize: '11px', flexShrink: 0, display: 'flex' }}><ExternalLink size={13} /></a>
+                      <button disabled={busy} onClick={e => { e.stopPropagation(); handleDiscoveredAction(d.id, 'dismiss'); }} className="btn-ghost" title="Dismiss" style={{ padding: '4px 8px', fontSize: '11px', flexShrink: 0 }}><X size={13} /></button>
+                      <button disabled={busy} onClick={e => { e.stopPropagation(); handleDiscoveredAction(d.id, 'add'); }} className="btn-primary" title="Add to tracker" style={{ padding: '4px 10px', fontSize: '11px', flexShrink: 0 }}><Check size={13} /> Add</button>
+                    </div>
+                    {expanded && (
+                      <div style={{ padding: '4px 16px 16px', borderTop: '1px solid var(--border)' }}>
+                        {scoreData && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px', marginBottom: '16px' }}>
+                            <div style={{ color: 'var(--text)', fontSize: '12px', lineHeight: 1.6 }}>{scoreData.summary}</div>
+                            {scoreData.categories.map(cat => {
+                              const pct = cat.max > 0 ? (cat.score / cat.max) * 100 : 0;
+                              return (
+                                <div key={cat.name}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '4px' }}>
+                                    <span style={{ color: 'var(--text)', fontSize: '11px', fontWeight: 600 }}>{cat.name}</span>
+                                    <span style={{ color: scoreColor(pct), fontSize: '12px', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{cat.score}/{cat.max}</span>
+                                  </div>
+                                  <div style={{ backgroundColor: 'var(--bg)', borderRadius: '20px', height: '4px', overflow: 'hidden', marginBottom: '4px' }}>
+                                    <div style={{ width: '100%', height: '100%', borderRadius: '20px', backgroundColor: scoreColor(pct), transform: `scaleX(${pct / 100})`, transformOrigin: 'left' }} />
+                                  </div>
+                                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', lineHeight: 1.5 }}>{cat.rationale}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {d.description ? (
+                          <details>
+                            <summary style={{ color: 'var(--text-muted)', fontSize: '11px', cursor: 'pointer', userSelect: 'none' }}>Full description</summary>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: 1.6, whiteSpace: 'pre-wrap', marginTop: '8px' }}>{d.description}</div>
+                          </details>
+                        ) : (
+                          <div style={{ color: 'var(--text-dim)', fontSize: '11px' }}>No description parsed for this posting.</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
+      {activeTab === 'tracker' && (
+      <>
       {/* Stats */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '18px', flexWrap: 'wrap' }}>
         {[
@@ -1552,6 +1684,8 @@ export default function DashboardPage() {
                   );
                 })}
         </div>
+      )}
+      </>
       )}
 
       {/* Import Modal */}
