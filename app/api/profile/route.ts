@@ -57,16 +57,22 @@ export async function PUT(request: NextRequest) {
     const { name, email, phone, linkedin, university, degree, graduation_date, gpa, honors, minors, target_roles, target_cities, work_authorization, notes, resume_text } = body;
     const args = [userId, name, email, phone, linkedin, university, degree, graduation_date, gpa, honors, minors, target_roles, target_cities, work_authorization, notes, resume_text]
       .map(v => (v === undefined ? null : v));
+    // On conflict, COALESCE each column against the existing row rather than
+    // blindly overwriting with `excluded` — a caller (UI or a direct API call)
+    // that omits a field must not silently null out data that was already
+    // saved. Once bitten: a direct-to-prod verification PUT that sent only
+    // {work_authorization} wiped a real user's name/target_roles/target_cities/
+    // resume_text because the old ON CONFLICT clause always took `excluded`.
     await db.execute({
       sql: `INSERT INTO profile (user_id, name, email, phone, linkedin, university, degree, graduation_date, gpa, honors, minors, target_roles, target_cities, work_authorization, notes, resume_text)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(user_id) DO UPDATE SET
-              name=excluded.name, email=excluded.email, phone=excluded.phone,
-              linkedin=excluded.linkedin, university=excluded.university, degree=excluded.degree,
-              graduation_date=excluded.graduation_date, gpa=excluded.gpa, honors=excluded.honors,
-              minors=excluded.minors, target_roles=excluded.target_roles, target_cities=excluded.target_cities,
-              work_authorization=excluded.work_authorization,
-              notes=excluded.notes, resume_text=excluded.resume_text`,
+              name=COALESCE(excluded.name, profile.name), email=COALESCE(excluded.email, profile.email), phone=COALESCE(excluded.phone, profile.phone),
+              linkedin=COALESCE(excluded.linkedin, profile.linkedin), university=COALESCE(excluded.university, profile.university), degree=COALESCE(excluded.degree, profile.degree),
+              graduation_date=COALESCE(excluded.graduation_date, profile.graduation_date), gpa=COALESCE(excluded.gpa, profile.gpa), honors=COALESCE(excluded.honors, profile.honors),
+              minors=COALESCE(excluded.minors, profile.minors), target_roles=COALESCE(excluded.target_roles, profile.target_roles), target_cities=COALESCE(excluded.target_cities, profile.target_cities),
+              work_authorization=COALESCE(excluded.work_authorization, profile.work_authorization),
+              notes=COALESCE(excluded.notes, profile.notes), resume_text=COALESCE(excluded.resume_text, profile.resume_text)`,
       args,
     });
 
