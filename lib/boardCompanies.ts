@@ -148,8 +148,13 @@ async function fetchWorkday(host: string, tenant: string, site: string): Promise
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) throw new Error(`Workday ${tenant}/${site}: ${res.status}`);
-    const data = await res.json() as { total: number; jobPostings: { title: string; externalPath: string; locationsText?: string; bulletFields?: string[] }[] };
+    const data = await res.json() as { total: number; jobPostings: { title?: string; externalPath?: string; locationsText?: string; bulletFields?: string[] }[] };
     for (const j of data.jobPostings) {
+      // Confirmed live against JLL's board: Workday occasionally lists a
+      // posting mid-transition (e.g. being pulled) with only bulletFields
+      // set and no title/externalPath at all. Skip it rather than crash
+      // matchesKeywords on an undefined title downstream.
+      if (!j.title || !j.externalPath) continue;
       postings.push({
         externalId: j.externalPath,
         title: j.title,
