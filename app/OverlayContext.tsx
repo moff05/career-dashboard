@@ -13,7 +13,8 @@ interface OverlayState {
   closeProfile: () => void;
   connectionsOpen: boolean;
   connectionsPrefillCompany: string;
-  openConnections: (prefillCompany?: string) => void;
+  connectionsFocusQuery: string;
+  openConnections: (prefillCompany?: string, focusQuery?: string) => void;
   closeConnections: () => void;
   companiesOpen: boolean;
   openCompanies: () => void;
@@ -29,19 +30,23 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
   const [coachPrefill, setCoachPrefill] = useState('');
   const [connectionsOpen, setConnectionsOpen] = useState(false);
   const [connectionsPrefillCompany, setConnectionsPrefillCompany] = useState('');
+  const [connectionsFocusQuery, setConnectionsFocusQuery] = useState('');
   const [companiesOpen, setCompaniesOpen] = useState(false);
   const openCoach = useCallback((prefill?: string) => { setCoachPrefill(prefill || ''); setProfileOpen(false); setConnectionsOpen(false); setCompaniesOpen(false); setCoachOpen(true); }, []);
   const closeCoach = useCallback(() => setCoachOpen(false), []);
   const openProfile = useCallback((tab?: string) => { setProfileTab(tab || 'resume'); setCoachOpen(false); setConnectionsOpen(false); setCompaniesOpen(false); setProfileOpen(true); }, []);
   const closeProfile = useCallback(() => setProfileOpen(false), []);
-  const openConnections = useCallback((prefillCompany?: string) => { setConnectionsPrefillCompany(prefillCompany || ''); setCoachOpen(false); setProfileOpen(false); setCompaniesOpen(false); setConnectionsOpen(true); }, []);
+  // focusQuery (e.g. from a Priorities "Reach out" item) pre-fills the search
+  // box to jump straight to that connection, instead of prefillCompany's
+  // behavior of opening the add-a-connection form.
+  const openConnections = useCallback((prefillCompany?: string, focusQuery?: string) => { setConnectionsPrefillCompany(prefillCompany || ''); setConnectionsFocusQuery(focusQuery || ''); setCoachOpen(false); setProfileOpen(false); setCompaniesOpen(false); setConnectionsOpen(true); }, []);
   const closeConnections = useCallback(() => setConnectionsOpen(false), []);
   const openCompanies = useCallback(() => { setCoachOpen(false); setProfileOpen(false); setConnectionsOpen(false); setCompaniesOpen(true); }, []);
   const closeCompanies = useCallback(() => setCompaniesOpen(false), []);
   return (
     <OverlayContext.Provider value={{
       coachOpen, profileOpen, profileTab, openCoach, closeCoach, coachPrefill, openProfile, closeProfile,
-      connectionsOpen, connectionsPrefillCompany, openConnections, closeConnections,
+      connectionsOpen, connectionsPrefillCompany, connectionsFocusQuery, openConnections, closeConnections,
       companiesOpen, openCompanies, closeCompanies,
     }}>
       {children}

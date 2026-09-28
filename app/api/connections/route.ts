@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getUserId } from '@/lib/user';
 import { findOrCreateCompany } from '@/lib/companies';
+import { ensureConnectionNotesTable } from '@/lib/connectionNotes';
+
+// Most recent connection_notes entry per connection, for the free
+// staleness-based follow-up reminder on the Priorities strip (see
+// getConnectionFollowups in app/lib/jobUtils.tsx) — a correlated subquery
+// rather than a join so a connection with zero log entries still returns
+// exactly one row with nulls, instead of being dropped or duplicated.
+const LAST_LOG_SELECT = `
+  c.*,
+  (SELECT entry_date FROM connection_notes n WHERE n.connection_id = c.id ORDER BY n.entry_date DESC, n.id DESC LIMIT 1) AS last_log_date,
+  (SELECT note FROM connection_notes n WHERE n.connection_id = c.id ORDER BY n.entry_date DESC, n.id DESC LIMIT 1) AS last_log_note
+`;
 
 async function ensureTable() {
   const db = getDb();
@@ -22,14 +34,15 @@ export async function GET(request: NextRequest) {
   try {
     const userId = getUserId(request);
     const db = await ensureTable();
+    await ensureConnectionNotesTable();
     const params = new URL(request.url).searchParams;
     const company = params.get('company');
     const companyId = params.get('company_id');
     const result = companyId
-      ? await db.execute({ sql: 'SELECT * FROM connections WHERE user_id = ? AND company_id = ? ORDER BY created_at DESC', args: [userId, parseInt(companyId)] })
+      ? await db.execute({ sql: `SELECT ${LAST_LOG_SELECT} FROM connections c WHERE c.user_id = ? AND c.company_id = ? ORDER BY c.created_at DESC`, args: [userId, parseInt(companyId)] })
       : company
-      ? await db.execute({ sql: 'SELECT * FROM connections WHERE user_id = ? AND company = ? ORDER BY created_at DESC', args: [userId, company] })
-      : await db.execute({ sql: 'SELECT * FROM connections WHERE user_id = ? ORDER BY created_at DESC', args: [userId] });
+      ? await db.execute({ sql: `SELECT ${LAST_LOG_SELECT} FROM connections c WHERE c.user_id = ? AND c.company = ? ORDER BY c.created_at DESC`, args: [userId, company] })
+      : await db.execute({ sql: `SELECT ${LAST_LOG_SELECT} FROM connections c WHERE c.user_id = ? ORDER BY c.created_at DESC`, args: [userId] });
     return NextResponse.json(result.rows);
   } catch (error) {
     console.error('GET /api/connections error:', error);

@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/apiFetch';
 import { Star, Trash2, ExternalLink, ChevronDown, ChevronRight, Plus, LinkIcon, Loader, AlertCircle, ArrowLeft, ImageIcon, Edit2, RotateCcw, X, Check } from 'lucide-react';
 import { useUser } from '@/app/hooks/useUser';
 import { useOverlays } from '@/app/OverlayContext';
-import { type Job, type DiscoveredJob, type AnalysisResult, type AnalysisState, type GapsResult, type GapsState, type BulletsResult, type BulletsState, type CoverLetterResult, type CoverLetterState, type Priority, LEVEL_CFG, TYPE_OPTIONS, TYPE_COLORS, STATUS_OPTIONS, scoreColor, greeting, getPriorities, typeLabel, PostedDisplay, DeadlineDisplay } from '@/app/lib/jobUtils';
+import { type Job, type DiscoveredJob, type AnalysisResult, type AnalysisState, type GapsResult, type GapsState, type BulletsResult, type BulletsState, type CoverLetterResult, type CoverLetterState, type Priority, LEVEL_CFG, TYPE_OPTIONS, TYPE_COLORS, STATUS_OPTIONS, scoreColor, greeting, getPriorities, getConnectionFollowups, typeLabel, PostedDisplay, DeadlineDisplay } from '@/app/lib/jobUtils';
 import { StatusBadge } from '@/app/components/StatusBadge';
 import { ConnStatusRow } from '@/app/components/ConnStatusRow';
 import { type Connection, CONN_STATUS } from '@/app/components/ConnectionsPanel';
@@ -170,6 +170,14 @@ export default function DashboardPage() {
 
   const connectionsCacheRef = useRef<Record<string, Connection[]>>({});
   const [connectionsMap, setConnectionsMap] = useState<Record<string, Connection[]>>({});
+
+  // Full connections list (not scoped to a company) just for the Priorities
+  // strip's follow-up reminders — separate from connectionsMap above, which
+  // is fetched lazily per-company for the tracker's in-job Network tab.
+  const [allConnections, setAllConnections] = useState<Connection[]>([]);
+  useEffect(() => {
+    apiFetch('/api/connections').then(r => r.json()).then(data => setAllConnections(Array.isArray(data) ? data : [])).catch(() => {});
+  }, []);
 
   const runAnalysis = useCallback((id: number) => {
     analysisCacheRef.current[id] = 'loading';
@@ -565,7 +573,16 @@ export default function DashboardPage() {
     starred: jobs.filter(j => j.starred).length,
   };
 
-  const priorities = getPriorities(jobs);
+  // Connection follow-ups are inserted right after any urgent/soon deadlines
+  // but ahead of job-application follow-ups/interview prep — a personal
+  // reach-out you deliberately logged is more actionable than a passive
+  // "haven't heard back" nudge, so it shouldn't get buried behind a long
+  // run of those.
+  const jobPriorities = getPriorities(jobs);
+  const connectionPriorities = getConnectionFollowups(allConnections);
+  const deadlineCount = jobPriorities.findIndex(p => p.level !== 'urgent' && p.level !== 'soon');
+  const insertAt = deadlineCount === -1 ? jobPriorities.length : deadlineCount;
+  const priorities = [...jobPriorities.slice(0, insertAt), ...connectionPriorities, ...jobPriorities.slice(insertAt)];
 
   // Priorities live on this same page now — clicking one expands and
   // scrolls to the matching row instead of navigating anywhere.
@@ -627,10 +644,10 @@ export default function DashboardPage() {
 
       {priorities.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
-          {priorities.slice(0, 3).map((p, i) => {
+          {priorities.slice(0, 5).map((p, i) => {
             const c = LEVEL_CFG[p.level];
             return (
-              <button key={i} onClick={() => p.level === 'interview' ? openCoach(`I have an upcoming interview for ${p.sub} at the company behind: "${p.label}". Help me prepare with likely questions and strong answers based on my background.`) : jumpToJob(p.jobId)} style={{
+              <button key={i} onClick={() => p.level === 'interview' ? openCoach(`I have an upcoming interview for ${p.sub} at the company behind: "${p.label}". Help me prepare with likely questions and strong answers based on my background.`) : p.level === 'connection_followup' ? openConnections(undefined, p.connectionName) : jumpToJob(p.jobId!)} style={{
                 display: 'flex', alignItems: 'center', gap: '10px', width: '100%', textAlign: 'left',
                 backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)',
                 padding: '9px 14px', cursor: 'pointer', fontFamily: 'inherit',

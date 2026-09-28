@@ -60,6 +60,51 @@
   --z-tooltip:  700;
 }
 
+/* ─── LIGHT THEME ───────────────────────────────────────────────────
+   Opt-in via the header toggle (persisted to localStorage as
+   cid_theme), applied as [data-theme="light"] on <html>. Same terminal
+   system, same token names, calibrated separately for a white canvas —
+   ratios computed the same way as the dark palette above (WCAG relative
+   luminance): --text 17.3:1, --text-muted 7.0:1, --accent 5.0:1,
+   --success 5.3:1, --danger 4.6:1 on --bg. --text-dim is 3.9:1 —
+   large/bold or decorative only, same rule as dark mode.
+   ------------------------------------------------------------------ */
+:root[data-theme="light"] {
+  --bg:          #FAFAFA;
+  --surface:     #FFFFFF;
+  --surface-2:   #F1F1F3;
+  --header-bg:   rgba(250, 250, 250, 0.92);
+
+  --border:      #E2E2E6;
+  --border-hi:   #CBCBD1;
+  --border-dim:  #ECECEF;
+
+  --text:        #16161A;
+  --text-muted:  #53565F;
+  --text-dim:    #7B7E87;
+
+  --accent:      #C2410C;
+  --accent-hi:   #9A3412;
+  --accent-dim:  rgba(194, 65, 12, 0.14);
+  --accent-bg:   rgba(194, 65, 12, 0.08);
+
+  --success:     #047857;
+  --success-bg:  rgba(4, 120, 87, 0.10);
+  --danger:      #DC2626;
+  --danger-bg:   rgba(220, 38, 38, 0.10);
+
+  color-scheme: light;
+}
+/* Button label sits on the raw accent fill, not the canvas — needs its
+   own check: white-on-accent clears 5.2:1 in light mode, where dark
+   mode's near-black label (#0A0A0A) was calibrated for the brighter
+   dark-mode accent instead. */
+:root[data-theme="light"] .btn-primary { color: #FFFFFF; }
+/* The invert(0.85) below makes the native date-picker icon visible on a
+   dark field; on a white one the un-inverted default icon already reads
+   fine, so undo it instead of duplicating the whole rule. */
+:root[data-theme="light"] input[type=date]::-webkit-calendar-picker-indicator { filter: none; }
+
 @theme {
   --color-bg:      #0A0A0A;
   --color-surface: #161616;

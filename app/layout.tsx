@@ -3,7 +3,7 @@
 import './globals.css';
 import React from 'react';
 import { usePathname } from 'next/navigation';
-import { User, MessageSquare, Users, Building2, Share2, Check } from 'lucide-react';
+import { User, MessageSquare, Users, Building2, Share2, Check, Sun, Moon } from 'lucide-react';
 import { ClientRoot } from './ClientRoot';
 import { useUser } from './hooks/useUser';
 import { OverlayProvider, useOverlays } from './OverlayContext';
@@ -20,6 +20,32 @@ function CountBadge({ count }: { count: number | null }) {
     <span style={{ background: 'var(--surface-2)', color: 'var(--text-dim)', fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '10px', lineHeight: '14px' }}>
       {count}
     </span>
+  );
+}
+
+// Persisted to localStorage as 'cid_theme' (separate from the cid_user_id/
+// cid_display_name identity keys), applied as data-theme="light" on <html>
+// so app/globals.css's :root[data-theme="light"] block can override the
+// default dark tokens. A blocking inline script in <head> (see RootLayout)
+// applies it before first paint to avoid a dark-then-light flash.
+function ThemeToggle() {
+  const [theme, setTheme] = React.useState<'dark' | 'light'>('dark');
+  React.useEffect(() => {
+    try {
+      if (localStorage.getItem('cid_theme') === 'light') setTheme('light');
+    } catch { /* ignore */ }
+  }, []);
+  const toggle = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    if (next === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+    try { localStorage.setItem('cid_theme', next); } catch { /* ignore */ }
+  };
+  return (
+    <button onClick={toggle} className="header-btn" style={{ padding: '7px 9px' }} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
+      {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+    </button>
   );
 }
 
@@ -66,6 +92,7 @@ function Header() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <ThemeToggle />
         <button onClick={() => openCompanies()} className="header-btn" aria-label="Companies">
           <Building2 size={14} /> <span className="header-btn-label">Companies</span> <CountBadge count={companiesCount} />
         </button>
@@ -111,8 +138,18 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: the blocking theme script (see the inline
+    // <script> below) sets data-theme on <html> from localStorage before
+    // React hydrates, which the server-rendered HTML can't know about — an
+    // expected, intentional mismatch, same as the next-themes library
+    // documents needing this for.
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "try{if(localStorage.getItem('cid_theme')==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}",
+          }}
+        />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>jobs_</title>
         <meta name="description" content="A job tracker with AI fit scoring, cover letter generation, and a coach that knows your resume." />

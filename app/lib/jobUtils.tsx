@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Clock, Bell, Zap } from 'lucide-react';
+import { AlertTriangle, Clock, Bell, Zap, Users } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,8 +33,13 @@ export interface CoverLetterResult { letter: string; tone: string; keywords?: st
 export type CoverLetterState = CoverLetterResult | 'loading' | 'error';
 
 export interface Priority {
-  level: 'urgent' | 'soon' | 'followup' | 'interview';
-  label: string; sub: string; jobId: number; score: number | null;
+  level: 'urgent' | 'soon' | 'followup' | 'interview' | 'connection_followup';
+  label: string; sub: string; score: number | null;
+  // Job-rooted priorities (urgent/soon/followup/interview) set jobId and
+  // jumpToJob to it. connection_followup instead sets connectionName, which
+  // opens the Connections overlay pre-searched to that name — a connection
+  // follow-up isn't tied to any tracked job.
+  jobId?: number; connectionName?: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -48,10 +53,11 @@ export const STATUS_STYLE: Record<string, { bg: string; text: string; border: st
 };
 
 export const LEVEL_CFG = {
-  urgent:    { icon: <AlertTriangle size={12} color="var(--danger)" />,     tag: 'Urgent',    color: 'var(--danger)' },
-  soon:      { icon: <Clock         size={12} color="var(--accent)" />,     tag: 'Soon',      color: 'var(--accent)' },
-  followup:  { icon: <Bell          size={12} color="var(--text-muted)" />, tag: 'Follow up', color: 'var(--text-muted)' },
-  interview: { icon: <Zap           size={12} color="var(--success)" />,    tag: 'Prep',      color: 'var(--success)' },
+  urgent:             { icon: <AlertTriangle size={12} color="var(--danger)" />,     tag: 'Urgent',    color: 'var(--danger)' },
+  soon:               { icon: <Clock         size={12} color="var(--accent)" />,     tag: 'Soon',      color: 'var(--accent)' },
+  followup:           { icon: <Bell          size={12} color="var(--text-muted)" />, tag: 'Follow up', color: 'var(--text-muted)' },
+  interview:          { icon: <Zap           size={12} color="var(--success)" />,    tag: 'Prep',      color: 'var(--success)' },
+  connection_followup: { icon: <Users        size={12} color="var(--text-muted)" />, tag: 'Reach out', color: 'var(--text-muted)' },
 };
 
 export const TYPE_OPTIONS = [
@@ -113,6 +119,35 @@ export function getPriorities(jobs: Job[]): Priority[] {
   interviews.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
 
   return [...deadlineItems, ...followups, ...interviews];
+}
+
+export interface ConnectionForPriority {
+  id: number; name: string; company: string;
+  last_log_date?: string | null; last_log_note?: string | null;
+}
+
+// Same free, no-AI-call pattern as getPriorities' job follow-ups, applied to
+// connections instead: once you've logged a conversation, staying silent
+// past the threshold surfaces it again as a reminder — nothing to configure,
+// just keep logging updates as you talk to people. A connection with no log
+// entries yet has nothing to go stale, so it never appears here.
+export function getConnectionFollowups(connections: ConnectionForPriority[], thresholdDays = 14): Priority[] {
+  const items: (Priority & { days: number })[] = [];
+  for (const c of connections) {
+    if (!c.last_log_date) continue;
+    const days = Math.floor((Date.now() - new Date(c.last_log_date).getTime()) / 86400000);
+    if (days < thresholdDays) continue;
+    items.push({
+      level: 'connection_followup',
+      label: `Follow up — ${c.name}`,
+      sub: `${c.company} · logged ${days}d ago${c.last_log_note ? `: ${c.last_log_note}` : ''}`,
+      score: null,
+      connectionName: c.name,
+      days,
+    });
+  }
+  items.sort((a, b) => b.days - a.days);
+  return items.map(({ days: _days, ...p }) => p);
 }
 
 // ─── Display components ───────────────────────────────────────────────────────

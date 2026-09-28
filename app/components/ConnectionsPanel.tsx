@@ -12,6 +12,10 @@ export interface Connection {
   email: string | null; role: string | null; linkedin: string | null;
   relationship: string | null; notes: string | null;
   status: string; created_at: string;
+  // Most recent connection_notes entry, for the Priorities follow-up reminder
+  // (see getConnectionFollowups in app/lib/jobUtils.tsx) — null until a log
+  // entry has ever been added.
+  last_log_date?: string | null; last_log_note?: string | null;
 }
 
 export const CONN_STATUS: Record<string, { label: string; color: string; bg: string }> = {
@@ -111,7 +115,7 @@ function ConnectionForm({ form, setForm, onSave, onCancel, saving, companyNames 
 }
 
 export function ConnectionsPanel() {
-  const { connectionsOpen, closeConnections, connectionsPrefillCompany } = useOverlays();
+  const { connectionsOpen, closeConnections, connectionsPrefillCompany, connectionsFocusQuery } = useOverlays();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [companyNames, setCompanyNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,9 +148,13 @@ export function ConnectionsPanel() {
     if (connectionsPrefillCompany) {
       setAddForm({ ...EMPTY_FORM, company: connectionsPrefillCompany });
       setShowAddForm(true);
+    } else if (connectionsFocusQuery) {
+      // Came from a Priorities "Reach out" item — jump straight to that
+      // connection via the search box instead of opening the add form.
+      setSearchText(connectionsFocusQuery);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connectionsOpen, connectionsPrefillCompany]);
+  }, [connectionsOpen, connectionsPrefillCompany, connectionsFocusQuery]);
 
   useEffect(() => {
     if (!connectionsOpen) return;
