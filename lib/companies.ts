@@ -16,7 +16,11 @@ export async function ensureCompaniesTable() {
 // Case-insensitive per user: typing a company name that already exists just
 // links to it, typing a new one creates it — this is what makes the
 // type-or-pick company field on a contact work without a separate save step.
-export async function findOrCreateCompany(userId: string, name: string): Promise<number | null> {
+// careerUrl is only used on the create path (e.g. approving a discovered job
+// from a company the expanded board-search found) — an existing company's
+// career_url is never overwritten here, since the user may have set it
+// themselves already.
+export async function findOrCreateCompany(userId: string, name: string, careerUrl?: string): Promise<number | null> {
   const trimmed = name.trim();
   if (!trimmed) return null;
   const db = await ensureCompaniesTable();
@@ -26,8 +30,8 @@ export async function findOrCreateCompany(userId: string, name: string): Promise
   });
   if (existing.rows.length > 0) return Number(existing.rows[0].id);
   const result = await db.execute({
-    sql: 'INSERT INTO companies (user_id, name) VALUES (?, ?)',
-    args: [userId, trimmed],
+    sql: 'INSERT INTO companies (user_id, name, career_url) VALUES (?, ?, ?)',
+    args: [userId, trimmed, careerUrl || null],
   });
   return Number(result.lastInsertRowid);
 }

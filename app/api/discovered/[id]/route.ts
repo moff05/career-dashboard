@@ -25,7 +25,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     })).rows[0] as unknown as {
       id: number; company: string; title: string; type: string; location: string | null;
       url: string; description: string | null; posting_date: string | null; source: string | null;
-      match_score: number | null; score_data: string | null;
+      match_score: number | null; score_data: string | null; career_url: string | null;
     } | undefined;
     if (!row) return NextResponse.json({ error: 'Discovered job not found' }, { status: 404 });
 
@@ -35,7 +35,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
               VALUES (?, ?, ?, ?, 'saved', ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [userId, row.company, row.title, row.type, row.match_score, row.score_data, row.posting_date, row.url, row.description, row.location, row.source, 'Found by daily job-board scan.'],
       });
-      await findOrCreateCompany(userId, row.company);
+      // career_url is only set on rows the expanded search staged (see
+      // lib/scanBoards.ts) — this is what makes a newly-discovered company
+      // scannable on its own in future runs, instead of only ever
+      // resurfacing through another expanded search.
+      await findOrCreateCompany(userId, row.company, row.career_url || undefined);
     }
 
     await db.execute({

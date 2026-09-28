@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/db';
 import { scoreJobFit } from '@/lib/scoreJobFit';
 import { resolveBoard, fetchBoardPostings, SOURCE_LABEL, type RawPosting } from '@/lib/boardCompanies';
+import { findSimilarCompanies } from '@/lib/discoverCompanies';
 
 // Shared by the weekly cron (app/api/cron/scan-boards, all users) and the
 // on-demand refresh a user can trigger themselves once they've cleared their
@@ -11,6 +12,17 @@ import { resolveBoard, fetchBoardPostings, SOURCE_LABEL, type RawPosting } from 
 export const TIME_BUDGET_MS = 50_000; // leave headroom under the 60s ceiling
 export const TOP_N = 20; // staged per run, per user (raised from 10 now that scans are weekly, not daily)
 export const MAX_CANDIDATES_PER_USER = 40; // raised from 20 alongside TOP_N, same reasoning
+
+// If the user's own tracked Companies stage fewer than this many matches in
+// a run, ask findSimilarCompanies for other real companies in a similar
+// space worth checking too (requires GEMINI_API_KEY — quietly a no-op
+// without it). Deliberately separate from the safeguards below: those were
+// written for over-loose *keyword* matching against companies the user
+// already chose to track. This step can suggest a company the user never
+// chose at all, so every suggestion is independently re-validated via
+// resolveBoard + a real fetch before it's ever staged — never trusted just
+// because the model said so.
+export const EXPAND_THRESHOLD = 5;
 
 const STOPWORDS = new Set(['and', 'the', 'for', 'of', 'to', 'a', 'an', 'in', 'or', 'with']);
 
@@ -202,6 +214,54 @@ export async function scanBoardsForUser(
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'discarded')`,
       args: [userId, candidate.company, candidate.title, inferType(candidate.title), candidate.location || null, candidate.url, candidate.description || null, candidate.postedAt, candidate.source, result.total, JSON.stringify(result)],
     });
+  }
+
+  // Expanded search — see EXPAND_THRESHOLD above for why this only runs
+  // when the user's own tracked companies came up short, and why every
+  // suggestion is re-validated here rather than trusted from the model.
+  if (stats.staged < EXPAND_THRESHOLD && Date.now() - startedAt < TIME_BUDGET_MS) {
+    const suggestions = await findSimilarCompanies({
+      existingCompanyNames: companies.map((c) => c.name),
+      targetRoles: profile.target_roles,
+      targetCities: profile.target_cities,
+      count: EXPAND_THRESHOLD - stats.staged + 3,
+    });
+    for (const s of suggestions) {
+      if (stats.staged >= TOP_N || Date.now() - startedAt > TIME_BUDGET_MS) break;
+      const board = resolveBoard(s.careerUrl);
+      if (!board) continue; // not a URL shape we can actually scan — dropped, never surfaced
+
+      let postings: RawPosting[];
+      try {
+        postings = await fetchBoardPostings(board);
+      } catch {
+        continue; // hallucinated or dead board — dropped silently, same as above
+      }
+
+      for (const posting of postings) {
+        if (stats.staged >= TOP_N) break;
+        if (!matchesKeywords(posting.title, keywordPhrases)) continue;
+        if (!matchesCity(posting.location, cities)) continue;
+
+        const existingJob = await db.execute({ sql: 'SELECT id FROM jobs WHERE user_id = ? AND url = ?', args: [userId, posting.url] });
+        if (existingJob.rows.length > 0) continue;
+        const existingDiscovered = await db.execute({ sql: 'SELECT id FROM discovered_jobs WHERE user_id = ? AND url = ?', args: [userId, posting.url] });
+        if (existingDiscovered.rows.length > 0) continue;
+
+        try {
+          const result = await scoreJobFit(userId, { id: -1, company: s.name, title: posting.title, type: inferType(posting.title), location: posting.location || null, description: posting.description || null });
+          await db.execute({
+            sql: `INSERT OR IGNORE INTO discovered_jobs (user_id, company, title, type, location, url, description, posting_date, source, match_score, score_data, status, career_url)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
+            args: [userId, s.name, posting.title, inferType(posting.title), posting.location || null, posting.url, posting.description || null, posting.postedAt, SOURCE_LABEL[board.platform], result.total, JSON.stringify(result), s.careerUrl],
+          });
+          stats.staged++;
+          notes.push(`Expanded search: staged "${posting.title}" at ${s.name} — not one of your tracked companies yet.`);
+        } catch (err) {
+          console.error(`scan-boards: expanded-search scoring "${posting.title}" at ${s.name} for user ${userId} failed:`, err);
+        }
+      }
+    }
   }
 
   return { stats, notes };
