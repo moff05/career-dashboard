@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, FileText } from 'lucide-react';
+import { Check, FileText, Copy } from 'lucide-react';
 import { saveUser } from '@/app/hooks/useUser';
 import { extractResumeText } from '@/lib/resumeExtract';
 
@@ -41,6 +41,16 @@ export default function SetupPage() {
   const [step, setStep] = useState<Step>(STEPS[0]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // Set once signup succeeds — its presence gates the recovery-key screen
+  // below instead of an immediate redirect. There are no accounts/passwords
+  // in this app; this key is the *only* way back in on a new device or after
+  // clearing browser data, and until 2026-09-29 it was generated server-side
+  // and then silently discarded client-side — never shown at signup at all,
+  // only reachable later via Profile, which a brand-new user has no reason
+  // to open. `copied` gates the actual redirect so it can't be skipped
+  // without having copied it at least once.
+  const [recoveryKey, setRecoveryKey] = useState('');
+  const [copied, setCopied] = useState(false);
   const [parsingFile, setParsingFile] = useState(false);
   const [resumeFileName, setResumeFileName] = useState('');
   const [prefilledFields, setPrefilledFields] = useState<string[]>([]);
@@ -134,7 +144,7 @@ export default function SetupPage() {
       localStorage.setItem('cid_display_name', form.name.trim());
 
       // Create profile in DB
-      await fetch('/api/profile', {
+      const profileRes = await fetch('/api/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -158,6 +168,7 @@ export default function SetupPage() {
           resume_text: form.resume_text.trim() || null,
         }),
       });
+      const profileData = await profileRes.json().catch(() => null);
 
       // Save resume separately if provided
       if (form.resume_text.trim()) {
@@ -171,11 +182,73 @@ export default function SetupPage() {
         });
       }
 
-      router.replace('/');
+      setSaving(false);
+      if (profileData?.recovery_key) {
+        setRecoveryKey(profileData.recovery_key);
+      } else {
+        // No key came back (shouldn't happen, but this is the only way
+        // back into the account — fail toward showing the app rather than
+        // silently stranding the user on a broken setup screen).
+        router.replace('/');
+      }
     } catch {
       setError('Something went wrong saving your profile. Please try again.');
       setSaving(false);
     }
+  }
+
+  function copyRecoveryKey() {
+    navigator.clipboard.writeText(recoveryKey);
+    setCopied(true);
+  }
+
+  if (recoveryKey) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', boxSizing: 'border-box' }}>
+        <div style={{ width: '100%', maxWidth: '460px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <h1 className="prompt" style={{ color: 'var(--text)', fontSize: '22px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em', justifyContent: 'center', display: 'flex' }}>
+              jobs<span style={{ color: 'var(--accent)' }}>_</span>
+            </h1>
+          </div>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '32px 28px' }}>
+            <h2 style={{ color: 'var(--text)', fontSize: '17px', fontWeight: 700, margin: '0 0 4px', letterSpacing: '-0.01em' }}>
+              Save your recovery key
+            </h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '12px', margin: '0 0 20px', lineHeight: 1.6 }}>
+              There's no account, no email, no password here — this key is the <strong style={{ color: 'var(--text)' }}>only</strong> way back into your data on a new device or after clearing your browser. If you lose it, there's no reset link and no support ticket that gets it back.
+            </p>
+            <div style={{
+              background: 'var(--bg)', border: '1px solid var(--border-hi)', borderRadius: 'var(--r)',
+              padding: '16px', fontSize: '20px', fontWeight: 700, letterSpacing: '0.15em', color: 'var(--accent)',
+              textAlign: 'center', userSelect: 'all', marginBottom: '14px',
+            }}>
+              {recoveryKey}
+            </div>
+            <button onClick={copyRecoveryKey} className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '10px', marginBottom: '20px' }}>
+              {copied ? <><Check size={13} /> Copied</> : <><Copy size={13} /> Copy key</>}
+            </button>
+            <button
+              onClick={() => router.replace('/')}
+              disabled={!copied}
+              title={copied ? undefined : 'Copy the key above first'}
+              style={{
+                width: '100%', padding: '10px 24px', fontSize: '13px', fontWeight: 700, fontFamily: 'inherit',
+                letterSpacing: '0.02em', borderRadius: 'var(--r-lg)', transition: 'all 0.15s',
+                background: copied ? 'var(--accent)' : 'var(--border-dim)',
+                color: copied ? '#0A0A0A' : 'var(--border-hi)',
+                border: copied ? '1px solid var(--accent)' : '1px solid var(--border)',
+                cursor: copied ? 'pointer' : 'not-allowed',
+              }}>
+              Continue to jobs_ →
+            </button>
+          </div>
+          <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '11px', marginTop: '20px' }}>
+            You can always find this again later in Profile — but don't count on remembering to check.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
