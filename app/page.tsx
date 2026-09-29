@@ -621,7 +621,7 @@ export default function DashboardPage() {
 
   // Posted column removed 2026-09-29 — deadline is the number that actually
   // drives action, posting date was just extra noise at real-usage scale.
-  const GRID = '28px 130px minmax(0,1fr) 90px 95px 68px 90px 72px';
+  const GRID = '28px 175px minmax(0,1fr) 90px 95px 68px 90px 72px';
   const GAP = '0 8px';
 
   return (
