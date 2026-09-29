@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/apiFetch';
 import { Star, Trash2, ExternalLink, ChevronDown, ChevronRight, Plus, LinkIcon, Loader, AlertCircle, ArrowLeft, ImageIcon, Edit2, RotateCcw, X, Check } from 'lucide-react';
 import { useUser } from '@/app/hooks/useUser';
 import { useOverlays } from '@/app/OverlayContext';
-import { type Job, type DiscoveredJob, type AnalysisResult, type AnalysisState, type GapsResult, type GapsState, type BulletsResult, type BulletsState, type CoverLetterResult, type CoverLetterState, type Priority, LEVEL_CFG, TYPE_OPTIONS, TYPE_COLORS, STATUS_OPTIONS, scoreColor, greeting, getPriorities, getConnectionFollowups, typeLabel, PostedDisplay, DeadlineDisplay } from '@/app/lib/jobUtils';
+import { type Job, type DiscoveredJob, type AnalysisResult, type AnalysisState, type GapsResult, type GapsState, type BulletsResult, type BulletsState, type CoverLetterResult, type CoverLetterState, type Priority, LEVEL_CFG, TYPE_OPTIONS, TYPE_COLORS, STATUS_OPTIONS, scoreColor, greeting, getPriorities, getConnectionFollowups, typeLabel, DeadlineDisplay } from '@/app/lib/jobUtils';
 import { StatusBadge } from '@/app/components/StatusBadge';
 import { ConnStatusRow } from '@/app/components/ConnStatusRow';
 import { type Connection, CONN_STATUS } from '@/app/components/ConnectionsPanel';
@@ -547,7 +547,14 @@ export default function DashboardPage() {
 
   const filteredJobs = jobs.filter(job => {
     if (searchText.trim() && !job.company.toLowerCase().includes(searchText.toLowerCase()) && !job.title.toLowerCase().includes(searchText.toLowerCase())) return false;
-    if (statusFilter.size > 0 && !statusFilter.has(job.status)) return false;
+    if (statusFilter.size > 0) {
+      if (!statusFilter.has(job.status)) return false;
+    } else if (job.status === 'rejected') {
+      // Rejected jobs are archived out of the default view (2026-09-29) —
+      // real-usage ask once the tracker had enough of them to be scroll
+      // clutter. Still fully there: select the Rejected pill to see them.
+      return false;
+    }
     if (typeFilter !== 'all' && job.type !== typeFilter) return false;
     if (starFilter && !job.starred) return false;
     return true;
@@ -558,7 +565,6 @@ export default function DashboardPage() {
     let cmp = 0;
     if (sortBy === 'match_score') cmp = (a.match_score ?? -1) - (b.match_score ?? -1);
     else if (sortBy === 'deadline') { if (!a.deadline && !b.deadline) cmp = 0; else if (!a.deadline) cmp = 1; else if (!b.deadline) cmp = -1; else cmp = new Date(a.deadline).getTime() - new Date(b.deadline).getTime(); }
-    else if (sortBy === 'posting_date') { if (!a.posting_date && !b.posting_date) cmp = 0; else if (!a.posting_date) cmp = 1; else if (!b.posting_date) cmp = -1; else cmp = new Date(a.posting_date).getTime() - new Date(b.posting_date).getTime(); }
     else if (sortBy === 'title') cmp = a.title.localeCompare(b.title);
     else if (sortBy === 'company') cmp = a.company.localeCompare(b.company) || a.title.localeCompare(b.title);
     else if (sortBy === 'status') cmp = a.status.localeCompare(b.status);
@@ -571,6 +577,7 @@ export default function DashboardPage() {
     interviewing: jobs.filter(j => j.status === 'interviewing').length,
     offers: jobs.filter(j => j.status === 'offer').length,
     starred: jobs.filter(j => j.starred).length,
+    rejected: jobs.filter(j => j.status === 'rejected').length,
   };
 
   // Connection follow-ups are inserted right after any urgent/soon deadlines
@@ -612,10 +619,10 @@ export default function DashboardPage() {
   const SortIcon = ({ col }: { col: string }) => sortBy !== col ? null : <span style={{ marginLeft: '3px', fontSize: '9px' }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
   const colHdr = (col: string): React.CSSProperties => ({ cursor: 'pointer', userSelect: 'none', color: sortBy === col ? 'var(--accent-hi)' : 'var(--text-muted)', display: 'flex', alignItems: 'center' });
 
-  const GRID = '28px 130px minmax(0,1fr) 90px 95px 68px 90px 90px 72px';
+  // Posted column removed 2026-09-29 — deadline is the number that actually
+  // drives action, posting date was just extra noise at real-usage scale.
+  const GRID = '28px 130px minmax(0,1fr) 90px 95px 68px 90px 72px';
   const GAP = '0 8px';
-
-  const isStale = (job: Job) => job.status === 'applied' && !!job.status_updated_at && (Date.now() - new Date(job.status_updated_at).getTime()) / 86400000 >= 14;
 
   return (
     <div className="px-4 py-5 sm:px-8 sm:py-7" style={{ minHeight: '100vh', background: 'transparent', width: '100%' }}>
@@ -796,6 +803,16 @@ export default function DashboardPage() {
             <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{label}</span>
           </div>
         ))}
+        {stats.rejected > 0 && statusFilter.size === 0 && (
+          <button
+            onClick={() => toggleStatusFilter('rejected')}
+            style={{ display: 'flex', alignItems: 'baseline', gap: '4px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+            title="Rejected jobs are archived out of the list below — click to show them"
+          >
+            <span style={{ color: 'var(--text-dim)', fontWeight: 700, fontSize: '14px', fontVariantNumeric: 'tabular-nums' }}>{stats.rejected}</span>
+            <span style={{ color: 'var(--text-dim)', fontSize: '11px', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '2px' }}>rejected (archived)</span>
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -976,7 +993,6 @@ export default function DashboardPage() {
               <div style={colHdr('status')} onClick={() => handleSort('status')}>Status <SortIcon col="status" /></div>
               <div style={colHdr('match_score')} onClick={() => handleSort('match_score')}>Score <SortIcon col="match_score" /></div>
               <div style={colHdr('deadline')} onClick={() => handleSort('deadline')}>Deadline <SortIcon col="deadline" /></div>
-              <div style={colHdr('posting_date')} onClick={() => handleSort('posting_date')}>Posted <SortIcon col="posting_date" /></div>
               <div style={{ color: 'var(--text-muted)' }}>Actions</div>
             </div>
           )}
@@ -1015,12 +1031,6 @@ export default function DashboardPage() {
                               <div style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {job.title}
                               </div>
-                              {isStale(job) && (
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '3px', backgroundColor: 'rgba(168,85,247,0.08)', borderRadius: '20px', padding: '1px 6px' }}>
-                                  <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#a855f7' }} />
-                                  <span style={{ color: '#a855f7', fontSize: '11px', fontWeight: 600 }}>Follow up</span>
-                                </div>
-                              )}
                             </div>
 
                             <div style={{ display: 'flex', gap: '2px', alignItems: 'center', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
@@ -1077,10 +1087,6 @@ export default function DashboardPage() {
                                 <DeadlineDisplay deadline={job.deadline} />
                               </span>
                             )}
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                              <span style={{ color: 'var(--text-dim)', fontSize: '11px' }}>Posted</span>
-                              <PostedDisplay date={job.posting_date} />
-                            </span>
                           </div>
                         </div>
                       ) : (
@@ -1113,12 +1119,6 @@ export default function DashboardPage() {
                             <div style={{ color: 'var(--text-muted)', fontWeight: 500, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {job.title}
                             </div>
-                            {isStale(job) && (
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '3px', backgroundColor: 'rgba(168,85,247,0.08)', borderRadius: '20px', padding: '1px 6px' }}>
-                                <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#a855f7' }} />
-                                <span style={{ color: '#a855f7', fontSize: '11px', fontWeight: 600 }}>Follow up</span>
-                              </div>
-                            )}
                           </div>
 
                           {/* Type */}
@@ -1159,9 +1159,6 @@ export default function DashboardPage() {
 
                           {/* Deadline */}
                           <div><DeadlineDisplay deadline={job.deadline} /></div>
-
-                          {/* Posted date */}
-                          <div><PostedDisplay date={job.posting_date} /></div>
 
                           {/* Actions */}
                           <div style={{ display: 'flex', gap: '2px', alignItems: 'center', justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>

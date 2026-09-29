@@ -6,10 +6,13 @@ import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
 import { Edit2, ExternalLink, FileText, Check, Plus, X, Trash2, Brain, Smartphone } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
 
+// gpa/honors/minors deliberately dropped (2026-09-29) — never read by any AI
+// route (see lib/ai-context.ts), and the resume upload already captures this
+// level of detail. university/degree stayed and are now actually wired in.
 interface ProfileData {
   id?: number; name?: string; email?: string; phone?: string; linkedin?: string;
-  university?: string; degree?: string; graduation_date?: string; gpa?: string;
-  honors?: string; minors?: string; target_roles?: string; target_cities?: string; work_authorization?: string; notes?: string;
+  university?: string; degree?: string; graduation_date?: string;
+  target_roles?: string; target_cities?: string; work_authorization?: string; notes?: string;
 }
 interface Resume { id: number; name: string; raw_text: string | null; parsed_at: string | null; is_default: number; }
 interface Memory { id: number; content: string; category: string; source: string; created_at: string; }
@@ -180,8 +183,12 @@ export function ProfilePanel() {
     if (!file) return;
     setResumeError(''); setResumeParsing(true); setResumeFileName(file.name);
     try {
-      const { text, profile: parsed } = await extractResumeText(file);
+      const { text, profile: rawParsed } = await extractResumeText(file);
       setResumeDraft(text);
+      // gpa/honors/minors dropped before they ever reach state — there's no
+      // field left to show them in, and nothing reads them (see ProfileData
+      // above), so silently prefilling them would just be a dead write.
+      const parsed = rawParsed ? { ...rawParsed, gpa: undefined, honors: undefined, minors: undefined } : rawParsed;
       if (parsed) {
         const labels: Record<keyof ParsedProfile, string> = {
           name: 'Name', email: 'Email', phone: 'Phone', linkedin: 'LinkedIn',
@@ -189,7 +196,7 @@ export function ProfilePanel() {
           gpa: 'GPA', honors: 'Honors', minors: 'Minors', target_roles: 'Target roles',
         };
         const filled = Object.entries(parsed)
-          .filter(([key, value]) => value?.trim() && !profile[key as keyof ParsedProfile]?.trim())
+          .filter(([key, value]) => value?.trim() && !(profile as Record<string, string | undefined>)[key]?.trim())
           .map(([key]) => labels[key as keyof ParsedProfile]);
         setPendingProfileFields(parsed); setPrefilledFields(filled);
       }
@@ -245,8 +252,8 @@ export function ProfilePanel() {
           {tab === 'resume' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {[
-                { title: 'Personal', fields: [{ field: 'name', label: 'Full Name' }, { field: 'email', label: 'Email (optional — used to sign cover letters)' }, { field: 'phone', label: 'Phone (optional)' }, { field: 'linkedin', label: 'LinkedIn (optional — used to sign cover letters)' }] },
-                { title: 'Education', fields: [{ field: 'university', label: 'University' }, { field: 'degree', label: 'Degree' }, { field: 'graduation_date', label: 'Graduation' }, { field: 'gpa', label: 'GPA' }, { field: 'minors', label: 'Minors' }, { field: 'honors', label: 'Honors', multiline: true }] },
+                { title: 'Personal', fields: [{ field: 'name', label: 'Full Name', multiline: false }, { field: 'email', label: 'Email (optional — used to sign cover letters)', multiline: false }, { field: 'phone', label: 'Phone (optional)', multiline: false }, { field: 'linkedin', label: 'LinkedIn (optional — used to sign cover letters)', multiline: false }] },
+                { title: 'Education', fields: [{ field: 'university', label: 'University', multiline: false }, { field: 'degree', label: 'Degree', multiline: false }, { field: 'graduation_date', label: 'Graduation', multiline: false }] },
                 { title: 'Targets', fields: [{ field: 'target_roles', label: 'Target Roles', multiline: true }, { field: 'target_cities', label: 'Target Cities', multiline: true }, { field: 'work_authorization', label: 'Work Authorization (optional — e.g. "U.S. citizen, dual U.S./Brazil"; used so a posting requiring citizenship isn\'t scored as unmet just because your resume is silent on it)', multiline: true }, { field: 'notes', label: 'Notes', multiline: true }] },
               ].map(section => (
                 <div key={section.title} style={card}>

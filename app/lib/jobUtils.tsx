@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Clock, Bell, Zap, Users } from 'lucide-react';
+import { AlertTriangle, Clock, Zap, Users } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,12 +33,12 @@ export interface CoverLetterResult { letter: string; tone: string; keywords?: st
 export type CoverLetterState = CoverLetterResult | 'loading' | 'error';
 
 export interface Priority {
-  level: 'urgent' | 'soon' | 'followup' | 'interview' | 'connection_followup';
+  level: 'urgent' | 'soon' | 'interview' | 'connection_followup';
   label: string; sub: string; score: number | null;
-  // Job-rooted priorities (urgent/soon/followup/interview) set jobId and
-  // jumpToJob to it. connection_followup instead sets connectionName, which
-  // opens the Connections overlay pre-searched to that name — a connection
-  // follow-up isn't tied to any tracked job.
+  // Job-rooted priorities (urgent/soon/interview) set jobId and jumpToJob to
+  // it. connection_followup instead sets connectionName, which opens the
+  // Connections overlay pre-searched to that name — a connection follow-up
+  // isn't tied to any tracked job.
   jobId?: number; connectionName?: string;
 }
 
@@ -55,7 +55,6 @@ export const STATUS_STYLE: Record<string, { bg: string; text: string; border: st
 export const LEVEL_CFG = {
   urgent:             { icon: <AlertTriangle size={12} color="var(--danger)" />,     tag: 'Urgent',    color: 'var(--danger)' },
   soon:               { icon: <Clock         size={12} color="var(--accent)" />,     tag: 'Soon',      color: 'var(--accent)' },
-  followup:           { icon: <Bell          size={12} color="var(--text-muted)" />, tag: 'Follow up', color: 'var(--text-muted)' },
   interview:          { icon: <Zap           size={12} color="var(--success)" />,    tag: 'Prep',      color: 'var(--success)' },
   connection_followup: { icon: <Users        size={12} color="var(--text-muted)" />, tag: 'Reach out', color: 'var(--text-muted)' },
 };
@@ -91,8 +90,15 @@ export function typeLabel(type: string): string {
   return TYPE_OPTIONS.find(t => t.value === type)?.label || type;
 }
 
-// Urgency bucket (deadline > follow-up > interview prep) is the primary sort —
-// fit score only breaks ties within a bucket. Free, no AI call.
+// Urgency bucket (deadline > interview prep) is the primary sort — fit score
+// only breaks ties within a bucket. Free, no AI call.
+//
+// Job-application "follow up" (14+ days with no response) was cut 2026-09-29
+// — a cold application isn't something you can meaningfully follow up on the
+// way you can with a person, so the nudge had no real action behind it. The
+// same staleness pattern stays for *connections* (see getConnectionFollowups
+// below), where logging an actual conversation gives it something real to
+// prompt.
 export function getPriorities(jobs: Job[]): Priority[] {
   const deadlineItems: (Priority & { days: number })[] = [];
   for (const j of jobs) {
@@ -104,21 +110,13 @@ export function getPriorities(jobs: Job[]): Priority[] {
   }
   deadlineItems.sort((a, b) => a.days - b.days || (b.score ?? -1) - (a.score ?? -1));
 
-  const followups: Priority[] = [];
-  for (const j of jobs) {
-    if (j.status !== 'applied' || !j.status_updated_at) continue;
-    const days = Math.floor((Date.now() - new Date(j.status_updated_at).getTime()) / 86400000);
-    if (days >= 14) followups.push({ level: 'followup', label: `Follow up — ${j.company}`, sub: `${j.title} · applied ${days}d ago`, jobId: j.id, score: j.match_score });
-  }
-  followups.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
-
   const interviews: Priority[] = [];
   for (const j of jobs) {
     if (j.status === 'interviewing') interviews.push({ level: 'interview', label: `Prep — ${j.company}`, sub: j.title, jobId: j.id, score: j.match_score });
   }
   interviews.sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
 
-  return [...deadlineItems, ...followups, ...interviews];
+  return [...deadlineItems, ...interviews];
 }
 
 export interface ConnectionForPriority {
@@ -151,18 +149,6 @@ export function getConnectionFollowups(connections: ConnectionForPriority[], thr
 }
 
 // ─── Display components ───────────────────────────────────────────────────────
-
-export function PostedDisplay({ date }: { date: string | null }) {
-  if (!date) return <span style={{ color: 'var(--text-dim)' }}>—</span>;
-  const d = new Date(date); d.setHours(0,0,0,0);
-  const today = new Date(); today.setHours(0,0,0,0);
-  const diff = Math.round((today.getTime() - d.getTime()) / 86400000);
-  if (diff === 0) return <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>Today</span>;
-  if (diff < 0) return <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
-  if (diff < 7) return <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{diff}d ago</span>;
-  if (diff < 30) return <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{Math.round(diff/7)}w ago</span>;
-  return <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>;
-}
 
 export function DeadlineDisplay({ deadline }: { deadline: string | null }) {
   if (!deadline) return <span style={{ color: 'var(--text-dim)' }}>—</span>;

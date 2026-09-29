@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
-import { X, Plus, Trash2, Edit2, Users } from 'lucide-react';
+import { X, Plus, Trash2, Edit2, Users, Radar } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
 import { StatusDropdown } from '@/app/components/StatusDropdown';
 
 export interface Company {
-  id: number; name: string; status: string; notes: string | null;
+  id: number; name: string; status: string; notes: string | null; career_url: string | null;
   created_at: string; contact_count: number;
 }
 
@@ -18,7 +18,7 @@ export const COMPANY_STATUS: Record<string, { label: string; color: string; bg: 
 };
 export const COMPANY_CYCLE = ['researching', 'reaching_out', 'applied'];
 
-const EMPTY_FORM = { name: '', status: 'researching', notes: '' };
+const EMPTY_FORM = { name: '', status: 'researching', notes: '', career_url: '' };
 type FormData = typeof EMPTY_FORM;
 
 const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '12px 14px' };
@@ -33,6 +33,10 @@ function CompanyForm({ form, setForm, onSave, onCancel, saving }: {
       <div style={{ marginBottom: '10px' }}>
         <label style={label}>Company *</label>
         <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} className="field-input" style={{ width: '100%' }} autoFocus />
+      </div>
+      <div style={{ marginBottom: '10px' }}>
+        <label style={label}>Careers page URL (optional — enables the weekly job-board scan for this company)</label>
+        <input value={form.career_url} onChange={e => setForm(p => ({ ...p, career_url: e.target.value }))} placeholder="https://job-boards.greenhouse.io/... or jobs.lever.co/... etc" className="field-input" style={{ width: '100%' }} />
       </div>
       <label style={label}>Notes</label>
       <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} placeholder="Why this company, roles you're eyeing, warm intro path..." className="field-input" style={{ width: '100%', resize: 'vertical', marginBottom: '10px' }} />
@@ -91,7 +95,7 @@ export function CompaniesPanel() {
 
   function startEdit(company: Company) {
     setEditingId(company.id);
-    setEditForm({ name: company.name, status: company.status, notes: company.notes || '' });
+    setEditForm({ name: company.name, status: company.status, notes: company.notes || '', career_url: company.career_url || '' });
   }
 
   async function saveEdit() {
@@ -189,6 +193,11 @@ export function CompaniesPanel() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <span style={{ color: 'var(--text)', fontSize: '13px', fontWeight: 700 }}>{company.name}</span>
                           <StatusDropdown value={company.status} options={COMPANY_STATUS} order={COMPANY_CYCLE} onChange={status => setStatus(company, status)} />
+                          {company.career_url && (
+                            <span title="Career page on file — this company's job board gets scanned weekly" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: 'var(--text-dim)', fontSize: '10px', fontWeight: 600 }}>
+                              <Radar size={11} /> Scanned
+                            </span>
+                          )}
                         </div>
                         {company.notes && <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '6px', lineHeight: 1.5 }}>{company.notes}</div>}
                         <button

@@ -22,16 +22,16 @@ export async function POST(request: NextRequest) {
   try {
     const userId = getUserId(request);
     const db = await ensureCompaniesTable();
-    const { name, status, notes } = await request.json();
+    const { name, status, notes, career_url } = await request.json();
     if (!name || !String(name).trim()) return NextResponse.json({ error: 'name required' }, { status: 400 });
 
     // findOrCreate so re-adding an existing name (case-insensitive) never
     // creates a duplicate — it just returns the existing row.
-    const id = await findOrCreateCompany(userId, name);
-    if (status || notes) {
+    const id = await findOrCreateCompany(userId, name, career_url || undefined);
+    if (status || notes || career_url) {
       await db.execute({
-        sql: 'UPDATE companies SET status = COALESCE(?, status), notes = COALESCE(?, notes) WHERE id = ?',
-        args: [status || null, notes || null, id],
+        sql: 'UPDATE companies SET status = COALESCE(?, status), notes = COALESCE(?, notes), career_url = COALESCE(?, career_url) WHERE id = ?',
+        args: [status || null, notes || null, career_url || null, id],
       });
     }
     const created = (await db.execute({ sql: 'SELECT * FROM companies WHERE id = ?', args: [id] })).rows[0];
