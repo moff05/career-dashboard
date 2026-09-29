@@ -4,6 +4,7 @@ import { buildSystemPrompt } from '@/lib/ai-context';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
 import { getModel, geminiUsage, GEMINI_MODEL, createChatCompletion } from '@/lib/groq';
+import { isOverDailyAiCap, dailyCapResponse } from '@/lib/rateLimit';
 
 export const maxDuration = 60;
 
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const userId = getUserId(request);
     if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
+    if (await isOverDailyAiCap(userId)) return dailyCapResponse();
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
     const tone = body.tone || 'professional';

@@ -2,6 +2,7 @@ import { getDb } from '@/lib/db';
 import { scoreJobFit } from '@/lib/scoreJobFit';
 import { resolveBoard, fetchBoardPostings, SOURCE_LABEL, type RawPosting } from '@/lib/boardCompanies';
 import { findSimilarCompanies } from '@/lib/discoverCompanies';
+import { isOverDailyAiCap } from '@/lib/rateLimit';
 
 // Shared by the weekly cron (app/api/cron/scan-boards, all users) and the
 // on-demand refresh a user can trigger themselves once they've cleared their
@@ -184,6 +185,13 @@ export async function scanBoardsForUser(
       notes.push(`${userId}: time budget hit — ${newCandidates.length - scored.length} candidate(s) left unscored this run.`);
       break;
     }
+    // A large batch (up to MAX_CANDIDATES_PER_USER=40) scoring in one run
+    // could otherwise blow straight past the daily cap in a single scan —
+    // this is the same check every direct AI route enforces (lib/rateLimit.ts).
+    if (await isOverDailyAiCap(userId)) {
+      notes.push(`${userId}: daily AI call cap reached — ${newCandidates.length - scored.length} candidate(s) left unscored this run.`);
+      break;
+    }
     try {
       const result = await scoreJobFit(userId, { id: -1, company: candidate.company, title: candidate.title, type: inferType(candidate.title), location: candidate.location || null, description: candidate.description || null }, startedAt + TIME_BUDGET_MS);
       scored.push({ candidate, result });
@@ -240,6 +248,7 @@ export async function scanBoardsForUser(
 
       for (const posting of postings) {
         if (stats.staged >= TOP_N) break;
+        if (await isOverDailyAiCap(userId)) break;
         if (!matchesKeywords(posting.title, keywordPhrases)) continue;
         if (!matchesCity(posting.location, cities)) continue;
 

@@ -4,6 +4,7 @@ import { extractText } from 'unpdf';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { logUsage } from '@/lib/usage';
 import { getModel, geminiUsage, GEMINI_MODEL, createChatCompletion } from '@/lib/groq';
+import { isOverDailyAiCap, dailyCapResponse } from '@/lib/rateLimit';
 
 const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(fileBase64, 'base64');
     const userId = getUserId(request);
     if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
+    if (await isOverDailyAiCap(userId)) return dailyCapResponse();
 
     let text = '';
     // Vision extraction (PDF-scan fallback, photos) already gets an explicit

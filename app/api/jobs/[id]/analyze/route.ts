@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getUserId, isSystemUser } from '@/lib/user';
 import { scoreJobFit, ScoreParseError, ScoreTruncatedError } from '@/lib/scoreJobFit';
+import { isOverDailyAiCap, dailyCapResponse } from '@/lib/rateLimit';
 
 export const maxDuration = 60;
 
@@ -9,6 +10,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const userId = getUserId(request);
     if (isSystemUser(userId)) return NextResponse.json({ error: 'Not available' }, { status: 403 });
+    if (await isOverDailyAiCap(userId)) return dailyCapResponse();
     const { id } = await params;
     const db = getDb();
     const job = (await db.execute({ sql: 'SELECT * FROM jobs WHERE id = ? AND user_id = ?', args: [parseInt(id), userId] })).rows[0] as unknown as {
