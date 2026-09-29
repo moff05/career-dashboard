@@ -79,6 +79,16 @@ const MAX_RETRIES = 3;
 // on) instead of silently eating the rest of the function's real budget.
 const PER_ATTEMPT_TIMEOUT_MS = 20_000;
 
+// maxRetries: 0 disables the OpenAI SDK's OWN built-in retry (default 2,
+// meant for generic 5xx/network errors) — confirmed live 2026-09-29 that a
+// single candidate in the board scan could still take ~20s+ even with the
+// fixes above, consistent with the SDK silently retrying a 429 internally
+// BEFORE it ever reaches withGroqRetry's own catch block below, stacking
+// two independent retry layers with no shared awareness of the real
+// deadline or of Groq's retry-after header. withGroqRetry is the only
+// retry layer now — it already handles 429s correctly (honors retry-after,
+// respects the caller's real deadline), the SDK's generic one doesn't.
+
 export async function withGroqRetry<T>(attempt: (timeoutMs: number) => Promise<T>, deadlineAtMs?: number): Promise<T> {
   const hardDeadline = deadlineAtMs ?? Date.now() + MAX_DURATION_MS - BUDGET_SAFETY_MARGIN_MS;
   let lastAttemptMs = 0;
@@ -104,14 +114,14 @@ export async function withGroqRetry<T>(attempt: (timeoutMs: number) => Promise<T
 }
 
 export async function createChatCompletion(client: OpenAI, params: ChatCompletionCreateParamsNonStreaming, deadlineAtMs?: number) {
-  return withGroqRetry((timeoutMs) => client.chat.completions.create(params, { timeout: timeoutMs }), deadlineAtMs);
+  return withGroqRetry((timeoutMs) => client.chat.completions.create(params, { timeout: timeoutMs, maxRetries: 0 }), deadlineAtMs);
 }
 
 // Streaming variant — the retry only ever applies to the *initial* request
 // (a 429 on that surfaces before any chunk reaches the client), never to a
 // stream that's already partway through sending content.
 export async function createChatCompletionStream(client: OpenAI, params: ChatCompletionCreateParamsStreaming, deadlineAtMs?: number) {
-  return withGroqRetry((timeoutMs) => client.chat.completions.create(params, { timeout: timeoutMs }), deadlineAtMs);
+  return withGroqRetry((timeoutMs) => client.chat.completions.create(params, { timeout: timeoutMs, maxRetries: 0 }), deadlineAtMs);
 }
 
 // Translate OpenAI usage to logUsage format
