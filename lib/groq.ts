@@ -68,13 +68,25 @@ const MAX_RETRIES = 3;
 // (FUNCTION_INVOCATION_TIMEOUT) scoring a real user's real candidates for
 // exactly this reason. Callers that score multiple items per invocation
 // MUST pass their own shared startedAt-derived deadline through.
-export async function withGroqRetry<T>(attempt: () => Promise<T>, deadlineAtMs?: number): Promise<T> {
+//
+// PER_ATTEMPT_TIMEOUT_MS guards a different failure mode from the retry
+// logic below: retries only kick in on a 429 the SDK actually throws, but
+// the same 504 above showed zero logged errors at all — the request was
+// just silently slow (Groq itself taking a long time to respond under load,
+// not erroring), which nothing here previously bounded. Every attempt now
+// gets an explicit request timeout so a single hung call fails fast and
+// cleanly (the per-candidate try/catch in scanBoards.ts skips it and moves
+// on) instead of silently eating the rest of the function's real budget.
+const PER_ATTEMPT_TIMEOUT_MS = 20_000;
+
+export async function withGroqRetry<T>(attempt: (timeoutMs: number) => Promise<T>, deadlineAtMs?: number): Promise<T> {
   const hardDeadline = deadlineAtMs ?? Date.now() + MAX_DURATION_MS - BUDGET_SAFETY_MARGIN_MS;
   let lastAttemptMs = 0;
   for (let retries = 0; ; retries++) {
     const attemptStartedAt = Date.now();
+    const timeoutMs = Math.max(1000, Math.min(PER_ATTEMPT_TIMEOUT_MS, hardDeadline - attemptStartedAt));
     try {
-      const result = await attempt();
+      const result = await attempt(timeoutMs);
       lastAttemptMs = Date.now() - attemptStartedAt;
       return result;
     } catch (err) {
@@ -92,14 +104,14 @@ export async function withGroqRetry<T>(attempt: () => Promise<T>, deadlineAtMs?:
 }
 
 export async function createChatCompletion(client: OpenAI, params: ChatCompletionCreateParamsNonStreaming, deadlineAtMs?: number) {
-  return withGroqRetry(() => client.chat.completions.create(params), deadlineAtMs);
+  return withGroqRetry((timeoutMs) => client.chat.completions.create(params, { timeout: timeoutMs }), deadlineAtMs);
 }
 
 // Streaming variant — the retry only ever applies to the *initial* request
 // (a 429 on that surfaces before any chunk reaches the client), never to a
 // stream that's already partway through sending content.
 export async function createChatCompletionStream(client: OpenAI, params: ChatCompletionCreateParamsStreaming, deadlineAtMs?: number) {
-  return withGroqRetry(() => client.chat.completions.create(params), deadlineAtMs);
+  return withGroqRetry((timeoutMs) => client.chat.completions.create(params, { timeout: timeoutMs }), deadlineAtMs);
 }
 
 // Translate OpenAI usage to logUsage format
