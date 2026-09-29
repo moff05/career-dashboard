@@ -48,7 +48,12 @@ const TYPE_LABEL: Record<string, string> = {
 // bad model response rather than silently writing a wrong score — callers
 // decide how to surface that (an HTTP 500 for the on-demand route, a skipped
 // job + logged warning for the cron scan).
-export async function scoreJobFit(userId: string, job: JobFitInput): Promise<JobFitResult> {
+// deadlineAtMs: forwarded to createChatCompletion's retry wrapper — pass the
+// caller's own overall request deadline when scoring more than one job per
+// invocation (the board scan), so a late candidate's retries can't silently
+// out-live the real remaining time and blow the platform's function-timeout
+// ceiling. See lib/groq.ts's withGroqRetry comment for why this matters.
+export async function scoreJobFit(userId: string, job: JobFitInput, deadlineAtMs?: number): Promise<JobFitResult> {
   const systemPrompt = await buildSystemPrompt(userId);
   const { client, systemInstruction } = getModel(systemPrompt);
 
@@ -154,7 +159,7 @@ CRITICAL: Return valid JSON only — no markdown, no code blocks, no text before
       ...(systemInstruction ? [{ role: 'system' as const, content: systemInstruction }] : []),
       { role: 'user' as const, content: prompt },
     ],
-  });
+  }, deadlineAtMs);
   await logUsage(userId, 'fit_scorecard', ANALYZE_MODEL, geminiUsage(response.usage));
 
   // Reasoning models sometimes emit <think>...</think> before JSON — strip it

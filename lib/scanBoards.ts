@@ -185,7 +185,7 @@ export async function scanBoardsForUser(
       break;
     }
     try {
-      const result = await scoreJobFit(userId, { id: -1, company: candidate.company, title: candidate.title, type: inferType(candidate.title), location: candidate.location || null, description: candidate.description || null });
+      const result = await scoreJobFit(userId, { id: -1, company: candidate.company, title: candidate.title, type: inferType(candidate.title), location: candidate.location || null, description: candidate.description || null }, startedAt + TIME_BUDGET_MS);
       scored.push({ candidate, result });
       stats.scored++;
     } catch (err) {
@@ -249,7 +249,7 @@ export async function scanBoardsForUser(
         if (existingDiscovered.rows.length > 0) continue;
 
         try {
-          const result = await scoreJobFit(userId, { id: -1, company: s.name, title: posting.title, type: inferType(posting.title), location: posting.location || null, description: posting.description || null });
+          const result = await scoreJobFit(userId, { id: -1, company: s.name, title: posting.title, type: inferType(posting.title), location: posting.location || null, description: posting.description || null }, startedAt + TIME_BUDGET_MS);
           await db.execute({
             sql: `INSERT OR IGNORE INTO discovered_jobs (user_id, company, title, type, location, url, description, posting_date, source, match_score, score_data, status, career_url)
                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,

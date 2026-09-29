@@ -56,8 +56,20 @@ const MAX_DURATION_MS = 60_000;
 const BUDGET_SAFETY_MARGIN_MS = 5_000;
 const MAX_RETRIES = 3;
 
-async function withGroqRetry<T>(attempt: () => Promise<T>): Promise<T> {
-  const startedAt = Date.now();
+// deadlineAtMs is an absolute Date.now()-style timestamp for when the
+// CALLER'S OVERALL request must finish by (not this one call). Without it,
+// each call's budget resets to a fresh MAX_DURATION_MS from its own start —
+// harmless for a route that only ever makes one call per invocation (analyze
+// on a single job), but dangerous for a caller that scores several jobs in
+// one function invocation (the board scan, lib/scanBoards.ts): a candidate
+// scored late in that loop could still "budget" itself a fresh 55s of
+// retries even though the actual Vercel function has only seconds left —
+// confirmed live 2026-09-29, POST /api/discovered/refresh 504'd
+// (FUNCTION_INVOCATION_TIMEOUT) scoring a real user's real candidates for
+// exactly this reason. Callers that score multiple items per invocation
+// MUST pass their own shared startedAt-derived deadline through.
+export async function withGroqRetry<T>(attempt: () => Promise<T>, deadlineAtMs?: number): Promise<T> {
+  const hardDeadline = deadlineAtMs ?? Date.now() + MAX_DURATION_MS - BUDGET_SAFETY_MARGIN_MS;
   let lastAttemptMs = 0;
   for (let retries = 0; ; retries++) {
     const attemptStartedAt = Date.now();
@@ -72,23 +84,22 @@ async function withGroqRetry<T>(attempt: () => Promise<T>): Promise<T> {
       const retryAfterSec = Number(retryAfterHeader) || 5;
       const waitMs = Math.min(retryAfterSec, 20) * 1000;
       // Estimate the next attempt's duration as similar to the last one's.
-      const elapsedMs = Date.now() - startedAt;
-      const projectedTotalMs = elapsedMs + waitMs + lastAttemptMs;
-      if (projectedTotalMs > MAX_DURATION_MS - BUDGET_SAFETY_MARGIN_MS) throw err;
+      const projectedFinishAt = Date.now() + waitMs + lastAttemptMs;
+      if (projectedFinishAt > hardDeadline) throw err;
       await new Promise(resolve => setTimeout(resolve, waitMs));
     }
   }
 }
 
-export async function createChatCompletion(client: OpenAI, params: ChatCompletionCreateParamsNonStreaming) {
-  return withGroqRetry(() => client.chat.completions.create(params));
+export async function createChatCompletion(client: OpenAI, params: ChatCompletionCreateParamsNonStreaming, deadlineAtMs?: number) {
+  return withGroqRetry(() => client.chat.completions.create(params), deadlineAtMs);
 }
 
 // Streaming variant — the retry only ever applies to the *initial* request
 // (a 429 on that surfaces before any chunk reaches the client), never to a
 // stream that's already partway through sending content.
-export async function createChatCompletionStream(client: OpenAI, params: ChatCompletionCreateParamsStreaming) {
-  return withGroqRetry(() => client.chat.completions.create(params));
+export async function createChatCompletionStream(client: OpenAI, params: ChatCompletionCreateParamsStreaming, deadlineAtMs?: number) {
+  return withGroqRetry(() => client.chat.completions.create(params), deadlineAtMs);
 }
 
 // Translate OpenAI usage to logUsage format
