@@ -22,12 +22,12 @@ export interface SimilarCompanyCandidate {
 // grounded call 429s even on a brand-new key). Once linked, Google gives
 // 5,000 free grounded requests/month, shared across all Gemini 3.x models —
 // this feature realistically uses a handful a month (called at most once per
-// scan, and scans are weekly-cron or manually-gated). This cap is a hard
-// stop at 10% of the free allotment, purely so a bug (a retry loop, a stuck
-// cron re-firing) can't quietly run past the free tier and start charging
-// the real card now on file — not a limit anyone should expect to hit under
-// normal use.
-const MONTHLY_GROUNDING_CAP = 500;
+// scan, and scans are weekly-cron or manually-gated). This cap sits just
+// below the actual free allotment (not an arbitrary fraction of it) so real
+// usage can use the whole free tier, while still guaranteeing a bug (a retry
+// loop, a stuck cron re-firing) hits this cap before ever reaching Google's
+// own billed overage.
+const MONTHLY_GROUNDING_CAP = 4500;
 
 async function ensureGroundingUsageTable() {
   const db = getDb();
