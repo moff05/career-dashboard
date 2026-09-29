@@ -121,11 +121,9 @@ export async function scanBoardsForUser(
     });
   stats.companiesScanned = scannable.length;
 
-  console.error(`DEBUG scan-boards[${userId}]: t+${Date.now() - startedAt}ms starting board fetch for ${scannable.length} companies`);
   const results = await Promise.allSettled(
     scannable.map(({ company, board }) => getPostingsCached(company.career_url!, board).then((postings) => ({ company, board, postings })))
   );
-  console.error(`DEBUG scan-boards[${userId}]: t+${Date.now() - startedAt}ms board fetch settled`);
   for (let i = 0; i < results.length; i++) {
     const outcome = results[i];
     const { company, board } = scannable[i];
@@ -162,7 +160,6 @@ export async function scanBoardsForUser(
     candidates.push(...capped);
   }
 
-  console.error(`DEBUG scan-boards[${userId}]: t+${Date.now() - startedAt}ms starting dedup for ${candidates.length} candidates`);
   const newCandidates: Candidate[] = [];
   for (const c of candidates) {
     const existingJob = await db.execute({ sql: 'SELECT id FROM jobs WHERE user_id = ? AND url = ?', args: [userId, c.url] });
@@ -171,7 +168,6 @@ export async function scanBoardsForUser(
     if (existingDiscovered.rows.length > 0) continue;
     newCandidates.push(c);
   }
-  console.error(`DEBUG scan-boards[${userId}]: t+${Date.now() - startedAt}ms dedup done, ${newCandidates.length} new candidates, dryRun=${dryRun}`);
 
   if (dryRun) {
     return { stats, notes, dryRunCandidates: newCandidates.map((c) => ({ company: c.company, title: c.title, location: c.location, url: c.url })) };
@@ -188,10 +184,8 @@ export async function scanBoardsForUser(
       notes.push(`${userId}: time budget hit — ${newCandidates.length - scored.length} candidate(s) left unscored this run.`);
       break;
     }
-    console.error(`DEBUG scan-boards[${userId}]: t+${Date.now() - startedAt}ms scoring "${candidate.title}" at ${candidate.company}`);
     try {
       const result = await scoreJobFit(userId, { id: -1, company: candidate.company, title: candidate.title, type: inferType(candidate.title), location: candidate.location || null, description: candidate.description || null }, startedAt + TIME_BUDGET_MS);
-      console.error(`DEBUG scan-boards[${userId}]: t+${Date.now() - startedAt}ms scored ok, total=${result.total}`);
       scored.push({ candidate, result });
       stats.scored++;
     } catch (err) {
