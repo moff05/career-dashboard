@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Send, Loader, X } from 'lucide-react';
+import { Send, Loader, X, Plus } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
 
 interface Message {
@@ -14,6 +14,11 @@ interface Message {
   created_at?: string;
 }
 
+const GREETING: Message = {
+  role: 'assistant',
+  content: "Hi, I'm your AI career coach. I have your full resume, saved memories, and job tracker context. What's on your mind?",
+};
+
 const QUICK_ACTIONS = [
   { label: 'What should I apply to?', text: 'Based on my background and saved jobs, what should I prioritize applying to right now?' },
   { label: 'Interview prep', text: 'I have an upcoming interview. Help me prepare with likely questions and strong answers based on my background.' },
@@ -22,7 +27,15 @@ const QUICK_ACTIONS = [
 
 export function CoachPanel() {
   const { coachOpen, closeCoach, coachPrefill } = useOverlays();
-  const [sessionId] = useState<string>(() => {
+  // This id never expired or rotated on its own before 2026-09-29 — it was
+  // generated once per browser on first open and stuck around in
+  // localStorage forever, so every message ever sent kept piling into one
+  // never-ending thread with no way to start over. startNewChat() below is
+  // the fix: swaps in a fresh id, which is all a "new chat" needs to be —
+  // old messages aren't deleted, just no longer the active thread (there's
+  // no UI to browse past threads, by design; the Memory tab is what
+  // actually needs to persist across chats, not the raw transcript).
+  const [sessionId, setSessionId] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('coach-session-id');
       if (stored) return stored;
@@ -47,17 +60,23 @@ export function CoachPanel() {
     try {
       const res = await apiFetch(`/api/chat/history?session_id=${sessionId}`);
       const data = await res.json();
-      setMessages(data?.length > 0 ? data : [{
-        role: 'assistant',
-        content: "Hi, I'm your AI career coach. I have your full resume, saved memories, and job tracker context. What's on your mind?",
-      }]);
+      setMessages(data?.length > 0 ? data : [GREETING]);
     } catch {
-      setMessages([{ role: 'assistant', content: "Hi, I'm your AI career coach. I have your full resume, saved memories, and job tracker context. What's on your mind?" }]);
+      setMessages([GREETING]);
     }
     setHistoryLoaded(true);
   }, [sessionId]);
 
   useEffect(() => { if (coachOpen && !historyLoaded) loadHistory(); }, [coachOpen, historyLoaded, loadHistory]);
+
+  // New session id, no API call needed — a fresh id has no history yet by
+  // definition, same end state loadHistory() would reach on an empty result.
+  const startNewChat = () => {
+    const id = crypto.randomUUID();
+    localStorage.setItem('coach-session-id', id);
+    setSessionId(id);
+    setMessages([GREETING]);
+  };
 
   useEffect(() => {
     if (coachOpen && coachPrefill) setQuickAction(coachPrefill);
@@ -141,9 +160,14 @@ export function CoachPanel() {
               <h1 style={{ color: 'var(--text)', fontSize: '15px', fontWeight: 700, margin: 0 }}>Coach</h1>
               <p style={{ color: 'var(--text-muted)', fontSize: '11px', margin: '2px 0 0' }}>Knows your resume, memory, and tracked jobs</p>
             </div>
-            <button onClick={closeCoach} aria-label="Close" style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r)', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}>
-              <X size={14} />
-            </button>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button onClick={startNewChat} title="Start a new chat" aria-label="New chat" style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r)', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <Plus size={14} />
+              </button>
+              <button onClick={closeCoach} aria-label="Close" style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 'var(--r)', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={14} />
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
