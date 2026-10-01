@@ -439,3 +439,5 @@ input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.85); }
   .app-header { padding: 0 14px; }
   .header-btn-label { display: none; }
 }
+
+.coach-session:hover { background: var(--surface-2); }
