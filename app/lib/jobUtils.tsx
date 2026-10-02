@@ -39,7 +39,7 @@ export interface Priority {
   // it. connection_followup instead sets connectionName, which opens the
   // Connections overlay pre-searched to that name — a connection follow-up
   // isn't tied to any tracked job.
-  jobId?: number; connectionName?: string;
+  jobId?: number; connectionName?: string; connectionId?: number; noteId?: number;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -124,31 +124,34 @@ export function getPriorities(jobs: Job[]): Priority[] {
 
 export interface ConnectionForPriority {
   id: number; name: string; company: string;
-  last_log_date?: string | null; last_log_note?: string | null;
+  follow_up_note_id?: number | null; follow_up_date?: string | null; follow_up_note?: string | null;
 }
 
-// Same free, no-AI-call pattern as getPriorities' job follow-ups, applied to
-// connections instead: once you've logged a conversation, staying silent
-// past the threshold surfaces it again as a reminder — nothing to configure,
-// just keep logging updates as you talk to people. A connection with no log
-// entries yet has nothing to go stale, so it never appears here.
-export function getConnectionFollowups(connections: ConnectionForPriority[], thresholdDays = 14): Priority[] {
-  const items: (Priority & { days: number })[] = [];
+// Follow-ups are explicit, not inferred from silence: you flag a log entry
+// ("Follow up on <date>") and the connection shows up on Priorities once that
+// date arrives, until you clear it. (An earlier version auto-nagged anyone
+// whose last log was 14+ days old, which surfaced people you never meant to
+// chase — cut 2026-10-02.) An empty date means "due now".
+export function getConnectionFollowups(connections: ConnectionForPriority[]): Priority[] {
+  const today = new Date().toISOString().slice(0, 10);
+  const items: (Priority & { due: string })[] = [];
   for (const c of connections) {
-    if (!c.last_log_date) continue;
-    const days = Math.floor((Date.now() - new Date(c.last_log_date).getTime()) / 86400000);
-    if (days < thresholdDays) continue;
+    if (!c.follow_up_note_id) continue;
+    const due = c.follow_up_date || '';
+    if (due > today) continue;
     items.push({
       level: 'connection_followup',
       label: `Follow up — ${c.name}`,
-      sub: `${c.company} · logged ${days}d ago${c.last_log_note ? `: ${c.last_log_note}` : ''}`,
+      sub: `${c.company}${c.follow_up_note ? ` · ${c.follow_up_note}` : ''}`,
       score: null,
       connectionName: c.name,
-      days,
+      connectionId: c.id,
+      noteId: c.follow_up_note_id,
+      due,
     });
   }
-  items.sort((a, b) => b.days - a.days);
-  return items.map(({ days: _days, ...p }) => p);
+  items.sort((a, b) => a.due.localeCompare(b.due));
+  return items.map(({ due: _due, ...p }) => p);
 }
 
 // ─── Display components ───────────────────────────────────────────────────────

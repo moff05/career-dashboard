@@ -22,12 +22,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const userId = getUserId(request);
     const { id } = await params;
-    const { entry_date, note } = await request.json();
+    const { entry_date, note, follow_up_date } = await request.json();
     if (!note || !String(note).trim()) return NextResponse.json({ error: 'note required' }, { status: 400 });
     const db = await ensureConnectionNotesTable();
     const result = await db.execute({
-      sql: 'INSERT INTO connection_notes (user_id, connection_id, entry_date, note) VALUES (?, ?, ?, ?)',
-      args: [userId, parseInt(id), entry_date || new Date().toISOString().slice(0, 10), String(note).trim()],
+      sql: 'INSERT INTO connection_notes (user_id, connection_id, entry_date, note, follow_up_date, follow_up_done) VALUES (?, ?, ?, ?, ?, 0)',
+      args: [userId, parseInt(id), entry_date || new Date().toISOString().slice(0, 10), String(note).trim(), typeof follow_up_date === 'string' ? follow_up_date : null],
     });
     const created = (await db.execute({ sql: 'SELECT * FROM connection_notes WHERE id = ?', args: [Number(result.lastInsertRowid)] })).rows[0];
     return NextResponse.json(created, { status: 201 });

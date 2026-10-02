@@ -12,7 +12,10 @@ import { ensureConnectionNotesTable } from '@/lib/connectionNotes';
 const LAST_LOG_SELECT = `
   c.*,
   (SELECT entry_date FROM connection_notes n WHERE n.connection_id = c.id ORDER BY n.entry_date DESC, n.id DESC LIMIT 1) AS last_log_date,
-  (SELECT note FROM connection_notes n WHERE n.connection_id = c.id ORDER BY n.entry_date DESC, n.id DESC LIMIT 1) AS last_log_note
+  (SELECT note FROM connection_notes n WHERE n.connection_id = c.id ORDER BY n.entry_date DESC, n.id DESC LIMIT 1) AS last_log_note,
+  (SELECT n.id FROM connection_notes n WHERE n.connection_id = c.id AND n.follow_up_date IS NOT NULL AND COALESCE(n.follow_up_done, 0) = 0 ORDER BY n.follow_up_date ASC, n.id ASC LIMIT 1) AS follow_up_note_id,
+  (SELECT n.follow_up_date FROM connection_notes n WHERE n.connection_id = c.id AND n.follow_up_date IS NOT NULL AND COALESCE(n.follow_up_done, 0) = 0 ORDER BY n.follow_up_date ASC, n.id ASC LIMIT 1) AS follow_up_date,
+  (SELECT n.note FROM connection_notes n WHERE n.connection_id = c.id AND n.follow_up_date IS NOT NULL AND COALESCE(n.follow_up_done, 0) = 0 ORDER BY n.follow_up_date ASC, n.id ASC LIMIT 1) AS follow_up_note
 `;
 
 async function ensureTable() {

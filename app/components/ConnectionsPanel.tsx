@@ -16,6 +16,8 @@ export interface Connection {
   // (see getConnectionFollowups in app/lib/jobUtils.tsx) — null until a log
   // entry has ever been added.
   last_log_date?: string | null; last_log_note?: string | null;
+  // Earliest open (flagged, not yet cleared) follow-up from the log, if any.
+  follow_up_note_id?: number | null; follow_up_date?: string | null; follow_up_note?: string | null;
 }
 
 export const CONN_STATUS: Record<string, { label: string; color: string; bg: string }> = {

@@ -175,9 +175,12 @@ export default function DashboardPage() {
   // strip's follow-up reminders — separate from connectionsMap above, which
   // is fetched lazily per-company for the tracker's in-job Network tab.
   const [allConnections, setAllConnections] = useState<Connection[]>([]);
+  // Refetch whenever the Connections overlay closes so a follow-up flagged or
+  // cleared in there shows up on Priorities immediately.
   useEffect(() => {
+    if (connectionsOpen) return;
     apiFetch('/api/connections').then(r => r.json()).then(data => setAllConnections(Array.isArray(data) ? data : [])).catch(() => {});
-  }, []);
+  }, [connectionsOpen]);
 
   const runAnalysis = useCallback((id: number) => {
     analysisCacheRef.current[id] = 'loading';
@@ -585,6 +588,12 @@ export default function DashboardPage() {
   // reach-out you deliberately logged is more actionable than a passive
   // "haven't heard back" nudge, so it shouldn't get buried behind a long
   // run of those.
+  const clearFollowup = async (connId: number, noteId: number) => {
+    setAllConnections(prev => prev.map(c => c.id === connId ? { ...c, follow_up_note_id: null, follow_up_date: null, follow_up_note: null } : c));
+    await apiFetch(`/api/connections/${connId}/notes/${noteId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ follow_up_done: true }) }).catch(() => {});
+    // Re-sync: another flagged entry on the same person may now be next in line.
+    apiFetch('/api/connections').then(r => r.json()).then(d => setAllConnections(Array.isArray(d) ? d : [])).catch(() => {});
+  };
   const jobPriorities = getPriorities(jobs);
   const connectionPriorities = getConnectionFollowups(allConnections);
   const deadlineCount = jobPriorities.findIndex(p => p.level !== 'urgent' && p.level !== 'soon');
@@ -654,8 +663,8 @@ export default function DashboardPage() {
           {priorities.slice(0, 5).map((p, i) => {
             const c = LEVEL_CFG[p.level];
             return (
-              <button key={i} onClick={() => p.level === 'interview' ? openCoach(`I have an upcoming interview for ${p.sub} at the company behind: "${p.label}". Help me prepare with likely questions and strong answers based on my background.`) : p.level === 'connection_followup' ? openConnections(undefined, p.connectionName) : jumpToJob(p.jobId!)} style={{
-                display: 'flex', alignItems: 'center', gap: '10px', width: '100%', textAlign: 'left',
+              <div key={i} style={{ display: 'flex', gap: '6px' }}><button onClick={() => p.level === 'interview' ? openCoach(`I have an upcoming interview for ${p.sub} at the company behind: "${p.label}". Help me prepare with likely questions and strong answers based on my background.`) : p.level === 'connection_followup' ? openConnections(undefined, p.connectionName) : jumpToJob(p.jobId!)} style={{
+                display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0, textAlign: 'left',
                 backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)',
                 padding: '9px 14px', cursor: 'pointer', fontFamily: 'inherit',
               }}>
@@ -667,6 +676,10 @@ export default function DashboardPage() {
                 {p.score != null && <span style={{ fontSize: '11px', fontWeight: 700, color: scoreColor(p.score), flexShrink: 0 }}>{p.score}/100</span>}
                 <span style={{ fontSize: '9px', fontWeight: 700, color: c.color, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{c.tag}</span>
               </button>
+              {p.level === 'connection_followup' && p.connectionId && p.noteId && (
+                <button onClick={() => clearFollowup(p.connectionId!, p.noteId!)} title="Clear this follow-up" aria-label="Clear follow-up" className="header-btn" style={{ flexShrink: 0, fontSize: '11px', padding: '0 12px', cursor: 'pointer', fontFamily: 'inherit' }}>Clear</button>
+              )}
+              </div>
             );
           })}
         </div>

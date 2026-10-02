@@ -15,5 +15,10 @@ export async function ensureConnectionNotesTable() {
     note TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
   )`);
+  // follow_up_date: set when an entry is flagged "needs follow-up" ('' = due
+  // immediately, otherwise YYYY-MM-DD). follow_up_done: cleared by the user.
+  for (const col of ['follow_up_date TEXT', 'follow_up_done INTEGER DEFAULT 0']) {
+    try { await db.execute(`ALTER TABLE connection_notes ADD COLUMN ${col}`); } catch { /* already exists */ }
+  }
   return db;
 }
