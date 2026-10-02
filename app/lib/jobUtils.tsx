@@ -102,7 +102,10 @@ export function typeLabel(type: string): string {
 export function getPriorities(jobs: Job[]): Priority[] {
   const deadlineItems: (Priority & { days: number })[] = [];
   for (const j of jobs) {
-    if (!j.deadline || j.status === 'rejected' || j.status === 'offer') continue;
+    // A deadline only matters until you've acted on it — once a job is past
+    // 'saved' (applied, interviewing, offer, rejected) the alert has nothing
+    // left to prompt. Interviewing jobs still get their own prep item below.
+    if (!j.deadline || j.status !== 'saved') continue;
     const days = deadlineDays(j.deadline);
     if (days < 0) continue;
     if (days <= 3) deadlineItems.push({ level: 'urgent', label: `${j.title} at ${j.company}`, sub: `Deadline ${days === 0 ? 'today' : `in ${days}d`}`, jobId: j.id, score: j.match_score, days });
