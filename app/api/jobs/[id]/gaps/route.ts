@@ -54,13 +54,14 @@ JOB: Company: ${job.company} | Title: ${job.title}
 ${job.description ? `JD:\n${String(job.description).slice(0, 6000)}` : '(No JD — base analysis on role title and company)'}
 
 Gap severity definitions:
-- "major": The posting explicitly lists this as required and the candidate clearly lacks it. A recruiter will notice immediately. This includes location/scheduling conflicts, missing credentials, wrong graduation year, required years of experience the candidate doesn't have.
+- "major": The posting explicitly lists this as required and the candidate clearly lacks it. A recruiter will notice immediately. This includes location/scheduling conflicts, missing credentials, a graduation year that truly excludes the candidate, required years of experience the candidate doesn't have.
 - "minor": Would strengthen the application but isn't a stated hard requirement.
 
 "how_to_address": Be specific. Name the exact course, certification, or action and realistic timeline. "Take an online course" is too vague.
 
 Rules for should_apply:
 - false when ANY hard structural disqualifier exists: a genuine scheduling conflict (can't physically be in that city during that semester due to school enrollment), a graduation-timeline conflict, missing required credential, a stated visa/work-authorization issue the candidate doesn't meet, required years of experience the candidate lacks. Strong skills do NOT override a hard gate — if the candidate can't physically be there or doesn't meet a stated requirement, it's false.
+- A degree still in progress is NOT a missing credential or a graduation-timeline conflict when the candidate's graduation date is on or before the role's plausible start date. Entry-level/new-grad roles are routinely filled by students who finish before they start, so "bachelor's required" is satisfied for them. Only flag it when the posting needs the degree in hand for an immediate start, names a graduation window that excludes the candidate, or requires a higher degree they aren't on track for.
 - The job's city simply not matching the candidate's stated location preference is NOT, by itself, a hard disqualifier — candidates are generally more location-flexible than a preference list suggests. Only treat location as disqualifying when there's an actual scheduling/enrollment conflict, not a bare preference mismatch.
 - true only when the candidate legitimately clears all stated requirements with no hard blockers.
 - apply_reasoning: Name the deciding factor plainly. If false, state exactly what the disqualifier is.
