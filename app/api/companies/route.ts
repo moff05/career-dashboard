@@ -7,7 +7,17 @@ export async function GET(request: NextRequest) {
     const userId = getUserId(request);
     const db = await ensureCompaniesTable();
     const result = await db.execute({
-      sql: `SELECT c.*, (SELECT COUNT(*) FROM connections WHERE connections.company_id = c.id) AS contact_count
+      // status is upgraded to 'applied' (never downgraded) when any tracked job
+      // at this company has moved past 'saved' — rejected counts, since you
+      // can only be rejected from something you applied to. Company status is
+      // otherwise a manual field with no link to jobs, so without this a
+      // company stayed "Researching" even after applying there.
+      sql: `SELECT c.id, c.user_id, c.name, c.notes, c.career_url, c.created_at,
+              CASE WHEN c.status != 'applied' AND EXISTS (
+                SELECT 1 FROM jobs j WHERE j.user_id = c.user_id AND j.company = c.name COLLATE NOCASE
+                  AND j.status IN ('applied', 'interviewing', 'offer', 'rejected')
+              ) THEN 'applied' ELSE c.status END AS status,
+              (SELECT COUNT(*) FROM connections WHERE connections.company_id = c.id) AS contact_count
             FROM companies c WHERE c.user_id = ? ORDER BY c.created_at DESC`,
       args: [userId],
     });
