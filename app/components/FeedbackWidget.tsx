@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { track } from '@/lib/track';
 import { MessageCircle, X, ImageIcon, Send, Loader } from 'lucide-react';
 
 export function FeedbackWidget() {
@@ -65,7 +66,7 @@ export function FeedbackWidget() {
   return (
     <>
       <button
-        onClick={() => { reset(); setOpen(true); }}
+        onClick={() => { track('feedback_open'); reset(); setOpen(true); }}
         style={{
           position: 'fixed',
           bottom: '24px',

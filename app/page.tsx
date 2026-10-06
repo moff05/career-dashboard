@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
+import { track } from '@/lib/track';
 import { Star, Trash2, ExternalLink, ChevronDown, ChevronRight, Plus, LinkIcon, Loader, AlertCircle, ArrowLeft, ImageIcon, Edit2, RotateCcw, X, Check } from 'lucide-react';
 import { useUser } from '@/app/hooks/useUser';
 import { useOverlays } from '@/app/OverlayContext';
@@ -342,6 +343,7 @@ export default function DashboardPage() {
     const trimmedUrl = importUrl.trim();
     const trimmedText = importExtraText.trim();
     if (!trimmedUrl && !trimmedText) return;
+    track('job_import', importImage ? 'screenshot' : trimmedUrl ? 'url' : 'paste');
     setImportFetchError(''); setImportStep('loading');
     try {
       const res = await apiFetch('/api/jobs/import', {
@@ -384,6 +386,7 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
+  useEffect(() => { track('app_open'); }, []);
 
   // Weekly board-scan review queue — sits in its own tab until explicitly
   // added or dismissed (see app/api/cron/scan-boards and app/api/discovered).
@@ -408,6 +411,7 @@ export default function DashboardPage() {
   useEffect(() => { fetchDiscovered(); }, [fetchDiscovered]);
 
   const handleDiscoveredAction = async (id: number, action: 'add' | 'dismiss') => {
+    track(action === 'add' ? 'discovered_add' : 'discovered_dismiss');
     setDiscoveredBusyId(id);
     try {
       await apiFetch(`/api/discovered/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) });
@@ -428,6 +432,7 @@ export default function DashboardPage() {
   };
 
   const handleRefresh = async () => {
+    track('discovered_refresh');
     setRefreshing(true);
     setRefreshError('');
     try {
@@ -470,6 +475,7 @@ export default function DashboardPage() {
   };
 
   const handleStatusChange = async (id: number, status: string) => {
+    track('job_status', status);
     const prev = jobs.find(j => j.id === id)?.status;
     setJobs(jobs => jobs.map(j => j.id === id ? { ...j, status } : j));
     try {
@@ -532,6 +538,7 @@ export default function DashboardPage() {
   }, [runMissing, fetchConnections, jobs]);
 
   const setTab = (id: number, tab: string) => {
+    track('job_tab', tab);
     setJobTabs(prev => ({ ...prev, [id]: tab }));
   };
 
@@ -576,7 +583,9 @@ export default function DashboardPage() {
 
   const stats = {
     total: jobs.length,
-    applied: jobs.filter(j => j.status === 'applied').length,
+    // Cumulative: every job that got past 'saved' was applied to at some point,
+    // including ones since moved to interviewing/offer/rejected.
+    applied: jobs.filter(j => j.status !== 'saved').length,
     interviewing: jobs.filter(j => j.status === 'interviewing').length,
     offers: jobs.filter(j => j.status === 'offer').length,
     starred: jobs.filter(j => j.starred).length,
@@ -690,7 +699,7 @@ export default function DashboardPage() {
           badge so a fresh batch is noticeable without switching over. */}
       <div style={{ display: 'flex', gap: '4px', borderBottom: '1px solid var(--border)', marginBottom: '20px' }}>
         {([['tracker', 'Tracker'], ['discovered', 'Discovered']] as const).map(([key, label]) => (
-          <button key={key} onClick={() => setActiveTab(key)} style={{
+          <button key={key} onClick={() => { track(`tab_${key}`); setActiveTab(key); }} style={{
             display: 'flex', alignItems: 'center', gap: '6px',
             background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
             padding: '8px 4px', marginBottom: '-1px',

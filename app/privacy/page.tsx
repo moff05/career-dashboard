@@ -14,7 +14,7 @@ export default function PrivacyPage() {
             </span>
           </Link>
           <h1 style={{ color: 'var(--text)', fontSize: '22px', fontWeight: 700, margin: '16px 0 6px', letterSpacing: '-0.02em' }}>Privacy Policy</h1>
-          <p style={{ color: 'var(--text-dim)', fontSize: '12px', margin: 0 }}>Last updated: July 2, 2026</p>
+          <p style={{ color: 'var(--text-dim)', fontSize: '12px', margin: 0 }}>Last updated: October 6, 2026</p>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', color: 'var(--text-muted)', fontSize: '13px', lineHeight: 1.7 }}>
@@ -27,6 +27,11 @@ export default function PrivacyPage() {
           <section>
             <h2 style={{ color: 'var(--text)', fontSize: '14px', fontWeight: 700, marginBottom: '8px' }}>What data we store</h2>
             <p>We store what you explicitly give us: your name, resume, job listings you save, and any notes or cover letters you generate. We store a randomly generated user ID to identify your account. We do not require or store your email address, password, or any other personal identifier.</p>
+          </section>
+
+          <section>
+            <h2 style={{ color: 'var(--text)', fontSize: '14px', fontWeight: 700, marginBottom: '8px' }}>Usage analytics</h2>
+            <p>To see which features get used, we record simple event counts tied to your random user ID, such as &quot;opened Coach&quot;, &quot;switched to the Discovered tab&quot;, or &quot;changed a job status&quot;. These events never include the content of your jobs, notes, resume, or messages, and we do not record your IP address, browser details, or location. We do not use third-party analytics or advertising trackers.</p>
           </section>
 
           <section>

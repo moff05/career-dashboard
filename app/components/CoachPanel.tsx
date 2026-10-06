@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
+import { track } from '@/lib/track';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Send, Loader, X, Plus, Maximize2, Minimize2, MessageSquare, Trash2 } from 'lucide-react';
@@ -158,6 +159,7 @@ export function CoachPanel() {
     if (!text || loading) return;
     if (!forceText) { setInput(''); if (textareaRef.current) textareaRef.current.style.height = 'auto'; }
     setMessages(prev => [...prev, { role: 'user', content: text }]);
+    track('coach_message');
     setLoading(true);
     setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
     try {
