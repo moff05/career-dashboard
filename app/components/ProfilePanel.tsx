@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { apiFetch } from '@/lib/apiFetch';
+import { track } from '@/lib/track';
 import { extractResumeText, type ParsedProfile } from '@/lib/resumeExtract';
 import { Edit2, ExternalLink, FileText, Check, Plus, X, Trash2, Brain, Smartphone } from 'lucide-react';
 import { useOverlays } from '@/app/OverlayContext';
@@ -180,6 +181,7 @@ export function ProfilePanel() {
     setResumeSaving(false);
   }
   async function handleResumeFile(file: File | undefined) {
+    if (file) track('resume_upload');
     if (!file) return;
     setResumeError(''); setResumeParsing(true); setResumeFileName(file.name);
     try {

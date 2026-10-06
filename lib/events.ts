@@ -15,6 +15,7 @@ export const EVENT_NAMES = new Set([
   'discovered_add', 'discovered_dismiss', 'discovered_refresh',
   'coach_message',
   'resume_upload',
+  'cover_letter',
   'feedback_open',
 ]);
 

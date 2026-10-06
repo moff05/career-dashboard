@@ -258,6 +258,7 @@ export default function DashboardPage() {
   }, [runAnalysis, runGaps, runBullets]);
 
   const runCoverLetter = useCallback((id: number, tone: string, angle: string) => {
+    track('cover_letter');
     coverLetterCacheRef.current[id] = 'loading';
     setCoverLetterResults(prev => ({ ...prev, [id]: 'loading' }));
     apiFetch(`/api/jobs/${id}/cover-letter`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tone, angle }) })
